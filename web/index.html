@@ -62,6 +62,15 @@ button{cursor:pointer}
 .hits{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
 .hits span{font-size:.72rem;background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:0 6px;white-space:nowrap}
 .hits b{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:5px 4px;font-size:.8rem;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:700}
+.seg small{font-family:var(--f-mono);margin-left:3px;opacity:.8}
+.lostmark{font-size:.68rem;font-weight:700;color:var(--danger);border:1px solid var(--danger);border-radius:4px;padding:0 5px;margin-left:4px;vertical-align:1px}
+.card.is-lost .avatar{filter:grayscale(1);opacity:.55}
+.card.is-lost .nm{color:var(--muted)}
+.portrait.is-lost{filter:grayscale(1);opacity:.6}
 .cnt{font-size:.7rem;font-weight:700;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 5px;margin-left:4px;vertical-align:1px}
 .grp{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--muted);cursor:pointer}
 .sheets{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
@@ -176,6 +185,9 @@ button{cursor:pointer}
     <div class="rack-tools">
       <input class="search" id="search" type="search" placeholder="名前・タグ・技能名で検索" aria-label="キャラクターを検索">
       <p class="search-help">例：<code>目星</code>　<code>目星70</code>（70以上）　<code>図書館&gt;=60 6版</code></p>
+      <div class="seg" id="lostSeg" role="group" aria-label="ロストで絞り込む">
+        <button type="button" data-lost="alive">生存</button><button type="button" data-lost="lost">ロスト</button><button type="button" data-lost="all">すべて</button>
+      </div>
       <label class="grp"><input type="checkbox" id="groupToggle" checked> 同じ名前を1人にまとめる</label>
       <div class="chips" id="chips"></div>
     </div>
@@ -240,11 +252,13 @@ function matchChar(c, terms){
   }
   return hits;
 }
+const isLost = c => (c.tags||[]).includes("ロスト");
 function filtered(){
   const terms = parseTerms(S.q);
   const out = [];
   for (const c of S.chars){
     if (S.sys && c.system!==S.sys) continue;
+    if (S.lost==="alive" && isLost(c) || S.lost==="lost" && !isLost(c)) continue;
     const hits = terms.length ? matchChar(c, terms) : [];
     if (hits) out.push({c, hits});
   }
@@ -273,6 +287,12 @@ function grouped(items){
 }
 function renderList(){
   $("count").textContent = S.ready ? `${S.chars.length}人` : "";
+  const nLost = S.chars.filter(isLost).length;
+  for (const b of $("lostSeg").querySelectorAll("button")){
+    const k = b.dataset.lost, n = k==="lost" ? nLost : k==="alive" ? S.chars.length - nLost : S.chars.length;
+    b.setAttribute("aria-pressed", String(S.lost===k));
+    b.innerHTML = `${({alive:"生存",lost:"ロスト",all:"すべて"})[k]}${S.ready ? `<small>${n}</small>` : ""}`;
+  }
   const systems = [...new Set(S.chars.map(c=>c.system).filter(Boolean))];
   $("chips").innerHTML = systems.length>1 ? [["","すべて"],...systems.map(s=>[s,s])].map(([v,l]) =>
     `<button class="chip" type="button" data-sys="${esc(v)}" aria-pressed="${S.sys===v}">${esc(l)}</button>`).join("") : "";
@@ -282,14 +302,15 @@ function renderList(){
   if (!items.length){ list.innerHTML = `<li class="rack-empty">${S.chars.length ? "条件に合うキャラクターはいません。" : "まだキャラクターがいません。右上のボタンから作成できます。"}</li>`; return; }
   const people = S.group ? new Set(S.chars.map(personKey)).size : S.chars.length;
   const unit = S.group ? "人" : "枚";
-  $("count").textContent = (S.q.trim() || S.sys ? `${items.length} / ${people}${unit}` : `${people}${unit}`) + (S.group && people !== S.chars.length ? `（シート${S.chars.length}枚）` : "");
+  $("count").textContent = (S.q.trim() || S.sys || S.lost!=="all" ?`${items.length} / ${people}${unit}` : `${people}${unit}`) + (S.group && people !== S.chars.length ? `（シート${S.chars.length}枚）` : "");
   list.innerHTML = items.map(({c, hits, members}) => {
     const uniq = [...new Map(hits.map(s=>[s.label,s])).values()].slice(0,4);
     const many = members.length > 1;
     const sub = many ? [...new Set(members.map(m=>m.system).filter(Boolean))].join("・") || "—"
       : [c.system, c.player && "PL: "+c.player].filter(Boolean).join(" · ") || "—";
-    return `<li><button class="card" type="button" data-id="${esc(c.id)}" aria-current="${members.some(m=>m.id===S.sel)}">
-    ${avatarHTML(c,"avatar")}<span style="min-width:0"><div class="nm">${esc(c.name||"名無し")}${many ? ` <span class="cnt">${members.length}枚</span>` : ""}</div>
+    const lost = members.every(isLost);
+    return `<li><button class="card${lost ? " is-lost" : ""}" type="button" data-id="${esc(c.id)}" aria-current="${members.some(m=>m.id===S.sel)}">
+    ${avatarHTML(c,"avatar")}<span style="min-width:0"><div class="nm">${esc(c.name||"名無し")}${lost ? `<span class="lostmark">ロスト</span>` : ""}${many ? ` <span class="cnt">${members.length}枚</span>` : ""}</div>
     <div class="sub">${esc(sub)}</div>
     ${uniq.length ? `<div class="hits">${uniq.map(s=>`<span>${esc(s.label)} <b>${esc(s.value)}</b></span>`).join("")}</div>` : ""}</span></button></li>`;
   }).join("");
@@ -312,12 +333,12 @@ function renderMain(){
   m.innerHTML = `<article class="sheet">
     <button class="btn sm back" type="button" data-act="back">← 一覧へ</button>
     ${fam.length > 1 ? `<nav class="sheets" aria-label="同じ人物のシート"><span class="lbl">この人物のシート ${fam.length}枚</span>
-      ${fam.map(x=>`<button type="button" data-goto="${esc(x.id)}" aria-current="${x.id===c.id}">${esc(sheetLabel(x))}<small>${x.updatedAt ? "更新 "+fmtDate(x.updatedAt) : ""}</small></button>`).join("")}</nav>` : ""}
+      ${fam.map(x=>`<button type="button" data-goto="${esc(x.id)}" aria-current="${x.id===c.id}">${esc(sheetLabel(x))}${isLost(x) ? `<span class="lostmark">ロスト</span>` : ""}<small>${x.updatedAt ? "更新 "+fmtDate(x.updatedAt) : ""}</small></button>`).join("")}</nav>` : ""}
     <section class="hero">
-      ${avatarHTML(c,"portrait")}
+      ${avatarHTML(c, isLost(c) ? "portrait is-lost" : "portrait")}
       <div style="min-width:0">
         ${c.ruby ? `<div class="ruby">${esc(c.ruby)}</div>` : ""}
-        <h2 class="name">${esc(c.name||"名無し")}</h2>
+        <h2 class="name">${esc(c.name||"名無し")}${isLost(c) ? `<span class="lostmark" style="font-family:var(--f-body);font-size:.8rem">ロスト</span>` : ""}</h2>
         <div class="meta">
           ${c.system ? `<span class="pill">${esc(c.system)}</span>` : ""}
           ${c.player ? `<span>PL: ${esc(c.player)}</span>` : ""}
@@ -381,7 +402,8 @@ function formHTML(){
       <div class="fld"><label for="f-system">システム</label><input id="f-system" name="system" list="sysList" value="${esc(d.system)}" placeholder="クトゥルフ神話TRPG 7版 など">
         <datalist id="sysList">${[...new Set([...SYSTEMS,...S.chars.map(c=>c.system).filter(Boolean)])].map(s=>`<option value="${esc(s)}">`).join("")}</datalist></div>
       <div class="fld"><label for="f-player">プレイヤー</label><input id="f-player" name="player" value="${esc(d.player)}"></div>
-      <div class="fld"><label for="f-tags">タグ（カンマ区切り）</label><input id="f-tags" name="tags" value="${esc((d.tags||[]).join(", "))}" placeholder="探索者, 継続中"></div>
+      <div class="fld"><label for="f-tags">タグ（カンマ区切り）</label><input id="f-tags" name="tags" value="${esc((d.tags||[]).filter(t=>t!=="ロスト").join(", "))}" placeholder="探索者, 継続中">
+        <label class="grp" style="margin-top:4px"><input type="checkbox" id="f-lost" name="lost" ${isLost(d) ? "checked" : ""}> ロストした</label></div>
       <div class="fld"><label for="f-tpl">能力値テンプレート</label><select id="f-tpl"><option value="">選ぶとリソースと能力値を置き換えます</option>${Object.keys(TEMPLATES).map(k=>`<option>${esc(k)}</option>`).join("")}</select></div>
     </div>
     <div class="fld"><label for="f-summary">ひとこと紹介</label><input id="f-summary" name="summary" value="${esc(d.summary)}" placeholder="職業や立ち位置を一行で"></div>
@@ -407,7 +429,7 @@ function collect(){
   const f = $("form"); if (!f) return;
   const d = S.draft, v = n => f.elements[n].value;
   Object.assign(d, {name:v("name").trim(), ruby:v("ruby").trim(), system:v("system").trim(), player:v("player").trim(), summary:v("summary").trim(),
-    tags:v("tags").split(/[,、，]/).map(s=>s.trim()).filter(Boolean),
+    tags:[...v("tags").split(/[,、，]/).map(s=>s.trim()).filter(t=>t && t!=="ロスト"), ...(f.elements.lost.checked ? ["ロスト"] : [])],
     items:v("items").split("\n").map(s=>s.trim()).filter(Boolean), notes:v("notes"),
     sourceUrl:v("sourceUrl").trim(), sourceSite:v("sourceSite").trim(), palette:v("palette")});
   for (const key of ["resources","stats","skills"]){
@@ -616,6 +638,13 @@ document.addEventListener("paste", e => {
 /* ---------- events ---------- */
 $("search").addEventListener("input", e => { S.q = e.target.value; renderList(); });
 try { S.group = localStorage.getItem("groupByName") !== "0"; } catch { S.group = true; }
+try { S.lost = ["alive","lost","all"].includes(localStorage.getItem("lostFilter")) ? localStorage.getItem("lostFilter") : "alive"; } catch { S.lost = "alive"; }
+$("lostSeg").addEventListener("click", e => {
+  const b = e.target.closest("[data-lost]"); if (!b) return;
+  S.lost = b.dataset.lost;
+  try { localStorage.setItem("lostFilter", S.lost); } catch {}
+  renderList();
+});
 $("groupToggle").checked = S.group;
 $("groupToggle").addEventListener("change", e => {
   S.group = e.target.checked;
