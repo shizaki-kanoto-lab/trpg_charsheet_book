@@ -1,0 +1,552 @@
+<title>キャラクターシート帳</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=JetBrains+Mono:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: an index-card rack on the left, the open sheet on the right; stat boxes read like a printed TRPG sheet. */
+:root{
+  --bg:#E8EBF0; --surface:#FFFFFF; --surface-2:#F3F5F8; --ink:#161B26; --muted:#5A6274; --line:#D2D7E0;
+  --accent:#3346B8; --accent-ink:#FFFFFF; --accent-soft:#E2E6F9;
+  --hp:#C2413A; --mp:#2F70BC; --san:#7A4DB3; --danger:#B3261E;
+  --f-display:"Dela Gothic One","Zen Kaku Gothic New","Hiragino Sans",sans-serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10131A; --surface:#191D27; --surface-2:#212633; --ink:#E5E8EF; --muted:#9AA2B3; --line:#2D3343;
+  --accent:#8F9EFF; --accent-ink:#0D1120; --accent-soft:#242B48;
+  --hp:#EA6C63; --mp:#6EA6EC; --san:#B08AE6; --danger:#F07A72; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10131A; --surface:#191D27; --surface-2:#212633; --ink:#E5E8EF; --muted:#9AA2B3; --line:#2D3343;
+  --accent:#8F9EFF; --accent-ink:#0D1120; --accent-soft:#242B48;
+  --hp:#EA6C63; --mp:#6EA6EC; --san:#B08AE6; --danger:#F07A72; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  border-bottom:1px solid var(--line);background:var(--surface)}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand h1{font-family:var(--f-display);font-weight:400;font-size:1.25rem;margin:0;letter-spacing:.02em}
+.brand span{color:var(--muted);font-size:.8rem}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--danger)}
+.btn.danger.solid{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:4px 10px;font-size:.85rem}
+
+.app{display:grid;grid-template-columns:320px minmax(0,1fr);min-height:calc(100% - 64px)}
+.rack{border-right:1px solid var(--line);background:var(--surface-2);display:flex;flex-direction:column;min-width:0}
+.rack-tools{display:flex;flex-direction:column;gap:10px;padding:14px max(16px,env(safe-area-inset-left,0px)) 10px 16px}
+.search{width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 10px;font-size:.78rem;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.list{list-style:none;margin:0;padding:4px 10px 20px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+.card{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;width:100%;text-align:left;
+  padding:8px 10px;border:1px solid transparent;border-radius:8px;background:transparent}
+.card:hover{background:var(--surface)}
+.card[aria-current="true"]{background:var(--surface);border-color:var(--line);box-shadow:inset 3px 0 0 var(--accent)}
+.card .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .sub{font-size:.78rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.avatar{width:44px;height:44px;border-radius:6px;object-fit:cover;display:grid;place-items:center;
+  font-family:var(--f-display);font-size:1.1rem;color:#fff}
+.rack-empty{padding:24px 16px;color:var(--muted);font-size:.9rem}
+
+.main{min-width:0;padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.sheet{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+.back{display:none}
+
+.hero{display:grid;grid-template-columns:150px minmax(0,1fr);gap:22px;align-items:start}
+.portrait{width:150px;aspect-ratio:3/4;max-width:100%;border-radius:8px;object-fit:cover;border:1px solid var(--line);
+  display:grid;place-items:center;font-family:var(--f-display);font-size:3rem;color:#fff}
+.ruby{color:var(--muted);font-size:.85rem;letter-spacing:.08em}
+.name{font-family:var(--f-display);font-weight:400;font-size:clamp(1.7rem,4vw,2.4rem);line-height:1.2;margin:2px 0 10px;text-wrap:balance;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:.88rem;color:var(--muted);align-items:center}
+.pill{background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:1px 8px;font-weight:700;font-size:.8rem}
+.tag{border:1px solid var(--line);border-radius:4px;padding:0 6px;font-size:.78rem}
+.summary{margin:12px 0 0;max-width:60ch}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+.sec h2{font-size:.78rem;letter-spacing:.14em;color:var(--muted);margin:0 0 10px;font-weight:700;
+  display:flex;align-items:center;gap:10px}
+.sec h2::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.res{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.resrow{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.resrow .hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.resrow .lb{font-weight:700;font-size:.85rem}
+.resrow .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:1.05rem}
+.resrow .num small{color:var(--muted);font-size:.8rem}
+.bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--c,var(--accent));transition:width .2s}
+.step{display:flex;gap:4px}
+.step button{width:28px;height:26px;border:1px solid var(--line);background:var(--surface-2);border-radius:4px;font-family:var(--f-mono);line-height:1}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.stat{border:2px solid var(--ink);border-radius:6px;padding:6px 8px 8px;text-align:center;background:var(--surface)}
+.stat .lb{font-size:.72rem;letter-spacing:.1em;color:var(--muted);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat .v{font-family:var(--f-mono);font-weight:700;font-size:1.6rem;font-variant-numeric:tabular-nums;line-height:1.2}
+
+.skills{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:2px 28px;margin:0;padding:0;list-style:none}
+.skills li{display:flex;align-items:baseline;gap:6px;padding:4px 0}
+.skills li .l{min-width:0;overflow-wrap:anywhere}
+.skills li .d{flex:1;border-bottom:1px dotted var(--line);transform:translateY(-4px)}
+.skills li .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:700}
+
+.items{margin:0;padding-left:1.2em}
+.notes{white-space:pre-wrap;max-width:70ch;margin:0;overflow-wrap:anywhere}
+.none{color:var(--muted);font-size:.9rem}
+.stamp{color:var(--muted);font-size:.78rem}
+
+/* form */
+.form{display:flex;flex-direction:column;gap:22px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld label,.fld .lbl{font-size:.78rem;color:var(--muted);font-weight:700;letter-spacing:.06em}
+.fld input,.fld select,.fld textarea,.rows input{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 10px}
+.fld textarea{min-height:110px;resize:vertical;line-height:1.6}
+.rows{display:flex;flex-direction:column;gap:6px}
+.row{display:grid;gap:6px;align-items:center}
+.row.r3{grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) 34px}
+.row.r2{grid-template-columns:minmax(0,3fr) minmax(0,1fr) 34px}
+.row input.n{font-family:var(--f-mono)}
+.x{height:34px;border:1px solid var(--line);background:var(--surface);border-radius:6px;color:var(--muted)}
+.rowhead{font-size:.72rem;color:var(--muted)}
+.ph{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.ph .portrait{width:90px}
+.formbar{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;position:sticky;bottom:0;padding-block:12px;background:var(--bg);border-top:1px solid var(--line)}
+
+.empty{max-width:520px;margin:10vh auto 0;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:12px;align-items:center}
+.empty h2{font-family:var(--f-display);font-weight:400;color:var(--ink);margin:0;font-size:1.4rem}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:8px 16px;border-radius:6px;font-size:.9rem;z-index:20}
+
+.src{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-weight:700;font-size:.85rem;text-decoration:none}
+.src:hover{text-decoration:underline}
+.palette{font-family:var(--f-mono);font-size:.82rem;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:0;
+  white-space:pre;overflow:auto;max-height:240px}
+.imp{max-width:880px;margin:0 auto 24px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.imp h2{margin:0;font-size:1rem}
+.imp textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);padding:8px 10px;font-family:var(--f-mono);font-size:.8rem}
+.imp .pv{border-left:3px solid var(--accent);padding:6px 12px;background:var(--surface-2);border-radius:0 6px 6px 0;font-size:.9rem}
+.imp .err{color:var(--danger);font-size:.88rem}
+.hdr-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  .rack{border-right:0}
+  .app.detail .rack{display:none}
+  .app:not(.detail) .main{display:none}
+  .back{display:inline-flex;align-self:flex-start}
+  .hero{grid-template-columns:96px minmax(0,1fr);gap:14px}
+  .portrait{width:96px;font-size:2rem}
+}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+</style>
+
+<header class="top">
+  <div class="brand"><h1>キャラクターシート帳</h1><span id="count"></span></div>
+  <div class="hdr-actions">
+    <button class="btn" id="impBtn" type="button" hidden>取り込み</button>
+    <button class="btn primary" id="newBtn" type="button" hidden>＋ 新しいキャラクター</button>
+  </div>
+</header>
+<div class="app" id="app">
+  <aside class="rack">
+    <div class="rack-tools">
+      <input class="search" id="search" type="search" placeholder="名前・タグ・PLで検索" aria-label="キャラクターを検索">
+      <div class="chips" id="chips"></div>
+    </div>
+    <ul class="list" id="list"></ul>
+  </aside>
+  <main class="main" id="mainWrap"><div id="imp"></div><div id="main"></div></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const SYSTEMS = ["クトゥルフ神話TRPG 7版","ソード・ワールド2.5","D&D 5e","オリジナル"];
+const TEMPLATES = {
+  "汎用": {resources:[["HP",10,10],["MP",10,10]], stats:["筋力","敏捷","耐久","知力","精神","魅力"].map(l=>[l,10])},
+  "クトゥルフ7版": {resources:[["HP",10,10],["MP",10,10],["SAN",50,99]], stats:["STR","CON","POW","DEX","APP","SIZ","INT","EDU","LUCK"].map(l=>[l,50])},
+  "D&D 5e": {resources:[["HP",10,10]], stats:["STR","DEX","CON","INT","WIS","CHA"].map(l=>[l,10])},
+};
+const RES_COLOR = {HP:"var(--hp)",MP:"var(--mp)",SAN:"var(--san)"};
+
+const S = {chars:[], sel:null, mode:"view", q:"", sys:"", ready:false, db:null, assets:null, canWrite:false, draft:null, confirmDel:false, uploading:false, noDb:false};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+
+function hue(str){ let h=0; for (const c of String(str)) h=(h*31+c.codePointAt(0))%360; return h; }
+function avatarHTML(c, cls){
+  if (c.portraitId) return `<img class="${cls}" src="/_blob/${esc(c.portraitId)}" alt="">`;
+  const ch = [...(c.name||"？")][0];
+  return `<div class="${cls}" style="background:hsl(${hue(c.name||"")} 42% 42%)" aria-hidden="true">${esc(ch)}</div>`;
+}
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,2200); }
+function current(){ return S.chars.find(c=>c.id===S.sel); }
+function fmtDate(ms){ if(!ms) return ""; const d=new Date(ms); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
+
+/* ---------- list ---------- */
+function filtered(){
+  const q = S.q.trim().toLowerCase();
+  return S.chars.filter(c => (!S.sys || c.system===S.sys) &&
+    (!q || [c.name,c.ruby,c.player,c.system,...(c.tags||[])].join(" ").toLowerCase().includes(q)));
+}
+function renderList(){
+  $("count").textContent = S.ready ? `${S.chars.length}人` : "";
+  const systems = [...new Set(S.chars.map(c=>c.system).filter(Boolean))];
+  $("chips").innerHTML = systems.length>1 ? [["","すべて"],...systems.map(s=>[s,s])].map(([v,l]) =>
+    `<button class="chip" type="button" data-sys="${esc(v)}" aria-pressed="${S.sys===v}">${esc(l)}</button>`).join("") : "";
+  const list = $("list");
+  if (!S.ready){ list.innerHTML = `<li class="rack-empty">${S.noDb ? "このビューでは保存データを読み込めません。" : "読み込み中…"}</li>`; return; }
+  const items = filtered();
+  if (!items.length){ list.innerHTML = `<li class="rack-empty">${S.chars.length ? "条件に合うキャラクターはいません。" : "まだキャラクターがいません。右上のボタンから作成できます。"}</li>`; return; }
+  list.innerHTML = items.map(c => `<li><button class="card" type="button" data-id="${esc(c.id)}" aria-current="${c.id===S.sel}">
+    ${avatarHTML(c,"avatar")}<span style="min-width:0"><div class="nm">${esc(c.name||"名無し")}</div>
+    <div class="sub">${esc([c.system, c.player && "PL: "+c.player].filter(Boolean).join(" · ") || "—")}</div></span></button></li>`).join("");
+}
+
+/* ---------- view ---------- */
+function renderMain(){
+  const m = $("main");
+  $("app").classList.toggle("detail", !!S.sel || S.mode==="edit" || !!S.imp);
+  renderImp();
+  if (S.mode==="edit"){ m.innerHTML = formHTML(); bindPortrait(); return; }
+  const c = current();
+  if (!c){
+    m.innerHTML = `<div class="empty"><h2>シートを選んでください</h2>
+      <p>左の一覧からキャラクターを開くと、能力値・技能・所持品・メモをまとめて確認できます。${S.canWrite ? "新しいキャラクターは右上の「＋ 新しいキャラクター」から作れます。" : ""}</p></div>`;
+    return;
+  }
+  const res = c.resources||[], stats = c.stats||[], skills = c.skills||[], items = (c.items||[]).filter(Boolean);
+  m.innerHTML = `<article class="sheet">
+    <button class="btn sm back" type="button" data-act="back">← 一覧へ</button>
+    <section class="hero">
+      ${avatarHTML(c,"portrait")}
+      <div style="min-width:0">
+        ${c.ruby ? `<div class="ruby">${esc(c.ruby)}</div>` : ""}
+        <h2 class="name">${esc(c.name||"名無し")}</h2>
+        <div class="meta">
+          ${c.system ? `<span class="pill">${esc(c.system)}</span>` : ""}
+          ${c.player ? `<span>PL: ${esc(c.player)}</span>` : ""}
+          ${(c.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}
+        </div>
+        ${c.summary ? `<p class="summary">${esc(c.summary)}</p>` : ""}
+        ${safeUrl(c.sourceUrl) ? `<p style="margin:10px 0 0"><a class="src" href="${esc(c.sourceUrl)}" target="_blank" rel="noopener">元のシートを開く（${esc(c.sourceSite || siteName(c.sourceUrl))}）↗</a></p>` : ""}
+        <div class="actions">
+          <button class="btn sm" type="button" data-act="ccf">ココフォリア駒をコピー</button>
+          ${c.palette ? `<button class="btn sm" type="button" data-act="pal">チャットパレットをコピー</button>` : ""}
+        </div>
+        ${S.canWrite ? `<div class="actions" style="margin-top:8px">
+          <button class="btn primary sm" type="button" data-act="edit">編集</button>
+          <button class="btn sm" type="button" data-act="dup">複製</button>
+          ${S.confirmDel
+            ? `<button class="btn sm danger solid" type="button" data-act="del-yes">削除する</button><button class="btn sm" type="button" data-act="del-no">やめる</button>`
+            : `<button class="btn sm danger" type="button" data-act="del">削除</button>`}
+        </div>` : ""}
+      </div>
+    </section>
+    ${res.length ? `<section class="sec"><h2>リソース</h2><div class="res">${res.map((r,i)=>{
+      const max=num(r.max), cur=num(r.cur), pct = max>0 ? Math.max(0,Math.min(100,cur/max*100)) : 0;
+      return `<div class="resrow"><div class="hd"><span class="lb">${esc(r.label)}</span>
+        <span class="num">${cur}<small> / ${max}</small></span></div>
+        <div class="bar" style="--c:${RES_COLOR[String(r.label).toUpperCase()]||"var(--accent)"}"><i style="width:${pct}%"></i></div>
+        ${S.canWrite ? `<div class="step"><button type="button" data-res="${i}" data-d="-5" aria-label="${esc(r.label)}を5減らす">−5</button><button type="button" data-res="${i}" data-d="-1" aria-label="${esc(r.label)}を1減らす">−1</button><button type="button" data-res="${i}" data-d="1" aria-label="${esc(r.label)}を1増やす">+1</button><button type="button" data-res="${i}" data-d="5" aria-label="${esc(r.label)}を5増やす">+5</button><button type="button" data-res="${i}" data-d="full" aria-label="${esc(r.label)}を全回復" style="width:auto;padding:0 8px">全快</button></div>` : ""}
+      </div>`; }).join("")}</div></section>` : ""}
+    ${stats.length ? `<section class="sec"><h2>能力値</h2><div class="stats">${stats.map(s=>`<div class="stat"><div class="lb">${esc(s.label)}</div><div class="v">${esc(s.value)}</div></div>`).join("")}</div></section>` : ""}
+    <section class="sec"><h2>技能</h2>${skills.length ? `<ul class="skills">${skills.map(s=>`<li><span class="l">${esc(s.label)}</span><span class="d"></span><span class="v">${esc(s.value)}</span></li>`).join("")}</ul>` : `<p class="none">技能は未登録です。</p>`}</section>
+    <section class="sec"><h2>所持品</h2>${items.length ? `<ul class="items">${items.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>` : `<p class="none">所持品は未登録です。</p>`}</section>
+    <section class="sec"><h2>メモ・設定</h2>${c.notes ? `<p class="notes">${esc(c.notes)}</p>` : `<p class="none">メモはありません。</p>`}</section>
+    ${c.palette ? `<section class="sec"><h2>チャットパレット</h2><pre class="palette">${esc(c.palette)}</pre></section>` : ""}
+    ${c.updatedAt ? `<div class="stamp">最終更新 ${fmtDate(c.updatedAt)}</div>` : ""}
+  </article>`;
+}
+
+/* ---------- form ---------- */
+function blank(){
+  const t = TEMPLATES["汎用"];
+  return {name:"",ruby:"",system:"",player:"",tags:[],summary:"",portraitId:"",
+    resources:t.resources.map(([label,cur,max])=>({label,cur,max})), stats:t.stats.map(([label,value])=>({label,value})),
+    skills:[], items:[], notes:"", sourceUrl:"", sourceSite:"", palette:""};
+}
+function formHTML(){
+  const d = S.draft;
+  const rowR = (r,i)=>`<div class="row r3" data-row="resources"><input aria-label="リソース名" data-k="label" value="${esc(r.label)}" placeholder="HP"><input class="n" aria-label="現在値" data-k="cur" inputmode="numeric" value="${esc(r.cur)}"><input class="n" aria-label="最大値" data-k="max" inputmode="numeric" value="${esc(r.max)}"><button class="x" type="button" data-rm="resources" data-i="${i}" aria-label="この行を削除">×</button></div>`;
+  const rowV = key => (r,i)=>`<div class="row r2" data-row="${key}"><input aria-label="名前" data-k="label" value="${esc(r.label)}"><input class="n" aria-label="値" data-k="value" value="${esc(r.value)}"><button class="x" type="button" data-rm="${key}" data-i="${i}" aria-label="この行を削除">×</button></div>`;
+  return `<form class="sheet form" id="form" autocomplete="off">
+    <button class="btn sm back" type="button" data-act="cancel">← 戻る</button>
+    <h2 class="name" style="margin:0">${d.id ? "シートを編集" : "新しいキャラクター"}</h2>
+    <section class="ph">
+      <div id="phPrev">${avatarHTML(d,"portrait")}</div>
+      ${S.assets ? `<div class="fld"><span class="lbl">立ち絵・アイコン</span>
+        <input type="file" id="f-photo" accept="image/*" aria-label="画像を選ぶ">
+        ${d.portraitId ? `<button class="btn sm" type="button" data-act="nophoto">画像を外す</button>` : ""}
+        <span class="stamp" id="phStatus">${S.uploading ? "アップロード中…" : "PNG / JPEG など（20MBまで）"}</span></div>` : `<span class="stamp">画像の追加は編集者のみ利用できます。</span>`}
+    </section>
+    <div class="grid2">
+      <div class="fld"><label for="f-name">名前</label><input id="f-name" name="name" required value="${esc(d.name)}" placeholder="例：アリス・ハーグリーヴス"></div>
+      <div class="fld"><label for="f-ruby">よみ・二つ名</label><input id="f-ruby" name="ruby" value="${esc(d.ruby)}"></div>
+      <div class="fld"><label for="f-system">システム</label><input id="f-system" name="system" list="sysList" value="${esc(d.system)}" placeholder="クトゥルフ神話TRPG 7版 など">
+        <datalist id="sysList">${[...new Set([...SYSTEMS,...S.chars.map(c=>c.system).filter(Boolean)])].map(s=>`<option value="${esc(s)}">`).join("")}</datalist></div>
+      <div class="fld"><label for="f-player">プレイヤー</label><input id="f-player" name="player" value="${esc(d.player)}"></div>
+      <div class="fld"><label for="f-tags">タグ（カンマ区切り）</label><input id="f-tags" name="tags" value="${esc((d.tags||[]).join(", "))}" placeholder="探索者, 継続中"></div>
+      <div class="fld"><label for="f-tpl">能力値テンプレート</label><select id="f-tpl"><option value="">選ぶとリソースと能力値を置き換えます</option>${Object.keys(TEMPLATES).map(k=>`<option>${esc(k)}</option>`).join("")}</select></div>
+    </div>
+    <div class="fld"><label for="f-summary">ひとこと紹介</label><input id="f-summary" name="summary" value="${esc(d.summary)}" placeholder="職業や立ち位置を一行で"></div>
+    <section class="sec"><h2>リソース</h2><div class="rows">
+      <div class="row r3 rowhead"><span>名前</span><span>現在</span><span>最大</span><span></span></div>
+      ${d.resources.map(rowR).join("")}
+      <button class="btn sm" type="button" data-add="resources" style="align-self:flex-start">＋ リソースを追加</button></div></section>
+    <section class="sec"><h2>能力値</h2><div class="rows">${d.stats.map(rowV("stats")).join("")}
+      <button class="btn sm" type="button" data-add="stats" style="align-self:flex-start">＋ 能力値を追加</button></div></section>
+    <section class="sec"><h2>技能</h2><div class="rows">${d.skills.map(rowV("skills")).join("")}
+      <button class="btn sm" type="button" data-add="skills" style="align-self:flex-start">＋ 技能を追加</button></div></section>
+    <div class="fld"><label for="f-items">所持品（1行に1つ）</label><textarea id="f-items" name="items">${esc((d.items||[]).join("\n"))}</textarea></div>
+    <div class="fld"><label for="f-notes">メモ・設定</label><textarea id="f-notes" name="notes" style="min-height:180px">${esc(d.notes)}</textarea></div>
+    <div class="grid2">
+      <div class="fld"><label for="f-src">元のシートのURL</label><input id="f-src" name="sourceUrl" type="url" value="${esc(d.sourceUrl)}" placeholder="https://iachara.com/view/…"></div>
+      <div class="fld"><label for="f-site">サイト名</label><input id="f-site" name="sourceSite" value="${esc(d.sourceSite)}" placeholder="空欄ならURLから判定"></div>
+    </div>
+    <div class="fld"><label for="f-pal">チャットパレット</label><textarea id="f-pal" name="palette" style="font-family:var(--f-mono);font-size:.82rem">${esc(d.palette)}</textarea></div>
+    <div class="formbar"><button class="btn" type="button" data-act="cancel">キャンセル</button><button class="btn primary" type="submit" id="saveBtn">保存</button></div>
+  </form>`;
+}
+function collect(){
+  const f = $("form"); if (!f) return;
+  const d = S.draft, v = n => f.elements[n].value;
+  Object.assign(d, {name:v("name").trim(), ruby:v("ruby").trim(), system:v("system").trim(), player:v("player").trim(), summary:v("summary").trim(),
+    tags:v("tags").split(/[,、，]/).map(s=>s.trim()).filter(Boolean),
+    items:v("items").split("\n").map(s=>s.trim()).filter(Boolean), notes:v("notes"),
+    sourceUrl:v("sourceUrl").trim(), sourceSite:v("sourceSite").trim(), palette:v("palette")});
+  for (const key of ["resources","stats","skills"]){
+    d[key] = [...f.querySelectorAll(`[data-row="${key}"]`)].map(r => {
+      const o = {}; r.querySelectorAll("input").forEach(i => o[i.dataset.k] = i.value.trim());
+      if (key==="resources"){ o.cur = num(o.cur); o.max = num(o.max); }
+      return o;
+    });
+  }
+}
+function bindPortrait(){
+  const inp = $("f-photo"); if (!inp) return;
+  inp.addEventListener("change", async () => {
+    const file = inp.files[0]; if (!file) return;
+    collect(); S.uploading = true; renderMain();
+    try { const a = await S.assets.upload(file); S.draft.portraitId = a.id; toast("画像を追加しました"); }
+    catch(e){ toast("画像を追加できませんでした：" + (e?.message || "不明なエラー")); }
+    S.uploading = false; renderMain();
+  });
+}
+
+/* ---------- writes ---------- */
+const queues = {};
+function writeDoc(id, fn){ queues[id] = (queues[id]||Promise.resolve()).then(fn).catch(e => { toast("保存できませんでした：" + (e?.message || e?.code || "")); throw e; }); return queues[id]; }
+function clean(d){ const {id, ...rest} = d; return rest; }
+
+async function save(){
+  collect(); const d = S.draft;
+  if (!d.name){ toast("名前を入力してください"); $("f-name").focus(); return; }
+  d.resources = d.resources.filter(r=>r.label); d.stats = d.stats.filter(r=>r.label); d.skills = d.skills.filter(r=>r.label);
+  const now = Date.now(); $("saveBtn").disabled = true;
+  try {
+    if (d.id){ await writeDoc(d.id, () => S.db.doc("characters/"+d.id).set({...clean(d), updatedAt:now})); S.sel = d.id; }
+    else { const ref = S.db.collection("characters").doc(); await writeDoc(ref.id, () => ref.set({...clean(d), createdAt:now, updatedAt:now})); S.sel = ref.id; }
+    S.mode = "view"; S.draft = null; toast("保存しました"); renderMain(); renderList();
+  } catch { $("saveBtn") && ($("saveBtn").disabled = false); }
+}
+
+const resTimers = {};
+function bumpRes(i, d){
+  const c = current(); if (!c) return;
+  const res = (c.resources||[]).map(r=>({...r})); const r = res[i]; if (!r) return;
+  r.cur = d==="full" ? num(r.max) : num(r.cur) + Number(d);
+  const idx = S.chars.indexOf(c); S.chars[idx] = {...c, resources:res};
+  renderMain();
+  clearTimeout(resTimers[c.id]);
+  resTimers[c.id] = setTimeout(() => {
+    const latest = S.chars.find(x=>x.id===c.id);
+    writeDoc(c.id, () => S.db.doc("characters/"+c.id).update({resources:latest.resources, updatedAt:Date.now()})).catch(()=>{});
+  }, 600);
+}
+
+/* ---------- import / export ---------- */
+const SITES = {"iachara.com":"いあきゃら","yutorize.work":"ゆとシート","yutorize.2-d.jp":"ゆとシート","charasheet.vampire-blood.net":"キャラクター保管所"};
+const safeUrl = u => /^https?:\/\//i.test(String(u||""));
+function siteName(u){ try { const h = new URL(u).hostname.replace(/^www\./,""); return SITES[h] || h; } catch { return ""; } }
+function guessSystem(u, site){
+  const s = String(u||"").toLowerCase();
+  if (/sw2\.5|sw25/.test(s)) return "ソード・ワールド2.5";
+  if (/sw2\.0|sw20/.test(s)) return "ソード・ワールド2.0";
+  if (/dx3/.test(s)) return "ダブルクロス3rd";
+  if (site==="いあきゃら") return "クトゥルフ神話TRPG";
+  return "";
+}
+function parsePalette(cmds){
+  const out = [], seen = new Set();
+  for (const line of String(cmds||"").split("\n")){
+    const m = line.match(/(?:<=|≦)\s*(\d+)\s*(?:[【\[〔「（(]\s*([^】\]〕」）)]+?)\s*[】\]〕」）)]|\s+([^\s{}]+))/);
+    if (!m) continue;
+    const label = (m[2]||m[3]||"").trim();
+    if (!label || seen.has(label) || /^(STR|CON|POW|DEX|APP|SIZ|INT|EDU|SAN|幸運|アイデア|知識)/i.test(label)) continue;
+    seen.add(label); out.push({label, value:m[1]});
+  }
+  return out;
+}
+function parseImport(text){
+  const t = String(text||"").trim(); if (!t) return {error:""};
+  let o; try { o = JSON.parse(t); } catch { const a = t.indexOf("{"), b = t.lastIndexOf("}"); try { o = JSON.parse(t.slice(a,b+1)); } catch { return {error:"データを読み取れませんでした。コピーした内容をそのまま貼り付けてください。"}; } }
+  let bridge = null, ccf = null;
+  if (o?.kind==="charsheet-bridge"){ bridge = o; ccf = o.ccfolia?.data ? o.ccfolia : null; }
+  else if (o?.kind==="character" && o.data) ccf = o;
+  else return {error:"対応していない形式です。ココフォリア駒データか、拡張機能でコピーしたデータを貼り付けてください。"};
+  const d = ccf?.data || {};
+  const sourceUrl = (bridge?.url) || (safeUrl(d.externalUrl) ? d.externalUrl : "");
+  const sourceSite = bridge?.site || siteName(sourceUrl);
+  const p = {
+    name: String(d.name || bridge?.name || "").trim(),
+    sourceUrl, sourceSite,
+    resources: (d.status||[]).filter(s=>s?.label).map(s=>({label:String(s.label), cur:num(s.value), max:num(s.max)})),
+    stats: (d.params||[]).filter(s=>s?.label).map(s=>({label:String(s.label), value:String(s.value ?? "")})),
+    palette: String(d.commands || ""),
+    notes: String(d.memo || ""),
+  };
+  p.skills = parsePalette(p.palette);
+  p.system = guessSystem(sourceUrl, sourceSite);
+  if (!p.name) return {error:"キャラクター名が見つかりませんでした。"};
+  return {p, hasData: !!ccf, match: sourceUrl ? S.chars.find(c=>c.sourceUrl===sourceUrl) : null};
+}
+function openImp(text){ S.imp = {text: text||""}; S.mode = S.mode==="edit" ? "edit" : "view"; renderMain(); window.scrollTo(0,0); $("imp-text")?.focus(); }
+function renderImp(){
+  const box = $("imp");
+  if (!S.imp){ box.innerHTML = ""; return; }
+  if (!$("imp-text")){
+    box.innerHTML = `<section class="imp" aria-label="シートを取り込む"><h2>シートを取り込む</h2>
+      <p class="stamp" style="margin:0">各サイトの「ココフォリア駒出力」でコピーしたデータ、または拡張機能「シート帳へ送る」でコピーしたデータを貼り付けてください。元のシートのURLが同じキャラクターがいれば、そのシートを更新します。</p>
+      <textarea id="imp-text" aria-label="取り込むデータ" placeholder='{"kind":"character","data":{…}}'></textarea>
+      <div id="imp-pv"></div>
+      <div class="actions" id="imp-act" style="margin:0"></div></section>`;
+    $("imp-text").value = S.imp.text;
+  }
+  const r = parseImport($("imp-text").value); S.imp.r = r;
+  const pv = $("imp-pv"), act = $("imp-act");
+  if (r.error !== undefined){ pv.innerHTML = r.error ? `<p class="err">${esc(r.error)}</p>` : ""; }
+  else { const p = r.p;
+    pv.innerHTML = `<div class="pv"><b>${esc(p.name)}</b>${p.sourceSite ? `（${esc(p.sourceSite)}）` : ""}<br>
+      リソース ${p.resources.length}件・能力値 ${p.stats.length}件・技能 ${p.skills.length}件${p.palette ? "・チャットパレットあり" : ""}
+      ${r.hasData ? "" : `<br><span class="err">能力値データが入っていません。名前とURLだけ登録します。</span>`}
+      ${r.match ? `<br>「${esc(r.match.name)}」と同じシートです。取り込むとこのシートを更新します。` : ""}</div>`; }
+  act.innerHTML = `${r.p ? `<button class="btn primary sm" type="button" data-imp="go">${r.match ? "更新する" : "取り込む"}</button>` : ""}
+    ${r.match ? `<button class="btn sm" type="button" data-imp="new">新しいキャラとして取り込む</button>` : ""}
+    <button class="btn sm" type="button" data-imp="close">閉じる</button>`;
+}
+async function doImport(asNew){
+  const r = S.imp?.r; if (!r?.p) return;
+  const p = r.p, now = Date.now(), m = asNew ? null : r.match;
+  try {
+    if (m){
+      const patch = {name:p.name, sourceUrl:p.sourceUrl, sourceSite:p.sourceSite, updatedAt:now};
+      if (r.hasData){ Object.assign(patch, {resources:p.resources, stats:p.stats, palette:p.palette});
+        if (p.skills.length) patch.skills = p.skills;
+        if (!m.notes && p.notes) patch.notes = p.notes; }
+      await writeDoc(m.id, () => S.db.doc("characters/"+m.id).update(patch)); S.sel = m.id; toast(`${p.name}を更新しました`);
+    } else {
+      const ref = S.db.collection("characters").doc(), b = blank();
+      const doc = {...b, ...p, resources: r.hasData ? p.resources : b.resources, stats: r.hasData ? p.stats : b.stats, createdAt:now, updatedAt:now};
+      await writeDoc(ref.id, () => ref.set(doc)); S.sel = ref.id; toast(`${p.name}を取り込みました`);
+    }
+    S.imp = null; S.mode = "view"; S.draft = null; renderList(); renderMain();
+  } catch {}
+}
+function toCcfolia(c){
+  return JSON.stringify({kind:"character", data:{
+    name:c.name||"", memo:c.notes||"", initiative:0, externalUrl:safeUrl(c.sourceUrl) ? c.sourceUrl : "",
+    status:(c.resources||[]).map(r=>({label:r.label, value:num(r.cur), max:num(r.max)})),
+    params:(c.stats||[]).map(s=>({label:s.label, value:String(s.value)})),
+    commands:c.palette || (c.skills||[]).map(s=>`CC<=${s.value} 【${s.label}】`).join("\n"),
+  }});
+}
+function copyText(text, done){
+  const fallback = () => { const ta = document.createElement("textarea"); ta.value = text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.append(ta); ta.select();
+    let ok = false; try { ok = document.execCommand("copy"); } catch {} ta.remove(); toast(ok ? done : "コピーできませんでした。ブラウザの設定を確認してください。"); };
+  try { navigator.clipboard.writeText(text).then(() => toast(done), fallback); } catch { fallback(); }
+}
+$("impBtn").addEventListener("click", () => S.imp ? (S.imp=null, renderMain()) : openImp(""));
+$("imp").addEventListener("input", e => { if (e.target.id==="imp-text"){ S.imp.text = e.target.value; renderImp(); } });
+$("imp").addEventListener("click", e => { const b = e.target.closest("[data-imp]"); if (!b) return;
+  if (b.dataset.imp==="close"){ S.imp = null; renderMain(); } else doImport(b.dataset.imp==="new"); });
+document.addEventListener("paste", e => {
+  if (!S.canWrite || !S.db || e.target.closest?.("input,textarea,[contenteditable]")) return;
+  const text = e.clipboardData?.getData("text") || "";
+  if (parseImport(text).p){ e.preventDefault(); openImp(text); }
+});
+
+/* ---------- events ---------- */
+$("search").addEventListener("input", e => { S.q = e.target.value; renderList(); });
+$("chips").addEventListener("click", e => { const b = e.target.closest("[data-sys]"); if (!b) return; S.sys = b.dataset.sys; renderList(); });
+$("list").addEventListener("click", e => {
+  const b = e.target.closest("[data-id]"); if (!b) return;
+  if (S.mode==="edit") collect();
+  S.sel = b.dataset.id; S.mode = "view"; S.draft = null; S.confirmDel = false; renderList(); renderMain(); window.scrollTo(0,0);
+});
+$("newBtn").addEventListener("click", () => { S.mode = "edit"; S.draft = blank(); S.confirmDel = false; renderMain(); renderList(); window.scrollTo(0,0); $("f-name")?.focus(); });
+$("main").addEventListener("click", async e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.res !== undefined) return bumpRes(Number(t.dataset.res), t.dataset.d);
+  if (t.dataset.add){ collect(); S.draft[t.dataset.add].push(t.dataset.add==="resources" ? {label:"",cur:0,max:0} : {label:"",value:""}); renderMain();
+    const rows = $("main").querySelectorAll(`[data-row="${t.dataset.add}"]`); rows[rows.length-1]?.querySelector("input")?.focus(); return; }
+  if (t.dataset.rm){ collect(); S.draft[t.dataset.rm].splice(Number(t.dataset.i),1); renderMain(); return; }
+  const act = t.dataset.act, c = current();
+  if (act==="ccf") return copyText(toCcfolia(c), "ココフォリア駒をコピーしました。ココフォリアの盤面に貼り付けてください");
+  if (act==="pal") return copyText(c.palette, "チャットパレットをコピーしました");
+  if (act==="back"){ S.sel = null; S.imp = null; S.confirmDel = false; renderList(); renderMain(); }
+  else if (act==="edit"){ S.mode = "edit"; S.draft = JSON.parse(JSON.stringify(c)); renderMain(); window.scrollTo(0,0); }
+  else if (act==="cancel"){ S.mode = "view"; S.draft = null; renderMain(); renderList(); }
+  else if (act==="nophoto"){ collect(); S.draft.portraitId = ""; renderMain(); }
+  else if (act==="del"){ S.confirmDel = true; renderMain(); }
+  else if (act==="del-no"){ S.confirmDel = false; renderMain(); }
+  else if (act==="del-yes"){ const id = c.id; S.confirmDel = false; S.sel = null;
+    try { await writeDoc(id, () => S.db.doc("characters/"+id).delete()); toast(`${c.name}を削除しました`); } catch {}
+    renderList(); renderMain(); }
+  else if (act==="dup"){ const now = Date.now(), ref = S.db.collection("characters").doc();
+    try { await writeDoc(ref.id, () => ref.set({...clean(JSON.parse(JSON.stringify(c))), name:c.name+"（コピー）", createdAt:now, updatedAt:now}));
+      S.sel = ref.id; toast("複製しました"); renderList(); renderMain(); } catch {} }
+});
+$("main").addEventListener("change", e => {
+  if (e.target.id !== "f-tpl" || !e.target.value) return;
+  collect(); const t = TEMPLATES[e.target.value];
+  S.draft.resources = t.resources.map(([label,cur,max])=>({label,cur,max}));
+  S.draft.stats = t.stats.map(([label,value])=>({label,value}));
+  renderMain(); toast(`「${e.target.value}」を適用しました`);
+});
+$("main").addEventListener("submit", e => { e.preventDefault(); save(); });
+
+/* ---------- boot ---------- */
+renderList(); renderMain();
+(async () => {
+  const use = window.claude?.use;
+  const [db, user, assets] = use ? await Promise.all([use("db"), use("user"), use("assets")]) : [null,null,null];
+  if (!db){ S.noDb = true; renderList(); return; }
+  S.db = db; S.assets = assets;
+  const can = user ? await user.can("data.write") : null;
+  S.canWrite = can !== false;
+  $("newBtn").hidden = !S.canWrite;
+  $("impBtn").hidden = !S.canWrite;
+  db.collection("characters").orderBy("updatedAt","desc").onSnapshot(snap => {
+    S.chars = snap.docs.map(d => ({id:d.id, ...JSON.parse(JSON.stringify(d.data()))}));
+    S.ready = true;
+    if (S.sel && !current()) S.sel = null;
+    if (!S.sel && S.mode!=="edit" && S.chars.length && matchMedia("(min-width:761px)").matches) S.sel = S.chars[0].id;
+    renderList();
+    if (S.mode !== "edit") renderMain();
+  }, err => { S.noDb = true; S.ready = false; renderList(); });
+})();
+</script>

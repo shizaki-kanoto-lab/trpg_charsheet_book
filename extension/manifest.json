@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "シート帳へ送る",
+  "version": "0.1.0",
+  "description": "いあきゃら・ゆとシート・キャラクター保管所などのシートを、キャラクターシート帳へ取り込める形でコピーします。",
+  "action": {
+    "default_title": "シート帳へ送る",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "scripting", "clipboardRead", "clipboardWrite", "storage"]
+}

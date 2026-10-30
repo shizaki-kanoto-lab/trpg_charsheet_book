@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>シート帳へ送る</title>
+<style>
+  :root{--bg:#fff;--fg:#161B26;--muted:#5A6274;--line:#D2D7E0;--accent:#3346B8;--ok:#2E7D4F;--warn:#9A5B00;--soft:#F3F5F8}
+  @media (prefers-color-scheme:dark){:root{--bg:#191D27;--fg:#E5E8EF;--muted:#9AA2B3;--line:#2D3343;--accent:#8F9EFF;--ok:#6CC08F;--warn:#E5B567;--soft:#212633;color-scheme:dark}}
+  body{margin:0;width:340px;background:var(--bg);color:var(--fg);font:13px/1.6 "Zen Kaku Gothic New","Hiragino Sans",system-ui,sans-serif}
+  main{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+  h1{font-size:14px;margin:0}
+  .site{color:var(--muted);font-size:12px;word-break:break-all}
+  label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.05em}
+  input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--soft);color:inherit;font:inherit}
+  .st{border-radius:6px;padding:8px 10px;background:var(--soft);font-size:12px}
+  .st.ok{border-left:3px solid var(--ok)} .st.warn{border-left:3px solid var(--warn)}
+  button{font:inherit;border-radius:6px;padding:8px 12px;cursor:pointer;border:1px solid var(--line);background:var(--bg);color:inherit}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  details{font-size:12px;color:var(--muted)}
+  .msg{font-size:12px;color:var(--ok);min-height:1em}
+</style>
+</head>
+<body>
+<main>
+  <h1>シート帳へ送る</h1>
+  <div class="site" id="site">読み込み中…</div>
+  <div><label for="name">キャラクター名</label><input id="name"></div>
+  <div class="st" id="status"></div>
+  <div class="row">
+    <button class="primary" id="send" type="button">コピーしてシート帳を開く</button>
+    <button id="copy" type="button">コピーだけ</button>
+  </div>
+  <div class="msg" id="msg"></div>
+  <details>
+    <summary>設定</summary>
+    <p><label for="book">シート帳のURL</label><input id="book" type="url"></p>
+    <button id="saveBook" type="button">保存</button>
+  </details>
+</main>
+<script src="popup.js"></script>
+</body>
+</html>
