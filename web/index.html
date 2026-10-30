@@ -461,7 +461,7 @@ function bumpRes(i, d){
 }
 
 /* ---------- import / export ---------- */
-const SITES = {"iachara.com":"いあきゃら","yutorize.work":"ゆとシート","yutorize.2-d.jp":"ゆとシート","charasheet.vampire-blood.net":"キャラクター保管所"};
+const SITES = {"iachara.com":"いあきゃら","yutorize.work":"ゆとシート","yutorize.2-d.jp":"ゆとシート","charasheet.vampire-blood.net":"キャラクター保管所","charash.jp":"キャラッシュ","vinsanet.com":"vinsanet"};
 const safeUrl = u => /^https?:\/\//i.test(String(u||""));
 function siteName(u){ try { const h = new URL(u).hostname.replace(/^www\./,""); return SITES[h] || h; } catch { return ""; } }
 function guessSystem(u, site){

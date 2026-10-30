@@ -1,0 +1,60 @@
+// vinsanet (Kutulu): reads sheets through vinsanet's public API (/api/v1/characters/{id})
+// and converts them into the sheet book's import format.
+
+// Runs inside the vinsanet page (MAIN world). The character list on /mypage has no links,
+// so the IDs are collected by catching where each 「閲覧」 button would navigate, without navigating.
+async function vinsanetFetchSheets(onlyId) {
+  let ids = onlyId ? [onlyId] : null;
+  if (!ids) {
+    if (location.pathname !== "/mypage") return { error: "open-mypage" };
+    const router = document.querySelector("#app")?.__vue_app__?.config?.globalProperties?.$router;
+    if (!router) return { error: "no-router" };
+    const caught = [];
+    const orig = router.push;
+    router.push = loc => { caught.push(typeof loc === "string" ? loc : loc?.path || ""); return Promise.resolve(); };
+    try {
+      for (const b of document.querySelectorAll("button")) if (b.textContent.trim() === "閲覧") b.click();
+      await new Promise(r => setTimeout(r, 300));
+    } finally { router.push = orig; }
+    ids = [...new Set(caught.map(p => (p.match(/\/characters\/([A-Za-z0-9_-]{21})/) || [])[1]).filter(Boolean))];
+    if (!ids.length) return { error: "not-logged-in" };
+  }
+  const sheets = [];
+  for (const id of ids) {
+    const r = await fetch("/api/v1/characters/" + id);
+    if (r.ok) sheets.push({ id, data: await r.json() });
+  }
+  return { sheets };
+}
+
+function vinsanetToItem(sheet) {
+  const d = sheet.data || {};
+  const url = `https://vinsanet.com/characters/${sheet.id}/view`;
+  const profile = [
+    ["肩書き", d.title], ["年齢", d.age], ["性別", d.gender], ["職業", d.profession],
+    ["出身", d.home], ["階級", d.rank], ["家庭", d.family],
+  ].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`);
+  const remarks = (d.remarks || []).filter(r => r.body).map(r => (r.title ? `【${r.title}】\n` : "") + r.body);
+  const base = (d.skills || []).map(s => ({ label: String(s.name), value: String(Number(s.value) || 0) }));
+  const specialities = (d.specialities || []).filter(s => Number(s.value) > 0)
+    .map(s => ({ label: String(s.name), value: String(Number(s.value)) }));
+  const rule = d.rule && d.rule !== "基本ルール" ? d.rule : "";
+  return {
+    url, site: "vinsanet",
+    name: d.name || "", ruby: d.kana || "",
+    system: "Kutulu",
+    summary: d.title || d.profession || "",
+    tags: [...(d.tags || []), rule, d.isLost ? "ロスト" : ""].filter(Boolean),
+    notes: [profile.join("\n"), ...remarks].filter(Boolean).join("\n\n"),
+    skills: specialities,
+    ccfolia: {
+      kind: "character",
+      data: {
+        name: d.name || "", memo: "", initiative: 0, externalUrl: url,
+        status: [],
+        params: [...base, { label: "負傷", value: String(Number(d.injury) || 0) }],
+        commands: "",
+      },
+    },
+  };
+}

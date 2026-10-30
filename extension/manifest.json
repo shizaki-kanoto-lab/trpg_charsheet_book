@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "シート帳へ送る",
-  "version": "0.2.0",
-  "description": "いあきゃら・ゆとシート・キャラクター保管所などのシートを、キャラクターシート帳へ取り込める形でコピーします。",
+  "version": "0.4.0",
+  "description": "いあきゃら・キャラッシュ・vinsanet・ゆとシート・キャラクター保管所などのシートを、キャラクターシート帳へ取り込める形でコピーします。",
   "action": {
     "default_title": "シート帳へ送る",
     "default_popup": "popup.html"

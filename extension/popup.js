@@ -4,6 +4,8 @@ const SITES = {
   "yutorize.work": "ゆとシート",
   "yutorize.2-d.jp": "ゆとシート",
   "charasheet.vampire-blood.net": "キャラクター保管所",
+  "charash.jp": "キャラッシュ",
+  "vinsanet.com": "vinsanet",
 };
 
 const $ = id => document.getElementById(id);
@@ -50,42 +52,57 @@ async function openBook() {
   await chrome.tabs.create({ url: book || DEFAULT_BOOK });
 }
 
-async function initIachara(tab) {
-  const m = tab.url.match(/^https:\/\/iachara\.com\/(?:view|edit)\/(\d+)/);
-  setStatus("", "いあきゃらからシートを読み込んでいます…");
-  let r;
-  try {
-    const [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: "MAIN", func: iacharaFetchSheets, args: [null] });
-    r = res?.result;
-  } catch (e) { r = { error: e.message }; }
+// Sites whose whole character list the extension can read with the visitor's login.
+const BULK_SITES = [
+  { name: "いあきゃら", host: /^https:\/\/iachara\.com\//, sheet: /^https:\/\/iachara\.com\/(?:view|edit)\/(\d+)/,
+    fetch: iacharaFetchSheets, convert: iacharaToItem, ok: s => !!s?.data },
+  { name: "キャラッシュ", host: /^https:\/\/charash\.jp\//, sheet: /^https:\/\/charash\.jp\/(?:view|edit)\/([A-Za-z0-9_-]{12})/,
+    fetch: charashFetchSheets, convert: charashToItem, ok: s => !!s?.data },
+  { name: "vinsanet", host: /^https:\/\/vinsanet\.com\//, sheet: /^https:\/\/vinsanet\.com\/characters\/([A-Za-z0-9_-]{21})/,
+    fetch: vinsanetFetchSheets, convert: vinsanetToItem, ok: s => !!s?.data,
+    errors: { "open-mypage": "全キャラを送るときは vinsanet のマイページ（https://vinsanet.com/mypage）を開いてから押してください。" } },
+];
 
-  if (r?.sheets) {
-    iaAll = r.sheets.map(iacharaToItem);
+async function initBulk(tab, site) {
+  const m = tab.url.match(site.sheet);
+  setStatus("", `${site.name}からシートを読み込んでいます…`);
+  const call = async arg => {
+    try {
+      const [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: "MAIN", func: site.fetch, args: [arg] });
+      return res?.result;
+    } catch (e) { return { error: e.message }; }
+  };
+  const r = await call(null);
+
+  if (r?.sheets?.length) {
+    iaAll = r.sheets.filter(site.ok).map(site.convert);
+    $("allSite").textContent = site.name;
     $("allCount").textContent = iaAll.length;
     $("allBox").hidden = false;
   }
 
-  let one = m && iaAll?.find(i => i.url.endsWith("/" + m[1]));
+  let one = m && iaAll?.find(i => i.url.split("/").includes(m[1]));
   if (m && !one) {
     // Someone else's public sheet: ask for that one directly.
-    try {
-      const [res] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: "MAIN", func: iacharaFetchSheets, args: [m[1]] });
-      if (res?.result?.sheets?.[0]?.data) one = iacharaToItem(res.result.sheets[0]);
-    } catch { /* falls through to the message below */ }
+    const r1 = await call(m[1]);
+    const s = r1?.sheets?.[0];
+    if (site.ok(s)) one = site.convert(s);
   }
 
   if (one) {
     items = [one];
     $("name").value = one.name;
     $("single").hidden = false;
-    const d = one.ccfolia.data;
-    setStatus("ok", `${one.system}: ステータス${d.status.length}件・能力値${d.params.length}件・技能${one.skills.length}件`);
+    const d = one.ccfolia?.data;
+    setStatus(d ? "ok" : "warn", d
+      ? `${one.system}: ステータス${d.status.length}件・能力値${d.params.length}件・技能${one.skills.length}件`
+      : `${one.system}: このシステムの能力値はまだ読み取れません。名前・URL・プロフィールを送ります。`);
   } else if (iaAll) {
-    setStatus("ok", "下のボタンで、いあきゃらの自分のキャラをまとめて送れます。1人だけ送るときはそのシートを開いてください。");
+    setStatus("ok", `下のボタンで、${site.name}の自分のキャラをまとめて送れます。1人だけ送るときはそのシートを開いてください。`);
   } else {
-    setStatus("warn", r?.error === "not-logged-in"
-      ? "いあきゃらにログインしていません。ログインしてから、もう一度この画面を開いてください。"
-      : `いあきゃらから読み込めませんでした（${r?.error || "不明"}）。ページを再読み込みしてから試してください。`);
+    setStatus("warn", site.errors?.[r?.error] ? site.errors[r.error] : r?.error === "not-logged-in"
+      ? `${site.name}にログインしていません。ログインしてから、もう一度この画面を開いてください。`
+      : `${site.name}から読み込めませんでした（${r?.error || "不明"}）。ページを再読み込みしてから試してください。`);
   }
 }
 
@@ -116,7 +133,8 @@ async function init() {
   $("book").value = book || DEFAULT_BOOK;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   $("site").textContent = `${siteName(tab?.url) || "このページ"} — ${tab?.url || ""}`;
-  if (/^https:\/\/iachara\.com\//.test(tab?.url || "")) await initIachara(tab);
+  const site = BULK_SITES.find(s => s.host.test(tab?.url || ""));
+  if (site) await initBulk(tab, site);
   else await initOther(tab);
 }
 
