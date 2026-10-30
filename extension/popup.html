@@ -25,12 +25,17 @@
 <main>
   <h1>シート帳へ送る</h1>
   <div class="site" id="site">読み込み中…</div>
-  <div><label for="name">キャラクター名</label><input id="name"></div>
-  <div class="st" id="status"></div>
-  <div class="row">
-    <button class="primary" id="send" type="button">コピーしてシート帳を開く</button>
-    <button id="copy" type="button">コピーだけ</button>
-  </div>
+  <div class="st" id="status">読み込み中…</div>
+  <section id="single" hidden>
+    <div><label for="name">キャラクター名</label><input id="name"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="primary" id="send" type="button">コピーしてシート帳を開く</button>
+      <button id="copy" type="button">コピーだけ</button>
+    </div>
+  </section>
+  <section id="allBox" hidden>
+    <button class="primary" id="sendAll" type="button" style="width:100%">いあきゃらの全キャラ（<span id="allCount">0</span>人）をシート帳へ送る</button>
+  </section>
   <div class="msg" id="msg"></div>
   <details>
     <summary>設定</summary>
@@ -38,6 +43,7 @@
     <button id="saveBook" type="button">保存</button>
   </details>
 </main>
+<script src="iachara.js"></script>
 <script src="popup.js"></script>
 </body>
 </html>
