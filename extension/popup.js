@@ -1,4 +1,3 @@
-const DEFAULT_BOOK = "https://claude.ai/artifact/UFcoUM4QKeEcBXE55RigXo";
 const SITES = {
   "iachara.com": "いあきゃら",
   "yutorize.work": "ゆとシート",
@@ -9,8 +8,9 @@ const SITES = {
 };
 
 const $ = id => document.getElementById(id);
-let items = [];      // what this popup will send (one sheet, or every iachara sheet)
-let iaAll = null;    // every iachara sheet, when the visitor is logged in
+let items = [];      // the single sheet this popup can add
+let iaAll = null;    // every sheet on the site, when the visitor is logged in
+let notion = { token: "", db: NOTION_DEFAULT_DB };
 
 // Runs inside the sheet page: collects the URL, title, and any CCFolia piece data shown on the page.
 function grabFromPage() {
@@ -42,14 +42,39 @@ async function readClipboardPiece() {
 
 function setStatus(kind, text) { const st = $("status"); st.className = "st " + kind; st.textContent = text; }
 
-async function copyBundle(list) {
-  if (list.length === 1) list[0].name = $("name").value.trim() || list[0].name;
-  await navigator.clipboard.writeText(JSON.stringify({ kind: "charsheet-bridge", version: 2, items: list, sentAt: new Date().toISOString() }));
+function setMsg(text, isError) { const m = $("msg"); m.className = "msg" + (isError ? " err" : ""); m.textContent = text; }
+
+async function loadSettings() {
+  const { notionToken, notionDb } = await chrome.storage.local.get(["notionToken", "notionDb"]);
+  notion = { token: notionToken || "", db: notionDbId(notionDb) || NOTION_DEFAULT_DB };
+  $("token").value = notion.token;
+  $("db").value = "https://www.notion.so/" + notion.db;
+  if (!notion.token) { $("settings").open = true; setMsg("Notionのトークンを設定に入力してください。", true); }
 }
 
-async function openBook() {
-  const { book } = await chrome.storage.local.get("book");
-  await chrome.tabs.create({ url: book || DEFAULT_BOOK });
+// Shows how many of the sheets are new; the add button only ever adds those.
+async function showAllCount() {
+  if (!iaAll || !notion.token) return;
+  try {
+    const existing = await notionExistingUrls(notion.token, notion.db);
+    const fresh = iaAll.filter(i => !existing.has(i.url)).length;
+    $("sendAll").textContent = fresh ? `新規 ${fresh}人をNotionに追加` : "新しいシートはありません";
+    $("sendAll").disabled = !fresh;
+    setMsg(`全${iaAll.length}人（新規 ${fresh}人・追加済み ${iaAll.length - fresh}人）`);
+    if (items[0]?.url && existing.has(items[0].url)) { $("send").textContent = "このシートは追加済みです"; $("send").disabled = true; }
+  } catch (e) { setMsg(e.message, true); }
+}
+
+async function send(list) {
+  if (!notion.token) { $("settings").open = true; setMsg("Notionのトークンを設定に入力してください。", true); return; }
+  $("send").disabled = $("sendAll").disabled = true;
+  setMsg("Notionに保存しています…");
+  try {
+    const r = await notionAddNew(notion.token, notion.db, list.map(notionRecordFromItem), (done, total) =>
+      setMsg(`${done} / ${total} 人を保存しました…\nこの画面を閉じると止まります。もう一度押せば続きから追加します。`));
+    const parts = [`${r.added}人を追加しました`, r.skipped ? `追加済みの${r.skipped}人はそのままです` : "", r.failed.length ? `${r.failed.length}人は失敗しました: ${r.failed.map(f => f.name).join("、")}` : "", r.stopped || ""];
+    setMsg(parts.filter(Boolean).join("\n"), !!(r.stopped || r.failed.length));
+  } catch (e) { setMsg(e.message, true); }
 }
 
 // Sites whose whole character list the extension can read with the visitor's login.
@@ -60,7 +85,7 @@ const BULK_SITES = [
     fetch: charashFetchSheets, convert: charashToItem, ok: s => !!s?.data },
   { name: "vinsanet", host: /^https:\/\/vinsanet\.com\//, sheet: /^https:\/\/vinsanet\.com\/characters\/([A-Za-z0-9_-]{21})/,
     fetch: vinsanetFetchSheets, convert: vinsanetToItem, ok: s => !!s?.data,
-    errors: { "open-mypage": "全キャラを送るときは vinsanet のマイページ（https://vinsanet.com/mypage）を開いてから押してください。" } },
+    errors: { "open-mypage": "全キャラを追加するときは vinsanet のマイページ（https://vinsanet.com/mypage）を開いてから押してください。" } },
 ];
 
 async function initBulk(tab, site) {
@@ -76,8 +101,7 @@ async function initBulk(tab, site) {
 
   if (r?.sheets?.length) {
     iaAll = r.sheets.filter(site.ok).map(site.convert);
-    $("allSite").textContent = site.name;
-    $("allCount").textContent = iaAll.length;
+    $("sendAll").textContent = `${site.name}の新規だけNotionに追加`;
     $("allBox").hidden = false;
   }
 
@@ -96,9 +120,9 @@ async function initBulk(tab, site) {
     const d = one.ccfolia?.data;
     setStatus(d ? "ok" : "warn", d
       ? `${one.system}: ステータス${d.status.length}件・能力値${d.params.length}件・技能${one.skills.length}件`
-      : `${one.system}: このシステムの能力値はまだ読み取れません。名前・URL・プロフィールを送ります。`);
+      : `${one.system}: このシステムの能力値はまだ読み取れません。名前・URL・プロフィールを追加します。`);
   } else if (iaAll) {
-    setStatus("ok", `下のボタンで、${site.name}の自分のキャラをまとめて送れます。1人だけ送るときはそのシートを開いてください。`);
+    setStatus("ok", `下のボタンで、${site.name}の自分のキャラのうち新規だけを追加できます。1人だけ追加するときはそのシートを開いてください。`);
   } else {
     setStatus("warn", site.errors?.[r?.error] ? site.errors[r.error] : r?.error === "not-logged-in"
       ? `${site.name}にログインしていません。ログインしてから、もう一度この画面を開いてください。`
@@ -124,33 +148,31 @@ async function initOther(tab) {
     const d = ccfolia.data;
     setStatus("ok", `能力値データあり（${source}から取得）: ステータス${(d.status || []).length}件・パラメータ${(d.params || []).length}件${d.commands ? "・チャットパレットあり" : ""}`);
   } else {
-    setStatus("warn", "能力値データが見つかりません。名前とURLだけ送ります。サイトの「ココフォリア出力」ボタンでコピーしてから、もう一度この画面を開くと能力値も送れます。");
+    setStatus("warn", "能力値データが見つかりません。名前とURLだけ追加します。サイトの「ココフォリア出力」ボタンでコピーしてから、もう一度この画面を開くと能力値も追加できます。");
   }
 }
 
 async function init() {
-  const { book } = await chrome.storage.local.get("book");
-  $("book").value = book || DEFAULT_BOOK;
+  await loadSettings();
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   $("site").textContent = `${siteName(tab?.url) || "このページ"} — ${tab?.url || ""}`;
   const site = BULK_SITES.find(s => s.host.test(tab?.url || ""));
   if (site) await initBulk(tab, site);
   else await initOther(tab);
+  await showAllCount();
 }
 
-const run = async (list, andOpen) => {
-  try {
-    await copyBundle(list);
-    if (andOpen) await openBook();
-    else $("msg").textContent = "コピーしました。シート帳で ⌘V を押すと取り込めます。";
-  } catch (e) { $("msg").textContent = "コピーできませんでした: " + e.message; }
-};
-$("send").addEventListener("click", () => run(items, true));
-$("copy").addEventListener("click", () => run(items, false));
-$("sendAll").addEventListener("click", () => run(iaAll, true));
-$("saveBook").addEventListener("click", async () => {
-  await chrome.storage.local.set({ book: $("book").value.trim() });
-  $("msg").textContent = "シート帳のURLを保存しました。";
+$("send").addEventListener("click", () => {
+  const name = $("name").value.trim();
+  send([{ ...items[0], name: name || items[0].name, ...(items[0].ccfolia && name ? { ccfolia: { ...items[0].ccfolia, data: { ...items[0].ccfolia.data, name } } } : {}) }]);
+});
+$("sendAll").addEventListener("click", () => send(iaAll));
+$("open").addEventListener("click", () => chrome.tabs.create({ url: "https://www.notion.so/" + notion.db }));
+$("save").addEventListener("click", async () => {
+  await chrome.storage.local.set({ notionToken: $("token").value.trim(), notionDb: notionDbId($("db").value) || NOTION_DEFAULT_DB });
+  await loadSettings();
+  setMsg("保存しました。");
+  await showAllCount();
 });
 
 init();

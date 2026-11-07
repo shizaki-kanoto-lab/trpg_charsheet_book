@@ -16,9 +16,11 @@
   .st.ok{border-left:3px solid var(--ok)} .st.warn{border-left:3px solid var(--warn)}
   button{font:inherit;border-radius:6px;padding:8px 12px;cursor:pointer;border:1px solid var(--line);background:var(--bg);color:inherit}
   button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
-  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .wide{width:100%}
   details{font-size:12px;color:var(--muted)}
-  .msg{font-size:12px;color:var(--ok);min-height:1em}
+  .msg{font-size:12px;color:var(--ok);min-height:1em;white-space:pre-wrap}
+  .msg.err{color:var(--warn)}
 </style>
 </head>
 <body>
@@ -28,21 +30,21 @@
   <div class="st" id="status">読み込み中…</div>
   <section id="single" hidden>
     <div><label for="name">キャラクター名</label><input id="name"></div>
-    <div class="row" style="margin-top:8px">
-      <button class="primary" id="send" type="button">コピーしてシート帳を開く</button>
-      <button id="copy" type="button">コピーだけ</button>
-    </div>
+    <button class="primary wide" id="send" type="button" style="margin-top:8px">このシートをNotionに追加</button>
   </section>
   <section id="allBox" hidden>
-    <button class="primary" id="sendAll" type="button" style="width:100%"><span id="allSite">いあきゃら</span>の全キャラ（<span id="allCount">0</span>人）をシート帳へ送る</button>
+    <button class="primary wide" id="sendAll" type="button">新規だけNotionに追加</button>
   </section>
   <div class="msg" id="msg"></div>
-  <details>
+  <button class="wide" id="open" type="button">Notionのシート帳を開く</button>
+  <details id="settings">
     <summary>設定</summary>
-    <p><label for="book">シート帳のURL</label><input id="book" type="url"></p>
-    <button id="saveBook" type="button">保存</button>
+    <p><label for="token">Notionのトークン</label><input id="token" type="password" autocomplete="off"></p>
+    <p><label for="db">データベースのURL</label><input id="db" type="url"></p>
+    <button id="save" type="button">保存</button>
   </details>
 </main>
+<script src="notion.js"></script>
 <script src="iachara.js"></script>
 <script src="charash.js"></script>
 <script src="vinsanet.js"></script>
