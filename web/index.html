@@ -560,20 +560,27 @@ function renderImp(){
   const pv = $("imp-pv"), act = $("imp-act");
   const busy = S.imp.busy;
   if (r.error !== undefined){ pv.innerHTML = r.error ? `<p class="err">${esc(r.error)}</p>` : ""; act.innerHTML = `<button class="btn sm" type="button" data-imp="close">閉じる</button>`; return; }
-  const L = r.list, upd = L.filter(x=>x.match).length;
+  if (!S.ready){ pv.innerHTML = `<div class="pv">保存済みのキャラを読み込んでいます…</div>`; act.innerHTML = `<button class="btn sm" type="button" data-imp="close">閉じる</button>`; return; }
+  const L = r.list, upd = L.filter(x=>x.match).length, fresh = L.length - upd;
   if (L.length === 1){ const x = L[0], p = x.p;
     pv.innerHTML = `<div class="pv"><b>${esc(p.name)}</b>${p.sourceSite ? `（${esc(p.sourceSite)}）` : ""}<br>
       リソース ${p.resources.length}件・能力値 ${p.stats.length}件・技能 ${p.skills.length}件${p.palette ? "・チャットパレットあり" : ""}
       ${x.hasData ? "" : `<br><span class="err">能力値データが入っていません。名前とURLだけ登録します。</span>`}
       ${x.match ? `<br>「${esc(x.match.name)}」と同じシートです。取り込むとこのシートを更新します。` : ""}</div>`;
   } else {
-    pv.innerHTML = `<div class="pv"><b>${L.length}人</b>のシートがあります（新規 ${L.length-upd}人・更新 ${upd}人）<br>
-      <span class="stamp">${L.slice(0,12).map(x=>esc(x.p.name)).join("、")}${L.length>12 ? " ほか" : ""}</span>
-      ${busy ? `<br><b>${busy.done} / ${L.length} 人を保存しました…</b>` : ""}</div>`;
+    const shown = upd && fresh ? L.filter(x=>!x.match) : L;
+    pv.innerHTML = busy ? `<div class="pv"><b>${busy.done} / ${busy.total} 人を保存しました…</b></div>`
+      : `<div class="pv"><b>${L.length}人</b>のシートがあります（新規 ${fresh}人・取り込み済み ${upd}人）<br>
+      ${fresh ? `<span class="stamp">${upd ? "新規: " : ""}${shown.slice(0,12).map(x=>esc(x.p.name)).join("、")}${shown.length>12 ? " ほか" : ""}</span>` : "新しいシートはありません。"}
+      ${upd ? `<br><span class="stamp">取り込み済みのキャラを更新すると、HP・SANや能力値、技能が元のシートの内容で上書きされます。</span>` : ""}</div>`;
   }
-  act.innerHTML = busy ? "" : `<button class="btn primary sm" type="button" data-imp="go">${L.length>1 ? `${L.length}人を取り込む` : L[0].match ? "更新する" : "取り込む"}</button>
-    ${L.length===1 && L[0].match ? `<button class="btn sm" type="button" data-imp="new">新しいキャラとして取り込む</button>` : ""}
-    <button class="btn sm" type="button" data-imp="close">閉じる</button>`;
+  if (busy){ act.innerHTML = ""; return; }
+  const close = `<button class="btn sm" type="button" data-imp="close">閉じる</button>`;
+  if (L.length === 1) act.innerHTML = `<button class="btn primary sm" type="button" data-imp="go">${L[0].match ? "更新する" : "取り込む"}</button>
+    ${L[0].match ? `<button class="btn sm" type="button" data-imp="new">新しいキャラとして取り込む</button>` : ""}${close}`;
+  else if (!upd) act.innerHTML = `<button class="btn primary sm" type="button" data-imp="go">${L.length}人を取り込む</button>${close}`;
+  else act.innerHTML = `${fresh ? `<button class="btn primary sm" type="button" data-imp="fresh">新規 ${fresh}人だけ取り込む</button>` : ""}
+    <button class="btn sm" type="button" data-imp="go">${fresh ? `${upd}人の更新も含めて取り込む` : `${upd}人を更新する`}</button>${close}`;
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function writeWithRetry(fn){
@@ -599,16 +606,21 @@ async function importOne(x, asNew, now){
   await writeWithRetry(() => ref.set(doc));
   return ref.id;
 }
-async function doImport(asNew){
-  const L = S.imp?.r?.list; if (!L?.length || S.imp.busy) return;
-  S.imp.busy = {done:0}; renderImp();
+async function doImport(how){
+  if (!S.imp || S.imp.busy || !S.ready) return;
+  const asNew = how==="new";
+  const all = parseImport($("imp-text").value).list || [];   // re-checked now, against the latest saved sheets
+  const L = how==="fresh" ? all.filter(x=>!x.match) : all;
+  if (!L.length) return;
+  S.imp.busy = {done:0, total:L.length}; renderImp();
   let lastId = null, failed = 0;
   for (const x of L){
     try { lastId = await importOne(x, asNew, Date.now()); } catch (e){ failed++; if (e?.code==="quota_exceeded"){ toast("保存できる件数の上限に達しました。不要なキャラを削除してください。"); break; } }
     S.imp.busy.done++; if (L.length > 1) renderImp();
   }
   const ok = S.imp.busy.done - failed;
-  toast(L.length===1 ? (failed ? "保存できませんでした" : `${L[0].p.name}を${L[0].match && !asNew ? "更新" : "取り込み"}しました`)
+  toast(how==="fresh" ? `新規 ${ok}人を取り込みました${failed ? `（${failed}人は失敗）` : ""}。取り込み済みの ${all.length-L.length}人はそのままです`
+    : L.length===1 ? (failed ? "保存できませんでした" : `${L[0].p.name}を${L[0].match && !asNew ? "更新" : "取り込み"}しました`)
     : `${ok}人を保存しました${failed ? `（${failed}人は失敗）` : ""}`);
   if (lastId && L.length===1) S.sel = lastId;
   S.imp = null; S.mode = "view"; S.draft = null; renderList(); renderMain();
@@ -629,7 +641,7 @@ function copyText(text, done){
 $("impBtn").addEventListener("click", () => S.imp ? (S.imp=null, renderMain()) : openImp(""));
 $("imp").addEventListener("input", e => { if (e.target.id==="imp-text"){ S.imp.text = e.target.value; renderImp(); } });
 $("imp").addEventListener("click", e => { const b = e.target.closest("[data-imp]"); if (!b) return;
-  if (b.dataset.imp==="close"){ S.imp = null; renderMain(); } else doImport(b.dataset.imp==="new"); });
+  if (b.dataset.imp==="close"){ S.imp = null; renderMain(); } else doImport(b.dataset.imp); });
 document.addEventListener("paste", e => {
   if (!S.canWrite || !S.db || e.target.closest?.("input,textarea,[contenteditable]")) return;
   const text = e.clipboardData?.getData("text") || "";
@@ -708,7 +720,7 @@ renderList(); renderMain();
     if (S.sel && !current()) S.sel = null;
     if (!S.sel && S.mode!=="edit" && S.chars.length && matchMedia("(min-width:761px)").matches) S.sel = S.chars[0].id;
     renderList();
-    if (S.mode !== "edit") renderMain();
+    if (S.mode !== "edit") renderMain(); else renderImp();
   }, err => { S.noDb = true; S.ready = false; renderList(); });
 })();
 </script>
