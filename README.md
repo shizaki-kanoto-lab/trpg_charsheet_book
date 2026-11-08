@@ -15,6 +15,8 @@
 2. Settings → Pages の Source を「GitHub Actions」にする
 3. Actions タブの「シート帳をGitHub Pagesに公開」を Run workflow で実行する
 
+公開ページの「Notionから更新」ボタンでも、このワークフローを実行できます。最初に押したときに GitHub のトークンを聞かれるので、公開リポジトリだけを対象に「Actions: Read and write」の権限を付けた fine-grained トークンを作って貼り付けてください。トークンはそのブラウザの localStorage にだけ保存されます（Shift を押しながらボタンを押すと設定画面が開き、消せます）。
+
 公開リポジトリ: https://github.com/shizaki-kanoto-lab/trpg_charsheet_book （このリポジトリ g16qa/charsheet-book は非公開。mainを両方にpushする）
 
 公開URL: https://shizaki-kanoto-lab.github.io/trpg_charsheet_book/

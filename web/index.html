@@ -38,6 +38,7 @@ button{cursor:pointer}
 .brand span{color:var(--muted);font-size:.86rem}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn:hover{background:var(--surface-2)}
+.btn[hidden]{display:none}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
 .btn.primary:hover{filter:brightness(1.08)}
 .btn.danger{color:var(--danger)}
@@ -200,6 +201,17 @@ button{cursor:pointer}
 button.tag{background:transparent;cursor:pointer}
 button.tag:hover{border-color:var(--accent);color:var(--accent)}
 .loading{color:var(--muted);font-size:.9rem}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08);background:var(--accent)}
+dialog.gh{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:20px;max-width:min(520px,calc(100vw - 32px));width:100%}
+dialog.gh::backdrop{background:rgba(0,0,0,.45)}
+dialog.gh h2{margin:0 0 10px;font-family:var(--f-display);font-weight:800;font-size:1.15rem;letter-spacing:.04em}
+dialog.gh p,dialog.gh ol{margin:0 0 10px;font-size:.92rem;line-height:1.7}
+dialog.gh ol{padding-left:1.3em}
+dialog.gh input[type=password]{width:100%;box-sizing:border-box;font:inherit;font-family:var(--f-mono);font-size:.85rem;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+dialog.gh .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+dialog.gh .err{color:var(--danger)}
+dialog.gh .note{color:var(--muted);font-size:.84rem}
 </style>
 
 <header class="top">
@@ -207,6 +219,7 @@ button.tag:hover{border-color:var(--accent);color:var(--accent)}
     <nav class="views" id="views" aria-label="表示の切り替え"><button type="button" data-view="chars">キャラ</button><button type="button" data-view="scen">シナリオ</button></nav></div>
   <div class="hdr-actions">
     <span class="fresh" id="fresh"></span>
+    <button class="btn primary" id="rebuild" type="button" hidden>Notionから更新</button>
     <button class="btn" id="reload" type="button">Notionから再読み込み</button>
     <a class="btn" href="https://www.notion.so/b47dc79665f54fdeb8df5e2afdb134a5" target="_blank" rel="noopener">Notionで開く ↗</a>
   </div>
@@ -227,6 +240,27 @@ button.tag:hover{border-color:var(--accent);color:var(--accent)}
   <main class="main"><div id="banner"></div><div id="main"></div></main>
 </div>
 <div class="toast" id="toast" hidden></div>
+<dialog class="gh" id="ghDlg">
+  <form method="dialog" id="ghForm">
+    <h2>Notionから更新する</h2>
+    <p>この画面から公開データを作り直すには、GitHub のトークンが要ります。最初の1回だけ設定してください。</p>
+    <ol>
+      <li><a id="ghNew" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub のトークン作成画面 ↗</a>を開きます（<span id="ghOwner"></span> でログイン）。</li>
+      <li>Repository access で「Only select repositories」→ <code id="ghRepo"></code> を選びます。</li>
+      <li>Permissions の Repositories で「Actions」を「Read and write」にして作成します。</li>
+      <li>表示されたトークン（github_pat_…）を下に貼り付けます。</li>
+    </ol>
+    <input type="password" id="ghToken" autocomplete="off" spellcheck="false" placeholder="github_pat_…" aria-label="GitHub のトークン">
+    <p class="note">トークンはこのブラウザの中だけに保存され、GitHub 以外には送りません。</p>
+    <p class="err" id="ghErr" hidden></p>
+    <p class="note">トークンを作らずに更新するときは <a id="ghActions" target="_blank" rel="noopener">GitHub の Actions 画面 ↗</a> で「Run workflow」を押してください。</p>
+    <div class="row">
+      <button class="btn" type="button" id="ghForget" hidden>保存したトークンを消す</button>
+      <button class="btn" type="button" id="ghCancel">やめる</button>
+      <button class="btn primary" id="ghSave" value="save">保存して更新</button>
+    </div>
+  </form>
+</dialog>
 
 <script>
 /* Read-only view of the Notion database "キャラクターシート帳".
@@ -315,6 +349,7 @@ async function loadStatic(refresh){
   for (const c of S.chars) S.details[c.id] = {ok:true, notes:c.notes || "", palette:c.palette || "", piece:c.piece || null};
   $("fresh").textContent = data.generatedAt ? `${fmtDate(Date.parse(data.generatedAt))} 時点` : "";
   $("reload").textContent = "再読み込み";
+  $("rebuild").hidden = false;
   if (S.sel && !current()) S.sel = null;
   if (!S.sel && S.chars.length && matchMedia("(min-width:761px)").matches) S.sel = grouped(filtered())[0]?.c.id || null;
   renderBanner(); renderList(); renderMain();
@@ -671,6 +706,76 @@ $("main").addEventListener("click", e => {
   if (b.dataset.act === "back"){ S.sel = null; renderList(); renderMain(); }
   else if (b.dataset.act === "ccf" && c) copyText(pieceText(c), "ココフォリア駒をコピーしました。ココフォリアの盤面に貼り付けてください。");
   else if (b.dataset.act === "pal" && c) copyText(S.details[c.id].palette, "チャットパレットをコピーしました");
+});
+
+/* ---------- rebuild on GitHub Pages ----------
+   Runs the Pages workflow (it reads Notion and writes data.json), waits for it, then reloads data.json. */
+const GH = (() => {
+  const m = location.hostname.match(/^([^.]+)\.github\.io$/);
+  const owner = m ? m[1] : "shizaki-kanoto-lab";
+  const repo = (m && location.pathname.split("/").filter(Boolean)[0]) || "trpg_charsheet_book";
+  return {owner, repo, workflow:"pages.yml", api:`https://api.github.com/repos/${owner}/${repo}/actions`};
+})();
+const ghToken = {get(){ return store.get("ghToken") || ""; }, set(v){ store.set("ghToken", v); }, clear(){ try { localStorage.removeItem("ghToken"); } catch {} }};
+async function gh(path, opts={}){
+  const r = await fetch(GH.api + path, {...opts, headers:{Accept:"application/vnd.github+json", Authorization:`Bearer ${ghToken.get()}`, "X-GitHub-Api-Version":"2022-11-28", ...(opts.body ? {"Content-Type":"application/json"} : {})}});
+  if (r.status === 401 || r.status === 403 || r.status === 404){ const e = new Error("auth"); e.status = r.status; throw e; }
+  if (!r.ok) throw new Error("GitHub " + r.status);
+  return r.status === 204 ? null : r.json();
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let rebuilding = false;
+function rebuildLabel(t){ $("rebuild").textContent = t; }
+async function rebuild(){
+  if (rebuilding) return;
+  if (!ghToken.get()) return openGhDlg();
+  rebuilding = true; $("rebuild").disabled = true; rebuildLabel("更新を始めています…");
+  const started = Date.now() - 5000;
+  try {
+    await gh(`/workflows/${GH.workflow}/dispatches`, {method:"POST", body:JSON.stringify({ref:"main"})});
+    let run = null;
+    for (let i = 0; i < 90; i++){            // up to about 15 minutes
+      await sleep(i < 3 ? 4000 : 10000);
+      const r = await gh(`/workflows/${GH.workflow}/runs?event=workflow_dispatch&per_page=5`);
+      run = (r.workflow_runs || []).find(x => Date.parse(x.created_at) >= started) || run;
+      if (!run) continue;
+      if (run.status === "completed") break;
+      rebuildLabel(run.status === "queued" ? "順番待ち…" : "Notionから読み込み中…");
+    }
+    if (!run || run.status !== "completed") throw new Error("timeout");
+    if (run.conclusion !== "success") throw new Error("failed");
+    rebuildLabel("反映を待っています…");
+    const before = $("fresh").textContent;
+    for (let i = 0; i < 12; i++){            // Pages can take a moment to serve the new data.json
+      await loadStatic(true);
+      if ($("fresh").textContent !== before) break;
+      await sleep(5000);
+    }
+    toast("Notionの内容で更新しました");
+  } catch (e){
+    if (e.message === "auth"){ ghToken.clear(); openGhDlg(e.status === 404 || e.status === 403 ? "このトークンでは更新できませんでした。リポジトリと「Actions: Read and write」の設定を確かめてください。" : "トークンが無効になっています。もう一度設定してください。"); }
+    else if (e.message === "failed") toast("更新に失敗しました。GitHub の Actions 画面で内容を確かめてください。");
+    else if (e.message === "timeout") toast("更新に時間がかかっています。しばらくしてから再読み込みしてください。");
+    else toast("GitHub に接続できませんでした。");
+  } finally {
+    rebuilding = false; $("rebuild").disabled = false; rebuildLabel("Notionから更新");
+  }
+}
+function openGhDlg(err){
+  $("ghOwner").textContent = GH.owner; $("ghRepo").textContent = GH.repo;
+  $("ghActions").href = `https://github.com/${GH.owner}/${GH.repo}/actions/workflows/${GH.workflow}`;
+  $("ghToken").value = ""; $("ghErr").hidden = !err; $("ghErr").textContent = err || "";
+  $("ghForget").hidden = !ghToken.get();
+  $("ghDlg").showModal(); $("ghToken").focus();
+}
+$("rebuild").addEventListener("click", e => { if (e.shiftKey || e.altKey) openGhDlg(); else rebuild(); });
+$("ghCancel").addEventListener("click", () => $("ghDlg").close("cancel"));
+$("ghForget").addEventListener("click", () => { ghToken.clear(); $("ghForget").hidden = true; toast("トークンを消しました"); });
+$("ghDlg").addEventListener("close", () => {
+  const v = $("ghToken").value.trim(); $("ghToken").value = "";
+  if ($("ghDlg").returnValue !== "save") return;
+  if (!/^(github_pat_|ghp_)[A-Za-z0-9_]+$/.test(v)){ openGhDlg("トークンの形が違います。github_pat_ で始まる文字列を貼り付けてください。"); return; }
+  ghToken.set(v); rebuild();
 });
 
 /* ---------- boot ---------- */
