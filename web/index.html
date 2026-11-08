@@ -1,15 +1,15 @@
 <title>キャラクターシート帳</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 /* Layout: an index-card rack on the left, the open sheet on the right; stat boxes read like a printed TRPG sheet. */
 :root{
   --bg:#E8EBF0; --surface:#FFFFFF; --surface-2:#F3F5F8; --ink:#161B26; --muted:#4A5264; --line:#D2D7E0;
   --accent:#3346B8; --accent-ink:#FFFFFF; --accent-soft:#E2E6F9;
   --hp:#C2413A; --mp:#2F70BC; --san:#7A4DB3; --danger:#B3261E;
-  --f-display:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP",sans-serif;
-  --f-body:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --f-display:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -31,9 +31,10 @@ button{cursor:pointer}
 
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  border-bottom:1px solid var(--line);background:var(--surface)}
+  border-bottom:1px solid var(--line);background:var(--surface);box-shadow:inset 0 -3px 0 var(--accent-soft)}
 .brand{display:flex;align-items:baseline;gap:10px}
-.brand h1{font-family:var(--f-display);font-weight:700;font-size:1.25rem;margin:0;letter-spacing:.02em}
+.brand h1{font-family:var(--f-display);font-weight:800;font-size:1.4rem;margin:0;letter-spacing:.08em;display:flex;align-items:center;gap:10px}
+.brand h1::before{content:"";width:12px;height:12px;background:var(--accent);transform:rotate(45deg);flex:none;box-shadow:0 0 0 3px var(--accent-soft)}
 .brand span{color:var(--muted);font-size:.86rem}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn:hover{background:var(--surface-2)}
@@ -90,16 +91,17 @@ button{cursor:pointer}
 .portrait{width:150px;aspect-ratio:3/4;max-width:100%;border-radius:8px;object-fit:cover;border:1px solid var(--line);
   display:grid;place-items:center;font-family:var(--f-display);font-size:3rem;color:#fff}
 .ruby{color:var(--muted);font-size:.85rem;letter-spacing:.08em}
-.name{font-family:var(--f-display);font-weight:700;font-size:clamp(1.7rem,4vw,2.4rem);line-height:1.2;margin:2px 0 10px;text-wrap:balance;overflow-wrap:anywhere}
+.name{font-family:var(--f-display);font-weight:800;letter-spacing:.03em;font-size:clamp(1.7rem,4vw,2.4rem);line-height:1.2;margin:2px 0 10px;text-wrap:balance;overflow-wrap:anywhere}
 .meta{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:.88rem;color:var(--muted);align-items:center}
 .pill{background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:1px 8px;font-weight:700;font-size:.86rem}
 .tag{border:1px solid var(--line);border-radius:4px;padding:0 6px;font-size:.86rem}
 .summary{margin:12px 0 0;max-width:60ch}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 
-.sec h2{font-size:.86rem;letter-spacing:.14em;color:var(--muted);margin:0 0 10px;font-weight:700;
+.sec h2{font-family:var(--f-display);font-size:1rem;letter-spacing:.24em;color:var(--ink);margin:0 0 12px;font-weight:800;
   display:flex;align-items:center;gap:10px}
-.sec h2::after{content:"";flex:1;height:1px;background:var(--line)}
+.sec h2::before{content:"";width:7px;height:7px;background:var(--accent);transform:rotate(45deg);flex:none}
+.sec h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
 
 .res{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
 .resrow{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
@@ -113,9 +115,9 @@ button{cursor:pointer}
 .step button{width:28px;height:26px;border:1px solid var(--line);background:var(--surface-2);border-radius:4px;font-family:var(--f-mono);line-height:1}
 
 .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
-.stat{border:2px solid var(--ink);border-radius:6px;padding:6px 8px 8px;text-align:center;background:var(--surface)}
+.stat{border:1px solid var(--ink);border-radius:4px;padding:7px 8px 8px;text-align:center;background:var(--surface);box-shadow:inset 0 0 0 3px var(--surface),inset 0 0 0 4px var(--line)}
 .stat .lb{font-size:.86rem;letter-spacing:.1em;color:var(--muted);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.stat .v{font-family:var(--f-mono);font-weight:700;font-size:1.6rem;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat .v{font-family:var(--f-display);font-weight:800;font-size:1.7rem;font-variant-numeric:tabular-nums;line-height:1.2}
 
 .skills{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:2px 28px;margin:0;padding:0;list-style:none}
 .skills li{display:flex;align-items:baseline;gap:6px;padding:4px 0}
@@ -129,7 +131,7 @@ button{cursor:pointer}
 .stamp{color:var(--muted);font-size:.86rem}
 
 .empty{max-width:520px;margin:10vh auto 0;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:12px;align-items:center}
-.empty h2{font-family:var(--f-display);font-weight:700;color:var(--ink);margin:0;font-size:1.4rem}
+.empty h2{font-family:var(--f-display);font-weight:800;letter-spacing:.06em;color:var(--ink);margin:0;font-size:1.4rem}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);
   padding:8px 16px;border-radius:6px;font-size:.9rem;z-index:20}
 
@@ -174,11 +176,12 @@ button{cursor:pointer}
 .scen-tools .search{max-width:420px}
 #scenCount{white-space:nowrap}
 .scentab{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.scentab thead th{text-align:left;font-size:.82rem;letter-spacing:.1em;color:var(--muted);background:var(--surface-2);padding:6px 12px;border-bottom:1px solid var(--line)}
-.scentab tbody th,.scentab td{padding:7px 12px;border-top:1px solid var(--line);vertical-align:top;text-align:left}
+.scentab thead th{text-align:left;font-family:var(--f-display);font-weight:800;font-size:.86rem;letter-spacing:.2em;color:var(--muted);background:var(--surface-2);padding:6px 12px;border-bottom:1px solid var(--line)}
+.scentab tbody tr:hover{background:var(--surface-2)}
+.scentab tbody th,.scentab td{padding:9px 14px;border-top:1px solid var(--line);vertical-align:top;text-align:left}
 .role.after{margin:0 0 0 6px}
 .scentab tbody tr:first-child th,.scentab tbody tr:first-child td{border-top:0}
-.scentab tbody th{font-weight:700;width:34%;overflow-wrap:anywhere}
+.scentab tbody th{font-family:var(--f-display);font-weight:800;font-size:1.02rem;letter-spacing:.02em;width:34%;overflow-wrap:anywhere}
 .castline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
 .castline li{white-space:nowrap}
 .castline a{color:var(--accent);text-decoration:none;font-weight:700}
