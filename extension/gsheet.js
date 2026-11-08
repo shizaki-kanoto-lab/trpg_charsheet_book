@@ -126,6 +126,19 @@ function gsImages(html) {
   return out;
 }
 
+// For the tools (Node): ".../edit#探偵" -> that side's picture URL, read fresh from the sheet.
+// The picture URLs change on every read and stop working after a while.
+async function gsImageFor(sourceUrl) {
+  const m = String(sourceUrl).match(/^https:\/\/docs\.google\.com\/spreadsheets\/d\/([A-Za-z0-9_-]+)\/[^#]*#(.+)$/);
+  if (!m) return "";
+  const role = decodeURIComponent(m[2]);
+  const base = `https://docs.google.com/spreadsheets/d/${m[1]}`;
+  const get = async url => { const r = await fetch(url); if (!r.ok) throw new Error(`${r.status} ${url}`); return r.text(); };
+  const tabs = {};
+  for (const t of (await get(`${base}/htmlview`)).matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*?gid=(\d+)/g)) tabs[t[1]] = t[2];
+  return gsImages(await get(`${base}/htmlview/sheet?headers=true&gid=${tabs["キャラシ"] ?? "0"}`))[role] || "";
+}
+
 // "四藤傑（しどう すぐる）" -> name and reading.
 function gsName(s) {
   const m = String(s || "").match(/^(.*?)[（(]([^）)]+)[）)]\s*$/);
@@ -172,4 +185,4 @@ function gsheetToItems(sheet) {
   });
 }
 
-if (typeof module !== "undefined") module.exports = { gsheetToItems, gsCsv, gsImages };
+if (typeof module !== "undefined") module.exports = { gsheetToItems, gsCsv, gsImages, gsImageFor };

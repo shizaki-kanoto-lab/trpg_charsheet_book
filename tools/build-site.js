@@ -9,6 +9,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { gsImageFor } = require("../extension/gsheet.js");
 const { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionDbId, notionRequest, notionSleep } = require("../extension/notion.js");
 
 const ROOT = path.join(__dirname, "..");
@@ -94,16 +95,19 @@ async function previousBuild(url) {
 }
 
 // Pictures from Google Sheets refuse to show on other sites (Cross-Origin-Resource-Policy:
-// same-site), so the site carries its own copy under img/.
-const COPY_IMAGE = /^https:\/\/docs\.google\.com\/sheets-images-rt\//;
+// same-site) and their URLs expire, so each build reads them fresh from the sheet and the
+// site carries its own copy under img/.
+const SHEET = /^https:\/\/docs\.google\.com\/spreadsheets\//;
 async function copyBlockedImages(chars) {
   const dir = path.join(OUT, "img");
   let copied = 0;
   for (const c of chars) {
-    if (!COPY_IMAGE.test(c.image)) continue;
-    const name = require("crypto").createHash("sha1").update(c.image).digest("hex").slice(0, 16);
+    if (!SHEET.test(c.sourceUrl)) continue;
+    const name = require("crypto").createHash("sha1").update(c.sourceUrl).digest("hex").slice(0, 16);
     try {
-      const r = await fetch(c.image);
+      const url = await gsImageFor(c.sourceUrl);
+      if (!url) { c.image = ""; continue; }
+      const r = await fetch(url);
       const type = r.headers.get("content-type") || "";
       if (!r.ok || !type.startsWith("image/")) throw new Error(`${r.status} ${type}`);
       const ext = { "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp" }[type] || ".png";
