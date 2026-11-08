@@ -5,7 +5,7 @@
 <style>
 /* Layout: an index-card rack on the left, the open sheet on the right; stat boxes read like a printed TRPG sheet. */
 :root{
-  --bg:#ECE6DA; --surface:#FFFDF7; --surface-2:#F5F0E6; --ink:#1B2928; --muted:#4F5C5A; --line:#D8CFBF;
+  --bg:#F4EFE5; --surface:#FFFDF7; --surface-2:#EFE8DB; --ink:#1B2928; --muted:#4F5C5A; --line:#D8CFBF;
   --accent:#244B4A; --accent-ink:#FFFDF7; --accent-soft:#DDE8E3; --copper:#B77A50;
   --hp:#C2413A; --mp:#2F70BC; --san:#7A4DB3; --danger:#B3261E;
   --f-display:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
@@ -50,7 +50,7 @@ button{cursor:pointer}
 .btn.sm{padding:4px 10px;font-size:.85rem}
 
 .app{display:grid;grid-template-columns:360px minmax(0,1fr);min-height:calc(100% - 64px)}
-.rack{border-right:1px solid var(--line);background:var(--surface-2);display:flex;flex-direction:column;min-width:0}
+.rack{border-right:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-width:0}
 .rack-tools{display:flex;flex-direction:column;gap:10px;padding:14px max(16px,env(safe-area-inset-left,0px)) 10px 16px}
 .search{width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
@@ -59,8 +59,8 @@ button{cursor:pointer}
 .list{list-style:none;margin:0;padding:4px 10px 20px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
 .card{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;width:100%;text-align:left;
   padding:8px 10px;border:1px solid transparent;border-radius:8px;background:transparent}
-.card:hover{background:var(--surface)}
-.card[aria-current="true"]{background:var(--surface);border-color:var(--line);box-shadow:inset 3px 0 0 var(--accent)}
+.card:hover{background:var(--surface-2)}
+.card[aria-current="true"]{background:var(--accent-soft);border-color:transparent;box-shadow:inset 3px 0 0 var(--accent)}
 .card .nm{font-family:var(--f-display);font-weight:800;letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .card .lostline{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
 .card .lostline .lostmark{margin-left:0}
