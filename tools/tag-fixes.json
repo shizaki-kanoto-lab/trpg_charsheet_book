@@ -1,0 +1,20 @@
+{
+  "join": [
+    ["All", "or", "Nothing"],
+    ["Bye-Bye", "Summer", "Days"],
+    ["AI", "KILLED", "YOU"],
+    ["MAYDAY", "FROM", "♇ANETA"],
+    ["我々は厄介事に愛されているHO2", "TROUBLE", "SOLVER"],
+    ["Paranormal", "Crime"],
+    ["地球戦争", "-火星からの侵略者-"],
+    ["Brave", "Of", "Eternal"],
+    ["Radiant", "Abyss"],
+    ["あの夜", "あの山", "あの光"],
+    ["影よ", "影よ！"],
+    ["目覚めよ", "はらから"]
+  ],
+  "rename": {
+    "帝都大混乱遊戯": "帝都大混沌遊戯",
+    "ロトカ・ヴォルテラの愛堕打ち": "ロトカ・ヴォルテラの愛堕討ち"
+  }
+}

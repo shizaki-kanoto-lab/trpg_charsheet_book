@@ -24,10 +24,10 @@ class NotionError extends Error {
   }
 }
 
-async function notionRequest(token, path, body) {
+async function notionRequest(token, path, body, method) {
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(NOTION_API + path, {
-      method: body === undefined ? "GET" : "POST",
+      method: method || (body === undefined ? "GET" : "POST"),
       headers: { "Authorization": "Bearer " + token, "Notion-Version": NOTION_VERSION, "Content-Type": "application/json" },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
