@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "シート帳へ送る",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "いあきゃら・キャラッシュ・vinsanet・ゆとシート・キャラクター保管所などのシートを、Notionのキャラクターシート帳へ追加します。",
   "action": {
     "default_title": "シート帳へ送る",

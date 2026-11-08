@@ -86,6 +86,13 @@ const BULK_SITES = [
   { name: "vinsanet", host: /^https:\/\/vinsanet\.com\//, sheet: /^https:\/\/vinsanet\.com\/characters\/([A-Za-z0-9_-]{21})/,
     fetch: vinsanetFetchSheets, convert: vinsanetToItem, ok: s => !!s?.data,
     errors: { "open-mypage": "全キャラを追加するときは vinsanet のマイページ（https://vinsanet.com/mypage）を開いてから押してください。" } },
+  // One sheet at a time: the sheet open in the tab.
+  { name: "ゆとシート", single: true, host: /^https:\/\/yutorize\.(?:work|2-d\.jp)\//, sheet: /[?&]id=([A-Za-z0-9_-]+)/,
+    fetch: ytsheetFetchSheets, convert: ytsheetToItem, ok: s => !!s?.data,
+    errors: { "open-sheet": "ゆとシートのキャラクターシートを開いてから押してください。" } },
+  { name: "キャラクター保管所", single: true, host: /^https:\/\/charasheet\.vampire-blood\.net\//, sheet: /^https:\/\/charasheet\.vampire-blood\.net\/(m?[0-9a-f]{32})/,
+    fetch: vampireFetchSheets, convert: vampireToItem, ok: s => !!s?.data,
+    errors: { "open-sheet": "キャラクター保管所のキャラクターシートを開いてから押してください。" } },
 ];
 
 async function initBulk(tab, site) {
@@ -97,7 +104,14 @@ async function initBulk(tab, site) {
       return res?.result;
     } catch (e) { return { error: e.message }; }
   };
-  const r = await call(null);
+  const r = await call(site.single ? (m?.[1] || null) : null);
+
+  if (site.single){
+    const s = r?.sheets?.[0];
+    if (site.ok(s)) return showOne(site.convert(s));
+    setStatus("warn", site.errors?.[r?.error] || `${site.name}から読み込めませんでした（${r?.error || "不明"}）。ページを再読み込みしてから試してください。`);
+    return;
+  }
 
   if (r?.sheets?.length) {
     iaAll = r.sheets.filter(site.ok).map(site.convert);
@@ -114,13 +128,7 @@ async function initBulk(tab, site) {
   }
 
   if (one) {
-    items = [one];
-    $("name").value = one.name;
-    $("single").hidden = false;
-    const d = one.ccfolia?.data;
-    setStatus(d ? "ok" : "warn", d
-      ? `${one.system}: ステータス${d.status.length}件・能力値${d.params.length}件・技能${one.skills.length}件`
-      : `${one.system}: このシステムの能力値はまだ読み取れません。名前・URL・プロフィールを追加します。`);
+    showOne(one);
   } else if (iaAll) {
     setStatus("ok", `下のボタンで、${site.name}の自分のキャラのうち新規だけを追加できます。1人だけ追加するときはそのシートを開いてください。`);
   } else {
@@ -128,6 +136,17 @@ async function initBulk(tab, site) {
       ? `${site.name}にログインしていません。ログインしてから、もう一度この画面を開いてください。`
       : `${site.name}から読み込めませんでした（${r?.error || "不明"}）。ページを再読み込みしてから試してください。`);
   }
+}
+
+function showOne(one) {
+  items = [one];
+  $("name").value = one.name;
+  $("single").hidden = false;
+  const d = one.ccfolia?.data;
+  const filled = d && (d.status.length || d.params.length || one.skills.length);
+  setStatus(filled ? "ok" : "warn", filled
+    ? `${one.system}: ステータス${d.status.length}件・能力値${d.params.length}件・技能${one.skills.length}件${d.commands ? "・チャットパレットあり" : ""}`
+    : `${one.system}: このシステムの能力値はまだ読み取れません。名前・URL・プロフィールを追加します。`);
 }
 
 async function initOther(tab) {
