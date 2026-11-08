@@ -158,11 +158,33 @@ button{cursor:pointer}
 .banner{max-width:880px;margin:0 auto 20px;border:1px solid var(--line);border-left:3px solid var(--danger);background:var(--surface);border-radius:0 8px 8px 0;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .banner p{margin:0}
 .fresh{font-size:.8rem;color:var(--muted)}
+.views{display:inline-grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-left:6px;align-self:center}
+.views button{border:0;background:var(--surface);padding:4px 14px;font-size:.86rem;color:var(--muted);white-space:nowrap}
+.brand{flex-wrap:wrap;row-gap:6px}
+.brand h1{white-space:nowrap}
+.brand span{white-space:nowrap}
+.views button+button{border-left:1px solid var(--line)}
+.views button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:700}
+.app.scen .char-only{display:none}
+.scen-head{display:flex;flex-direction:column;gap:4px}
+.scen-head h2{font-family:var(--f-display);font-weight:700;font-size:clamp(1.5rem,3.5vw,2rem);line-height:1.25;margin:0;overflow-wrap:anywhere}
+.scen-head p{margin:0;color:var(--muted);font-size:.9rem}
+.cast{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.cast button{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;width:100%;text-align:left;
+  padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.cast button:hover{border-color:var(--accent)}
+.cast button.is-lost .avatar{filter:grayscale(1);opacity:.55}
+.cast .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cast .sub{font-size:.86rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.role{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:0 7px;font-weight:700;font-size:.82rem;margin-right:6px;vertical-align:1px}
+button.tag{background:transparent;cursor:pointer}
+button.tag:hover{border-color:var(--accent);color:var(--accent)}
 .loading{color:var(--muted);font-size:.9rem}
 </style>
 
 <header class="top">
-  <div class="brand"><h1>キャラクターシート帳</h1><span id="count"></span></div>
+  <div class="brand"><h1>キャラクターシート帳</h1><span id="count"></span>
+    <nav class="views" id="views" aria-label="表示の切り替え"><button type="button" data-view="chars">キャラ</button><button type="button" data-view="scen">シナリオ</button></nav></div>
   <div class="hdr-actions">
     <span class="fresh" id="fresh"></span>
     <button class="btn" id="reload" type="button">Notionから再読み込み</button>
@@ -173,12 +195,12 @@ button{cursor:pointer}
   <aside class="rack">
     <div class="rack-tools">
       <input class="search" id="search" type="search" placeholder="名前・タグ・技能名で検索" aria-label="キャラクターを検索">
-      <p class="search-help">例：<code>目星</code>　<code>目星70</code>（70以上）　<code>図書館&gt;=60 6版</code></p>
-      <div class="seg" id="lostSeg" role="group" aria-label="ロストで絞り込む">
+      <p class="search-help char-only">例：<code>目星</code>　<code>目星70</code>（70以上）　<code>図書館&gt;=60 6版</code></p>
+      <div class="seg char-only" id="lostSeg" role="group" aria-label="ロストで絞り込む">
         <button type="button" data-lost="alive">生存</button><button type="button" data-lost="lost">ロスト</button><button type="button" data-lost="all">すべて</button>
       </div>
-      <label class="grp"><input type="checkbox" id="groupToggle" checked> 同じ名前を1人にまとめる</label>
-      <div class="chips" id="chips"></div>
+      <label class="grp char-only"><input type="checkbox" id="groupToggle" checked> 同じ名前を1人にまとめる</label>
+      <div class="chips char-only" id="chips"></div>
     </div>
     <ul class="list" id="list"></ul>
   </aside>
@@ -195,7 +217,7 @@ const VIEW_URL = "https://www.notion.so/b47dc79665f54fdeb8df5e2afdb134a5?v=37bce
 const RES_COLOR = {HP:"var(--hp)",MP:"var(--mp)",SAN:"var(--san)"};
 const CACHE = {staleTime: 10*60*1000, gcTime: 7*24*60*60*1000};
 
-const S = {chars:[], sel:null, q:"", sys:"", lost:"alive", group:true, ready:false, loading:false, error:null, mcp:null, details:{}, static:false};
+const S = {chars:[], sel:null, q:"", sys:"", lost:"alive", group:true, ready:false, loading:false, error:null, mcp:null, details:{}, static:false, view:"chars", scen:null};
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -338,6 +360,98 @@ async function loadDetail(c){
   if (S.sel === c.id) renderMain();
 }
 
+/* ---------- scenarios ---------- */
+/* Tags hold scenario names. An HO is either written after the name ("命盟HO2", "アメシャトKPC")
+   or is a tag of its own ("HO1") next to the scenario tag it belongs to. */
+const META_TAG = /^(?:[67]版|ロスト|.*コンバート|CoC転生)$/;
+const ROLE_ONLY = /^(?:HO|PC\d|KPC$|NPC$)/;
+const ROLE_SUFFIX = /^(.+?)((?:HO|KPC|NPC|PC\d).*)$/;
+function scenariosOf(c){
+  const out = [];   // [{name, role}]
+  const tags = (c.tags||[]).filter(t => !META_TAG.test(t));
+  let pending = "";
+  for (const t of tags){
+    if (ROLE_ONLY.test(t)){
+      const last = out[out.length-1];
+      if (last && !last.role) last.role = t; else pending = t;
+      continue;
+    }
+    const m = t.match(ROLE_SUFFIX);
+    out.push(m ? {name:m[1].trim(), role:m[2]} : {name:t, role:pending});
+    pending = "";
+  }
+  return out;
+}
+function scenarioIndex(){
+  if (scenarioIndex.src === S.chars) return scenarioIndex.map;
+  const map = new Map();
+  // One entry per person in a scenario: the newest sheet, with whichever sheet names the HO.
+  const people = new Map();
+  for (const c of S.chars) for (const {name, role} of scenariosOf(c)){
+    const k = name + "\u0000" + personKey(c);
+    const x = people.get(k);
+    if (!x){ people.set(k, {name, c, role}); continue; }
+    if (!x.role) x.role = role;
+    if ((c.updatedAt||0) > (x.c.updatedAt||0)) x.c = c;
+  }
+  for (const {name, c, role} of people.values()){
+    if (!map.has(name)) map.set(name, []);
+    map.get(name).push({c, role});
+  }
+  const roleKey = r => r ? r.replace(/\d+/, d => d.padStart(3,"0")) : "\uffff";
+  for (const cast of map.values()) cast.sort((a,b) => roleKey(a.role).localeCompare(roleKey(b.role), "ja") || a.c.name.localeCompare(b.c.name, "ja"));
+  scenarioIndex.src = S.chars; scenarioIndex.map = map;
+  return map;
+}
+function filteredScenarios(){
+  const terms = S.q.trim().toLowerCase().split(/[\s　]+/).filter(Boolean);
+  const out = [];
+  for (const [name, cast] of scenarioIndex()){
+    const text = [name, ...cast.flatMap(x => [x.c.name, x.c.ruby, x.role])].join(" ").toLowerCase();
+    if (terms.every(t => text.includes(t))) out.push({name, cast});
+  }
+  return out.sort((a,b) => a.name.localeCompare(b.name, "ja"));
+}
+function renderScenList(){
+  const list = $("list");
+  const all = scenarioIndex().size, items = filteredScenarios();
+  $("count").textContent = S.q.trim() ? `${items.length} / ${all}本` : `${all}本`;
+  if (!items.length){ list.innerHTML = `<li class="rack-empty">${all ? "条件に合うシナリオはありません。" : "シナリオ名のタグが付いたキャラクターがいません。"}</li>`; return; }
+  list.innerHTML = items.map(({name, cast}) => {
+    const roles = [...new Set(cast.map(x=>x.role).filter(Boolean))];
+    const sub = cast.map(x => x.c.name).join("、");
+    return `<li><button class="card" type="button" data-scen="${esc(name)}" aria-current="${S.scen===name}" style="grid-template-columns:minmax(0,1fr)">
+      <span style="min-width:0"><div class="nm">${esc(name)} <span class="cnt">${cast.length}人</span></div>
+      <div class="sub">${roles.length ? roles.map(esc).join("・") + " — " : ""}${esc(sub)}</div></span></button></li>`;
+  }).join("");
+}
+function renderScenMain(){
+  const m = $("main");
+  $("app").classList.toggle("detail", !!S.scen);
+  const cast = S.scen && scenarioIndex().get(S.scen);
+  if (!cast){
+    m.innerHTML = S.ready ? `<div class="empty"><h2>シナリオを選んでください</h2>
+      <p>キャラクターのタグをシナリオ名として集めています。「HO1」などのタグや「命盟HO2」のような書き方は、そのシナリオでのHOとして表示します。</p></div>` : "";
+    return;
+  }
+  m.innerHTML = `<article class="sheet">
+    <button class="btn sm back" type="button" data-act="back">← 一覧へ</button>
+    <div class="scen-head"><h2>${esc(S.scen)}</h2><p>${cast.length}人${cast.some(x=>isLost(x.c)) ? `（ロスト ${cast.filter(x=>isLost(x.c)).length}人）` : ""}</p></div>
+    <ul class="cast">${cast.map(({c, role}) => `<li><button type="button" data-open="${esc(c.id)}" class="${isLost(c) ? "is-lost" : ""}">
+      ${avatarHTML(c,"avatar")}<span style="min-width:0">
+      <div class="nm">${role ? `<span class="role">${esc(role)}</span>` : ""}${esc(c.name||"名無し")}${isLost(c) ? `<span class="lostmark">ロスト</span>` : ""}</div>
+      <div class="sub">${esc([c.system, c.summary].filter(Boolean).join(" · ") || "—")}</div></span></button></li>`).join("")}</ul>
+  </article>`;
+}
+function setView(v){
+  S.view = v; store.set("view", v);
+  $("app").classList.toggle("scen", v === "scen");
+  for (const b of $("views").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.view === v));
+  $("search").placeholder = v === "scen" ? "シナリオ名・キャラ名・HOで検索" : "名前・タグ・技能名で検索";
+  $("search").setAttribute("aria-label", v === "scen" ? "シナリオを検索" : "キャラクターを検索");
+  renderList(); renderMain();
+}
+
 /* ---------- list ---------- */
 /* Search: space-separated terms, all must match. A term matches the name, よみ, system, tags or a skill name.
    "目星70" / "目星>=70" keeps characters whose skill is at least that value; "目星<30" and "目星=50" work too. */
@@ -403,6 +517,7 @@ function grouped(items){
   return [...map.values()];
 }
 function renderList(){
+  if (S.view === "scen" && S.ready) return renderScenList();
   const nLost = S.chars.filter(isLost).length;
   for (const b of $("lostSeg").querySelectorAll("button")){
     const k = b.dataset.lost, n = k==="lost" ? nLost : k==="alive" ? S.chars.length - nLost : S.chars.length;
@@ -438,6 +553,7 @@ function renderList(){
 
 /* ---------- sheet ---------- */
 function renderMain(){
+  if (S.view === "scen") return renderScenMain();
   const m = $("main");
   $("app").classList.toggle("detail", !!S.sel);
   const c = current();
@@ -462,7 +578,7 @@ function renderMain(){
         <h2 class="name">${esc(c.name||"名無し")}${isLost(c) ? `<span class="lostmark" style="font-family:var(--f-body);font-size:.8rem">ロスト</span>` : ""}</h2>
         <div class="meta">
           ${c.system ? `<span class="pill">${esc(c.system)}</span>` : ""}
-          ${c.tags.filter(t=>t!=="ロスト").map(t=>`<span class="tag">${esc(t)}</span>`).join("")}
+          ${c.tags.filter(t=>t!=="ロスト").map(t=>{ const sc = scenariosOf({tags:[t]})[0]; return sc ? `<button class="tag" type="button" data-scen="${esc(sc.name)}" title="シナリオ「${esc(sc.name)}」の一覧へ">${esc(t)}</button>` : `<span class="tag">${esc(t)}</span>`; }).join("")}
         </div>
         ${c.summary ? `<p class="summary">${esc(c.summary)}</p>` : ""}
         <p style="margin:10px 0 0;display:flex;gap:16px;flex-wrap:wrap">
@@ -505,14 +621,19 @@ $("search").addEventListener("input", e => { S.q = e.target.value; renderList();
 $("chips").addEventListener("click", e => { const b = e.target.closest("[data-sys]"); if (!b) return; S.sys = b.dataset.sys; renderList(); });
 $("lostSeg").addEventListener("click", e => { const b = e.target.closest("[data-lost]"); if (!b) return; S.lost = b.dataset.lost; store.set("lostFilter", S.lost); renderList(); });
 $("groupToggle").addEventListener("change", e => { S.group = e.target.checked; store.set("groupByName", S.group ? "1" : "0"); renderList(); renderMain(); });
-$("list").addEventListener("click", e => { const b = e.target.closest("[data-id]"); if (!b) return; S.sel = b.dataset.id; renderList(); renderMain(); window.scrollTo(0,0); });
+$("views").addEventListener("click", e => { const b = e.target.closest("[data-view]"); if (b) setView(b.dataset.view); });
+$("list").addEventListener("click", e => {
+  const sc = e.target.closest("[data-scen]"); if (sc){ S.scen = sc.dataset.scen; renderList(); renderMain(); window.scrollTo(0,0); return; }
+  const b = e.target.closest("[data-id]"); if (!b) return; S.sel = b.dataset.id; renderList(); renderMain(); window.scrollTo(0,0); });
 $("reload").addEventListener("click", () => { if (!S.static) S.details = {}; load(true); });
 $("banner").addEventListener("click", e => { if (e.target.id === "allow") load(true); });
 $("main").addEventListener("click", e => {
+  const o = e.target.closest("[data-open]"); if (o){ S.sel = o.dataset.open; setView("chars"); window.scrollTo(0,0); return; }
+  const sc = e.target.closest("[data-scen]"); if (sc){ S.scen = sc.dataset.scen; setView("scen"); window.scrollTo(0,0); return; }
   const g = e.target.closest("[data-goto]"); if (g){ S.sel = g.dataset.goto; renderList(); renderMain(); return; }
   const b = e.target.closest("[data-act]"); if (!b) return;
   const c = current();
-  if (b.dataset.act === "back"){ S.sel = null; renderList(); renderMain(); }
+  if (b.dataset.act === "back"){ if (S.view === "scen") S.scen = null; else S.sel = null; renderList(); renderMain(); }
   else if (b.dataset.act === "ccf" && c) copyText(pieceText(c), "ココフォリア駒をコピーしました。ココフォリアの盤面に貼り付けてください。");
   else if (b.dataset.act === "pal" && c) copyText(S.details[c.id].palette, "チャットパレットをコピーしました");
 });
@@ -521,6 +642,7 @@ $("main").addEventListener("click", e => {
 S.lost = ["alive","lost","all"].includes(store.get("lostFilter")) ? store.get("lostFilter") : "alive";
 S.group = store.get("groupByName") !== "0";
 $("groupToggle").checked = S.group;
+setView(store.get("view") === "scen" ? "scen" : "chars");
 S.mcp = undefined;
 renderList(); renderMain();
 (async () => {
