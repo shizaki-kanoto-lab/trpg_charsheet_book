@@ -5,6 +5,8 @@
 //   キャラッシュ    /api/sheets/<token>/image, when the sheet has an image
 //   vinsanet        the character image, as its unsigned Firebase Storage URL
 //   ゆとシート      imageURL in the sheet's JSON output
+//   Googleスプレッドシート (フタリソウサ)  the picture in the 探偵's or 助手's columns of "キャラシ"
+//   キャラクターシート倉庫  /<system>/image?key=…, when it answers with an image
 // Sheets that are private, or on sites without sheet images, are left empty.
 //
 //   node tools/fill-images.js [--dry-run]
@@ -14,6 +16,7 @@
 
 const fs = require("fs");
 const readline = require("readline");
+const { gsImages } = require("../extension/gsheet.js");
 const { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionDbId, notionRequest, notionSleep } = require("../extension/notion.js");
 
 const SITE_GAP_MS = 400;   // between requests to the sheet sites
@@ -57,6 +60,19 @@ async function imageFor(sourceUrl) {
   if ((m = sourceUrl.match(/^(https:\/\/yutorize\.(?:work|2-d\.jp)\/[^?#]*)\?(?:.*&)?id=([A-Za-z0-9_-]+)/))) {
     const d = JSON.parse(await text(`${m[1]}?id=${m[2]}&mode=json`));
     return d.image && d.imageURL ? String(d.imageURL) : "";
+  }
+  if ((m = sourceUrl.match(/^https:\/\/docs\.google\.com\/spreadsheets\/d\/([A-Za-z0-9_-]+)\/[^#]*#(探偵|助手)$/))) {
+    const base = `https://docs.google.com/spreadsheets/d/${m[1]}`;
+    const tabs = {};
+    for (const t of (await text(`${base}/htmlview`)).matchAll(/\{name: "([^"]+)", pageUrl: "[^"]*?gid=(\d+)/g)) tabs[t[1]] = t[2];
+    return gsImages(await text(`${base}/htmlview/sheet?headers=true&gid=${tabs["キャラシ"] ?? "0"}`))[decodeURIComponent(m[2])] || "";
+  }
+  if ((m = sourceUrl.match(/^https:\/\/character-sheets\.appspot\.com\/([a-z0-9]+)\/edit\.html\?key=([A-Za-z0-9_-]+)/))) {
+    const url = `https://character-sheets.appspot.com/${m[1]}/image?key=${m[2]}`;
+    const r = await fetch(url);
+    const b = new Uint8Array(await r.arrayBuffer()).slice(0, 4);
+    const isImage = (b[0] === 0x89 && b[1] === 0x50) || (b[0] === 0xFF && b[1] === 0xD8) || (b[0] === 0x47 && b[1] === 0x49) || (b[0] === 0x52 && b[1] === 0x49);
+    return r.ok && isImage ? url : "";
   }
   return "";
 }

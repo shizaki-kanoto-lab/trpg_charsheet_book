@@ -634,7 +634,7 @@ function renderList(){
       : [c.system, c.summary].filter(Boolean).join(" · ") || "—";
     const lost = members.every(isLost);
     return `<li><button class="card${lost ? " is-lost" : ""}" type="button" data-id="${esc(c.id)}" aria-current="${members.some(m=>m.id===S.sel)}">
-    ${avatarHTML(c,"avatar")}<span style="min-width:0"><div class="nm">${esc(c.name||"名無し")}${many ? ` <span class="cnt">${members.length}枚</span>` : ""}</div>
+    ${avatarHTML(c.image ? c : {...c, image:(members.find(m=>m.image)||c).image},"avatar")}<span style="min-width:0"><div class="nm">${esc(c.name||"名無し")}${many ? ` <span class="cnt">${members.length}枚</span>` : ""}</div>
     <div class="sub">${esc(sub)}</div>
     ${members.some(isLost) ? `<div class="lostline">${[...new Map(members.filter(isLost).map(m => [m.system, m])).values()].map(lostMark).join("")}</div>` : ""}
     ${uniq.length ? `<div class="hits">${uniq.map(s=>`<span>${esc(s.label)} <b>${esc(s.value)}</b></span>`).join("")}</div>` : ""}</span></button></li>`;

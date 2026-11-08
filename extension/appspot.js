@@ -18,7 +18,15 @@ async function appspotFetchSheets(onlyKey) {
     const html = await (await fetch(`/${system}/edit.html`)).text();
     systemName = (new DOMParser().parseFromString(html, "text/html").title || "").replace(/\s*キャラクターシート\s*$/, "").trim();
   } catch { /* falls back to the system code */ }
-  return { sheets: [{ key, system, systemName, data }] };
+  // The sheet's picture: /<system>/image?key=… answers with the image bytes when there is one.
+  let image = "";
+  try {
+    const url = `/${system}/image?key=${encodeURIComponent(key)}`;
+    const b = new Uint8Array(await (await fetch(url)).arrayBuffer()).slice(0, 4);
+    const isImage = (b[0] === 0x89 && b[1] === 0x50) || (b[0] === 0xFF && b[1] === 0xD8) || (b[0] === 0x47 && b[1] === 0x49) || (b[0] === 0x52 && b[1] === 0x49);
+    if (isImage) image = location.origin + url;
+  } catch { /* no picture */ }
+  return { sheets: [{ key, system, systemName, data, image }] };
 }
 
 const AS_CLEAN = s => String(s ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/[\s　]+/g, " ").trim();
@@ -72,7 +80,7 @@ function appspotToItem(sheet) {
     name, ruby: unquote(b.nameKana),
     system: sheet.systemName || sheet.system,
     summary: [alias && `“${alias}”`, extra.summary || AS_CLEAN(d.outline)].filter(Boolean).join(" "),
-    tags: [], notes, skills: extra.skills, ...(extra.stats ? { stats: extra.stats } : {}),
+    tags: [], notes, skills: extra.skills, image: sheet.image || "", ...(extra.stats ? { stats: extra.stats } : {}),
     ccfolia: {
       kind: "character",
       data: { name, memo: "", initiative: 0, externalUrl: url, status: [], params: extra.params, commands: "" },

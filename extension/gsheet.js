@@ -21,7 +21,10 @@ async function gsheetFetchSheets() {
   try {
     const main = await csv(tabs["キャラシ"] ?? "0");
     const ccf = tabs["ココフォリアコピペ用"] ? await csv(tabs["ココフォリアコピペ用"]).catch(() => "") : "";
-    return { sheets: [{ id, title: document.title.replace(/\s*-\s*Google\s*(スプレッドシート|Sheets)\s*$/i, "").trim(), main, ccf }] };
+    // Pictures placed in cells only show in the HTML view of the tab.
+    let html = "";
+    try { html = await (await fetch(`${base}/htmlview/sheet?headers=true&gid=${tabs["キャラシ"] ?? "0"}`)).text(); } catch { /* no images */ }
+    return { sheets: [{ id, title: document.title.replace(/\s*-\s*Google\s*(スプレッドシート|Sheets)\s*$/i, "").trim(), main, ccf, html }] };
   } catch (e) { return { error: e.message }; }
 }
 
@@ -92,6 +95,37 @@ function gsPieces(rows) {
   return pieces;
 }
 
+// The HTML view of "キャラシ": the 探偵's picture sits in the 探偵's columns, left of the 助手's
+// heading ("助手" or "★助手"). Lays the table out on a grid (colspan/rowspan) to find each picture's column.
+function gsImages(html) {
+  const out = {};
+  const taken = [];   // taken[row] = Set of columns covered by rowspans from above
+  let split = -1;
+  const pics = [];
+  let r = 0;
+  for (const tr of String(html || "").matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)) {
+    let c = 0;
+    for (const td of tr[1].matchAll(/<td([^>]*)>([\s\S]*?)<\/td>/g)) {
+      while (taken[r]?.has(c)) c++;
+      const span = Number((td[1].match(/colspan="(\d+)"/) || [])[1]) || 1;
+      const rows = Number((td[1].match(/rowspan="(\d+)"/) || [])[1]) || 1;
+      for (let k = 1; k < rows; k++) for (let j = 0; j < span; j++) (taken[r + k] ||= new Set()).add(c + j);
+      const textOnly = td[2].replace(/<[^>]*>/g, "").trim();
+      if (split < 0 && /^★?\s*助手$/.test(textOnly)) split = c;
+      const img = td[2].match(/<img[^>]+src="(https:\/\/docs\.google\.com\/sheets-images-rt\/[^"=]+)/);
+      if (img) pics.push({ col: c, url: img[1].replace(/&amp;/g, "&") });
+      c += span;
+    }
+    r++;
+  }
+  if (split < 0) return out;
+  for (const p of pics) {
+    const role = p.col >= split ? "助手" : "探偵";
+    if (!out[role]) out[role] = p.url;
+  }
+  return out;
+}
+
 // "四藤傑（しどう すぐる）" -> name and reading.
 function gsName(s) {
   const m = String(s || "").match(/^(.*?)[（(]([^）)]+)[）)]\s*$/);
@@ -101,6 +135,7 @@ function gsName(s) {
 function gsheetToItems(sheet) {
   const { sides, scenarios } = gsSides(gsCsv(sheet.main || ""));
   const pieces = gsPieces(gsCsv(sheet.ccf || ""));
+  const images = gsImages(sheet.html);
   const sheetUrl = `https://docs.google.com/spreadsheets/d/${sheet.id}/edit`;
   return sides.filter(s => s["PC名"]).map((s, i) => {
     const other = sides[1 - i];
@@ -124,6 +159,7 @@ function gsheetToItems(sheet) {
       system: "フタリソウサ",
       summary: [s.role, cls, s["背景"]].filter(Boolean).join("・"),
       tags: [...scenarios], notes, skills,
+      image: images[s.role] || "",
       stats: [],    // the 異常な癖 (params) are text; they stay in the piece and the memo
       ccfolia: {
         kind: "character",
@@ -136,4 +172,4 @@ function gsheetToItems(sheet) {
   });
 }
 
-if (typeof module !== "undefined") module.exports = { gsheetToItems, gsCsv };
+if (typeof module !== "undefined") module.exports = { gsheetToItems, gsCsv, gsImages };
