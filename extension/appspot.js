@@ -11,8 +11,14 @@ async function appspotFetchSheets(onlyKey) {
   if (!r.ok) return { error: "sheet-" + r.status };
   let data;
   try { data = JSON.parse(await r.text()); } catch { return { error: "sheet-json" }; }
-  // The page title is the system's name (e.g. "トーキョーN◎VA THE AXLERATION").
-  return { sheets: [{ key, system, systemName: document.title.trim(), data }] };
+  // The system's name is the <title> of the sheet page as served (e.g. "トーキョーN◎VA THE AXLERATION");
+  // the open page renames its tab to the character's name, so document.title can't be used.
+  let systemName = "";
+  try {
+    const html = await (await fetch(`/${system}/edit.html`)).text();
+    systemName = (new DOMParser().parseFromString(html, "text/html").title || "").replace(/\s*キャラクターシート\s*$/, "").trim();
+  } catch { /* falls back to the system code */ }
+  return { sheets: [{ key, system, systemName, data }] };
 }
 
 const AS_CLEAN = s => String(s ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/[\s　]+/g, " ").trim();

@@ -5,20 +5,20 @@
 <style>
 /* Layout: an index-card rack on the left, the open sheet on the right; stat boxes read like a printed TRPG sheet. */
 :root{
-  --bg:#E8EBF0; --surface:#FFFFFF; --surface-2:#F3F5F8; --ink:#161B26; --muted:#4A5264; --line:#D2D7E0;
-  --accent:#3346B8; --accent-ink:#FFFFFF; --accent-soft:#E2E6F9;
+  --bg:#ECE6DA; --surface:#FFFDF7; --surface-2:#F5F0E6; --ink:#1B2928; --muted:#4F5C5A; --line:#D8CFBF;
+  --accent:#244B4A; --accent-ink:#FFFDF7; --accent-soft:#DDE8E3; --copper:#B77A50;
   --hp:#C2413A; --mp:#2F70BC; --san:#7A4DB3; --danger:#B3261E;
   --f-display:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
   --f-body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#10131A; --surface:#191D27; --surface-2:#212633; --ink:#E5E8EF; --muted:#B0B7C6; --line:#2D3343;
-  --accent:#8F9EFF; --accent-ink:#0D1120; --accent-soft:#242B48;
+  --bg:#0F1514; --surface:#172120; --surface-2:#1F2B2A; --ink:#ECE7DC; --muted:#AEB9B5; --line:#2C3A38;
+  --accent:#86C2BA; --accent-ink:#0F1514; --accent-soft:#1E3533; --copper:#D69B6E;
   --hp:#EA6C63; --mp:#6EA6EC; --san:#B08AE6; --danger:#F07A72; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#10131A; --surface:#191D27; --surface-2:#212633; --ink:#E5E8EF; --muted:#B0B7C6; --line:#2D3343;
-  --accent:#8F9EFF; --accent-ink:#0D1120; --accent-soft:#242B48;
+  --bg:#0F1514; --surface:#172120; --surface-2:#1F2B2A; --ink:#ECE7DC; --muted:#AEB9B5; --line:#2C3A38;
+  --accent:#86C2BA; --accent-ink:#0F1514; --accent-soft:#1E3533; --copper:#D69B6E;
   --hp:#EA6C63; --mp:#6EA6EC; --san:#B08AE6; --danger:#F07A72; color-scheme:dark}
 
 *{box-sizing:border-box}
@@ -31,13 +31,13 @@ button{cursor:pointer}
 
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  border-bottom:1px solid var(--line);background:var(--surface);box-shadow:inset 0 -3px 0 var(--accent-soft)}
+  border-bottom:1px solid var(--line);background:var(--surface);box-shadow:inset 0 -3px 0 var(--accent-soft),inset 0 -4px 0 color-mix(in srgb,var(--copper) 55%,transparent)}
 .brand{display:flex;align-items:center;gap:10px}
 .brand h1{font-family:var(--f-display);font-weight:800;font-size:1.4rem;margin:0;letter-spacing:.08em;display:flex;align-items:center;gap:10px}
 .brand h1 .emb{width:46px;height:46px;flex:none;display:block}
 .brand h1 .lt{display:flex;flex-direction:column;line-height:1.15;color:var(--ink);font-size:inherit}
 .brand h1 .en{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:.6rem;letter-spacing:.28em;color:var(--muted);
-  border-top:1.5px solid #b77a50;margin-top:4px;padding-top:3px;white-space:nowrap}
+  border-top:1.5px solid var(--copper);margin-top:4px;padding-top:3px;white-space:nowrap}
 .brand > span{color:var(--muted);font-size:.86rem}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn:hover{background:var(--surface-2)}
@@ -106,8 +106,8 @@ button{cursor:pointer}
 
 .sec h2{font-family:var(--f-display);font-size:1rem;letter-spacing:.24em;color:var(--ink);margin:0 0 12px;font-weight:800;
   display:flex;align-items:center;gap:10px}
-.sec h2::before{content:"";width:7px;height:7px;background:var(--accent);transform:rotate(45deg);flex:none}
-.sec h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.sec h2::before{content:"";width:7px;height:7px;background:var(--copper);transform:rotate(45deg);flex:none}
+.sec h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,color-mix(in srgb,var(--copper) 60%,var(--line)),transparent)}
 
 .res{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
 .resrow{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
