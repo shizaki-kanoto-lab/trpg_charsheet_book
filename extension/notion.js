@@ -27,9 +27,9 @@ class NotionError extends Error {
 async function notionRequest(token, path, body) {
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(NOTION_API + path, {
-      method: "POST",
+      method: body === undefined ? "GET" : "POST",
       headers: { "Authorization": "Bearer " + token, "Notion-Version": NOTION_VERSION, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     if (res.ok) return res.json();
     const retryable = res.status === 429 || res.status === 409 || res.status >= 500;
@@ -164,5 +164,5 @@ async function notionAddNew(token, db, records, onProgress = () => {}) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { NOTION_DEFAULT_DB, notionDbId, notionExistingUrls, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
+  module.exports = { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionRequest, notionSleep, notionDbId, notionExistingUrls, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
 }
