@@ -14,7 +14,14 @@ async function charashFetchSheets(onlyToken) {
   const sheets = [];
   for (const t of tokenList) {
     const r = await fetch("/api/sheets/" + t, { credentials: "include" });
-    if (r.ok) sheets.push(await r.json());
+    if (!r.ok) continue;
+    const sheet = await r.json();
+    // The sheet's own image is only named in the view page (og:image -> /api/sheets/<token>/image).
+    try {
+      const html = await (await fetch(`/view/${t}`, { credentials: "include" })).text();
+      if (new RegExp(`/api/sheets/${t}/image`).test(html)) sheet.image = `https://charash.jp/api/sheets/${t}/image`;
+    } catch { /* no image */ }
+    sheets.push(sheet);
   }
   return { sheets };
 }
@@ -67,7 +74,7 @@ function charashToItem(sheet) {
   ].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`);
   const memos = (sh.memos || []).filter(m => m.body).map(m => (m.title ? `【${m.title}】\n` : "") + m.body);
   const item = {
-    url, site: "キャラッシュ",
+    url, site: "キャラッシュ", image: sheet.image || "",
     name: sh.name || "", ruby: sh.nameKana || "",
     system: CH_SYSTEMS[sys] || sys || "",
     summary: sh.occupation || "",

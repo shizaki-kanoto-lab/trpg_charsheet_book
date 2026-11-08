@@ -24,7 +24,8 @@ async function iacharaFetchSheets(onlyId) {
       const r = await fetch(api + "/charasheet/" + onlyId, { headers });
       if (!r.ok) return { error: "sheet-" + r.status };
       one = await r.json();
-      if (!one.data && one.charasheet) one = one.charasheet;
+      if (one?.success !== undefined && one.data) one = one.data;   // {success, data: {id, name, data: …}}
+      else if (!one.data && one.charasheet) one = one.charasheet;
     }
     list = [one];
   }
@@ -125,6 +126,7 @@ function iacharaToItem(sheet) {
     system: six ? "クトゥルフ神話TRPG 6版" : "クトゥルフ神話TRPG 7版",
     summary: p.profession || "",
     tags, notes, skills,
+    image: (p.icons || []).find(i => i?.url)?.url || "",   // the first image shown on the sheet
     ccfolia: { kind: "character", data: { name: p.name || sheet.name || "", memo: "", initiative: v.dex, externalUrl: "https://iachara.com/view/" + sheet.id, status, params, commands } },
   };
 }

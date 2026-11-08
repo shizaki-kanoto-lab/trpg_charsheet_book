@@ -67,14 +67,15 @@ async function pageBody(token, id) {
 function toChar(page, body) {
   const p = page.properties;
   const get = name => prop(p[name]);
-  const tags = [...(get("タグ") || [])];
+  // タグ holds the edition and similar marks; シナリオ holds scenario names and HO, one per line.
+  const tags = [...(get("タグ") || []), ...String(get("シナリオ") || "").split("\n").map(s => s.trim()).filter(Boolean)];
   if (get("状態") === "ロスト") tags.push("ロスト");
   const resources = ["HP", "MP", "SAN"].filter(k => get(k) != null || get(k + "最大") != null)
     .map(k => ({ label: k, cur: get(k) ?? 0, max: get(k + "最大") ?? 0 }));
   const split = s => String(s || "").split(" / ").map(x => x.trim()).filter(Boolean);
   return {
     id: page.url, name: get("名前") || "", ruby: get("ふりがな") || "", system: get("システム") || "", sourceSite: get("サイト") || "",
-    sourceUrl: get("元シート") || "", summary: get("概要") || "", tags, resources,
+    sourceUrl: get("元シート") || "", image: get("立ち絵") || "", summary: get("概要") || "", tags, resources,
     stats: split(get("能力値")).map(s => { const m = s.match(/^(.*\S)\s+(-?\d+)$/); return m ? { label: m[1], value: m[2] } : { label: s, value: "" }; }),
     skills: split(get("技能")).map(s => { const m = s.match(/^(.*?)(-?\d+)$/); return m ? { label: m[1], value: m[2] } : { label: s, value: "" }; }),
     updatedAt: Date.parse(page.last_edited_time) || 0,

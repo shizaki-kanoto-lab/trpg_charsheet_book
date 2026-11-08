@@ -67,6 +67,9 @@ button{cursor:pointer}
 .card .sub{font-size:.86rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .avatar{width:44px;height:44px;border-radius:6px;object-fit:cover;display:grid;place-items:center;
   font-family:var(--f-display);font-size:1.1rem;color:#fff}
+.avatar,.portrait{position:relative;overflow:hidden}
+.avatar img,.portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;background:var(--surface-2)}
+a.portrait{text-decoration:none}
 .hits{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
 .hits span{font-size:.86rem;background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:0 6px;white-space:nowrap}
 .hits b{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
@@ -291,9 +294,13 @@ const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const store = {get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} }};
 
 function hue(str){ let h=0; for (const c of String(str)) h=(h*31+c.codePointAt(0))%360; return h; }
-function avatarHTML(c, cls){
+// The sheet's own image when there is one; the initial on a colored tile underneath shows if it fails to load.
+function avatarHTML(c, cls, link){
   const ch = [...(c.name||"？")][0];
-  return `<div class="${cls}" style="background:hsl(${hue(c.name||"")} 42% 42%)" aria-hidden="true">${esc(ch)}</div>`;
+  const img = safeUrl(c.image) ? `<img src="${esc(c.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : "";
+  const style = `background:hsl(${hue(c.name||"")} 42% 42%)`;
+  if (link && img) return `<a class="${cls}" style="${style}" href="${esc(c.image)}" target="_blank" rel="noopener" title="立ち絵を開く"><span aria-hidden="true">${esc(ch)}</span>${img}</a>`;
+  return `<div class="${cls}" style="${style}" aria-hidden="true">${esc(ch)}${img}</div>`;
 }
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,2200); }
 function current(){ return S.chars.find(c=>c.id===S.sel); }
@@ -305,13 +312,14 @@ const plain = s => String(s ?? "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").
 function toChar(row){
   let tags = [];
   try { tags = JSON.parse(row["タグ"] || "[]"); } catch {}
+  tags.push(...String(row["シナリオ"] || "").split("\n").map(s => s.trim()).filter(Boolean));
   if (row["状態"] === "ロスト") tags.push("ロスト");
   const resources = ["HP","MP","SAN"].filter(k => row[k] != null || row[k+"最大"] != null)
     .map(k => ({label:k, cur:num(row[k]), max:num(row[k+"最大"])}));
   const split = s => plain(s).split(" / ").filter(Boolean);
   return {
     id: row.url, name: plain(row["名前"]), ruby: plain(row["ふりがな"]), system: row["システム"] || "", sourceSite: row["サイト"] || "",
-    sourceUrl: row["元シート"] || "", summary: plain(row["概要"]), tags: tags.map(String), resources,
+    sourceUrl: row["元シート"] || "", image: row["立ち絵"] || "", summary: plain(row["概要"]), tags: tags.map(String), resources,
     stats: split(row["能力値"]).map(s => { const m = s.match(/^(.*\S)\s+(-?\d+)$/); return m ? {label:m[1], value:m[2]} : {label:s, value:""}; }),
     skills: split(row["技能"]).map(s => { const m = s.match(/^(.*?)(-?\d+)$/); return m ? {label:m[1], value:m[2]} : {label:s, value:""}; }),
     updatedAt: Date.parse(row["最終更新"]) || 0,
@@ -655,7 +663,7 @@ function renderMain(){
     ${fam.length > 1 ? `<nav class="sheets" aria-label="同じ人物のシート"><span class="lbl">この人物のシート ${fam.length}枚</span>
       ${fam.map(x=>`<button type="button" data-goto="${esc(x.id)}" aria-current="${x.id===c.id}">${esc(sheetLabel(x))}${isLost(x) ? `<span class="lostmark">ロスト</span>` : ""}<small>${x.updatedAt ? "更新 "+fmtDate(x.updatedAt) : ""}</small></button>`).join("")}</nav>` : ""}
     <section class="hero">
-      ${avatarHTML(c, isLost(c) ? "portrait is-lost" : "portrait")}
+      ${avatarHTML(c, isLost(c) ? "portrait is-lost" : "portrait", true)}
       <div style="min-width:0">
         ${c.ruby ? `<div class="ruby">${esc(c.ruby)}</div>` : ""}
         <h2 class="name">${esc(c.name||"名無し")}${lostMark(c)}</h2>

@@ -22,9 +22,20 @@ async function vinsanetFetchSheets(onlyId) {
   const sheets = [];
   for (const id of ids) {
     const r = await fetch("/api/v1/characters/" + id);
-    if (r.ok) sheets.push({ id, data: await r.json() });
+    if (!r.ok) continue;
+    sheets.push({ id, data: await r.json(), image: await vinsanetImage(id) });
   }
   return { sheets };
+}
+
+// The character image is named only in the view page's og:image, as a signed URL that expires.
+// The same file is public through Firebase Storage without a signature.
+async function vinsanetImage(id) {
+  try {
+    const html = await (await fetch(`/characters/${id}/view`)).text();
+    const m = html.match(/og:image"\s+content="https:\/\/storage\.googleapis\.com\/([^/"]+)\/(characters\/[^?"]+)/);
+    return m ? `https://firebasestorage.googleapis.com/v0/b/${m[1]}/o/${encodeURIComponent(m[2])}?alt=media` : "";
+  } catch { return ""; }
 }
 
 function vinsanetToItem(sheet) {
@@ -40,7 +51,7 @@ function vinsanetToItem(sheet) {
     .map(s => ({ label: String(s.name), value: String(Number(s.value)) }));
   const rule = d.rule && d.rule !== "基本ルール" ? d.rule : "";
   return {
-    url, site: "vinsanet",
+    url, site: "vinsanet", image: sheet.image || "",
     name: d.name || "", ruby: d.kana || "",
     system: "Kutulu",
     summary: d.title || d.profession || "",

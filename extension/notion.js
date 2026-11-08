@@ -5,6 +5,10 @@ const NOTION_API = (typeof process !== "undefined" && process.env.NOTION_API_BAS
 const NOTION_VERSION = "2022-06-28";
 const NOTION_TEXT_LIMIT = 2000;
 const NOTION_GAP_MS = 350;   // Notion allows about 3 requests per second
+// Tags kept in the タグ multi-select; every other tag (scenario names, HO, …) goes into the シナリオ text,
+// one per line, so the multi-select's option list stays small.
+const NOTION_META_TAG = /^(?:[67]版|ロスト|.*コンバート|CoC転生|要確認)$/;
+const notionCleanTag = t => String(t).replace(/,/g, "、").replace(/\s+/g, " ").trim().slice(0, 100);
 
 const notionSleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -62,6 +66,7 @@ function notionRecordFromItem(item) {
     name: item.name || d.name || "", ruby: item.ruby || "", system: item.system || "", site: item.site || "",
     summary: item.summary || "", tags, lost: tags.includes("ロスト"), url: item.url || d.externalUrl || "",
     resources: (d.status || []).map(s => ({ label: s.label, cur: s.value, max: s.max })),
+    image: item.image || d.iconUrl || "",
     stats: item.stats || d.params || [], skills: item.skills || [], notes: item.notes || d.memo || "", palette: d.commands || "",
   };
 }
@@ -90,7 +95,9 @@ function notionProperties(r) {
   const num = v => (v === "" || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
   const select = v => (v ? { select: { name: String(v).replace(/,/g, "、").slice(0, 100) } } : undefined);
   const others = r.resources.filter(x => !["HP", "MP", "SAN"].includes(x.label)).map(x => `${x.label} ${x.cur}`);
-  const tags = [...new Set(r.tags.filter(t => t !== "ロスト").map(t => String(t).replace(/,/g, "、").trim().slice(0, 100)).filter(Boolean))];
+  const all = [...new Set(r.tags.filter(t => t !== "ロスト").map(notionCleanTag).filter(Boolean))];
+  const tags = all.filter(t => NOTION_META_TAG.test(t));
+  const scenarios = all.filter(t => !NOTION_META_TAG.test(t));
   const props = {
     "名前": { title: notionRich(r.name || "名無し") },
     "ふりがな": { rich_text: notionRich(r.ruby) },
@@ -99,9 +106,11 @@ function notionProperties(r) {
     "サイト": select(r.site),
     "概要": { rich_text: notionRich(r.summary) },
     "タグ": { multi_select: tags.map(name => ({ name })) },
+    "シナリオ": { rich_text: notionRich(scenarios.join("\n")) },
     "能力値": { rich_text: notionRich([...r.stats.map(s => `${s.label} ${s.value}`), ...others].join(" / ")) },
     "技能": { rich_text: notionRich(r.skills.map(s => `${s.label}${s.value}`).join(" / ")) },
     "元シート": { url: r.url || null },
+    "立ち絵": { url: r.image || null },
   };
   for (const label of ["HP", "MP", "SAN"]) {
     const x = res(label);
@@ -114,7 +123,7 @@ function notionProperties(r) {
 
 function notionCcfolia(r) {
   return JSON.stringify({ kind: "character", data: {
-    name: r.name, memo: "", initiative: 0, externalUrl: r.url,
+    name: r.name, memo: "", initiative: 0, externalUrl: r.url, iconUrl: r.image || null,
     status: r.resources.map(x => ({ label: x.label, value: Number(x.cur) || 0, max: Number(x.max) || 0 })),
     params: r.stats.map(s => ({ label: s.label, value: String(s.value) })),
     commands: r.palette,   // no CoC-style fallback: other systems roll differently
@@ -164,5 +173,5 @@ async function notionAddNew(token, db, records, onProgress = () => {}) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionRequest, notionSleep, notionDbId, notionExistingUrls, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
+  module.exports = { NOTION_DEFAULT_DB, NOTION_GAP_MS, NOTION_META_TAG, notionCleanTag, notionRequest, notionSleep, notionDbId, notionExistingUrls, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
 }

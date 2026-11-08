@@ -92,7 +92,7 @@ function ytsheetToItem(sheet) {
 
   const summary = ytText(d.aka || d.class || d.works || d.cover || "");
   return {
-    url, site: "ゆとシート",
+    url, site: "ゆとシート", image: d.image && d.imageURL ? String(d.imageURL) : "",
     name, ruby: ytText(d.characterNameRuby || d.akaRuby || ""),
     system: YT_SYSTEMS[system] || system,
     summary, tags: [...new Set(tags)], notes, skills,
