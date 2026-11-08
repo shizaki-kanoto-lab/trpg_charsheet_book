@@ -5,6 +5,7 @@ const SITES = {
   "charasheet.vampire-blood.net": "キャラクター保管所",
   "charash.jp": "キャラッシュ",
   "vinsanet.com": "vinsanet",
+  "character-sheets.appspot.com": "キャラクターシート倉庫",
 };
 
 const $ = id => document.getElementById(id);
@@ -93,6 +94,9 @@ const BULK_SITES = [
   { name: "キャラクター保管所", single: true, host: /^https:\/\/charasheet\.vampire-blood\.net\//, sheet: /^https:\/\/charasheet\.vampire-blood\.net\/(m?[0-9a-f]{32})/,
     fetch: vampireFetchSheets, convert: vampireToItem, ok: s => !!s?.data,
     errors: { "open-sheet": "キャラクター保管所のキャラクターシートを開いてから押してください。" } },
+  { name: "キャラクターシート倉庫", single: true, host: /^https:\/\/character-sheets\.appspot\.com\//, sheet: /[?&]key=([A-Za-z0-9_-]+)/,
+    fetch: appspotFetchSheets, convert: appspotToItem, ok: s => !!s?.data?.base,
+    errors: { "open-sheet": "キャラクターシート倉庫のキャラクターシートを開いてから押してください。" } },
 ];
 
 async function initBulk(tab, site) {
