@@ -297,7 +297,8 @@ function hue(str){ let h=0; for (const c of String(str)) h=(h*31+c.codePointAt(0
 // The sheet's own image when there is one; the initial on a colored tile underneath shows if it fails to load.
 function avatarHTML(c, cls, link){
   const ch = [...(c.name||"？")][0];
-  const img = safeUrl(c.image) ? `<img src="${esc(c.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : "";
+  const okImg = safeUrl(c.image) || /^img\/[0-9a-f]+\.(png|jpg|gif|webp)$/.test(String(c.image||""));
+  const img = okImg ? `<img src="${esc(c.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : "";
   const style = `background:hsl(${hue(c.name||"")} 42% 42%)`;
   if (link && img) return `<a class="${cls}" style="${style}" href="${esc(c.image)}" target="_blank" rel="noopener" title="立ち絵を開く"><span aria-hidden="true">${esc(ch)}</span>${img}</a>`;
   return `<div class="${cls}" style="${style}" aria-hidden="true">${esc(ch)}${img}</div>`;

@@ -93,6 +93,32 @@ async function previousBuild(url) {
   } catch { return new Map(); }
 }
 
+// Pictures from Google Sheets refuse to show on other sites (Cross-Origin-Resource-Policy:
+// same-site), so the site carries its own copy under img/.
+const COPY_IMAGE = /^https:\/\/docs\.google\.com\/sheets-images-rt\//;
+async function copyBlockedImages(chars) {
+  const dir = path.join(OUT, "img");
+  let copied = 0;
+  for (const c of chars) {
+    if (!COPY_IMAGE.test(c.image)) continue;
+    const name = require("crypto").createHash("sha1").update(c.image).digest("hex").slice(0, 16);
+    try {
+      const r = await fetch(c.image);
+      const type = r.headers.get("content-type") || "";
+      if (!r.ok || !type.startsWith("image/")) throw new Error(`${r.status} ${type}`);
+      const ext = { "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp" }[type] || ".png";
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, name + ext), Buffer.from(await r.arrayBuffer()));
+      c.image = `img/${name}${ext}`;
+      copied++;
+    } catch (e) {
+      console.log(`立ち絵をコピーできませんでした: ${c.name} (${e.message})`);
+      c.image = "";
+    }
+  }
+  if (copied) console.log(`立ち絵 ${copied}枚をサイトにコピーしました`);
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const prevAt = args.indexOf("--previous");
@@ -113,6 +139,7 @@ async function main() {
   }
 
   fs.mkdirSync(OUT, { recursive: true });
+  await copyBlockedImages(chars);
   fs.writeFileSync(path.join(OUT, "data.json"), JSON.stringify({ generatedAt: new Date().toISOString(), chars }));
   for (const f of ["favicon.svg", "banner.svg"]) fs.copyFileSync(path.join(ROOT, "web", f), path.join(OUT, f));
   const page = fs.readFileSync(path.join(ROOT, "web", "index.html"), "utf8");
