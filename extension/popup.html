@@ -11,7 +11,7 @@
   h1{font-size:14px;margin:0}
   .site{color:var(--muted);font-size:12px;word-break:break-all}
   label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.05em}
-  input{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--soft);color:inherit;font:inherit}
+  input,select{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--soft);color:inherit;font:inherit}
   .st{border-radius:6px;padding:8px 10px;background:var(--soft);font-size:12px}
   .st.ok{border-left:3px solid var(--ok)} .st.warn{border-left:3px solid var(--warn)}
   button{font:inherit;border-radius:6px;padding:8px 12px;cursor:pointer;border:1px solid var(--line);background:var(--bg);color:inherit}
@@ -29,6 +29,7 @@
   <div class="site" id="site">読み込み中…</div>
   <div class="st" id="status">読み込み中…</div>
   <section id="single" hidden>
+    <div id="pickBox" hidden style="margin-bottom:8px"><label for="pick">追加するキャラ</label><select id="pick"></select></div>
     <div><label for="name">キャラクター名</label><input id="name"></div>
     <button class="primary wide" id="send" type="button" style="margin-top:8px">このシートをNotionに追加</button>
   </section>
@@ -51,6 +52,7 @@
 <script src="ytsheet.js"></script>
 <script src="vampire.js"></script>
 <script src="appspot.js"></script>
+<script src="gsheet.js"></script>
 <script src="popup.js"></script>
 </body>
 </html>

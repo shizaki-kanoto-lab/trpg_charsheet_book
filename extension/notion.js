@@ -62,7 +62,7 @@ function notionRecordFromItem(item) {
     name: item.name || d.name || "", ruby: item.ruby || "", system: item.system || "", site: item.site || "",
     summary: item.summary || "", tags, lost: tags.includes("ロスト"), url: item.url || d.externalUrl || "",
     resources: (d.status || []).map(s => ({ label: s.label, cur: s.value, max: s.max })),
-    stats: d.params || [], skills: item.skills || [], notes: item.notes || d.memo || "", palette: d.commands || "",
+    stats: item.stats || d.params || [], skills: item.skills || [], notes: item.notes || d.memo || "", palette: d.commands || "",
   };
 }
 

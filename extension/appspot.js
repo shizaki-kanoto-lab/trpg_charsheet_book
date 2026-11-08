@@ -15,7 +15,7 @@ async function appspotFetchSheets(onlyKey) {
   return { sheets: [{ key, system, systemName: document.title.trim(), data }] };
 }
 
-const AS_CLEAN = s => String(s ?? "").replace(/[\s　]+/g, " ").trim();
+const AS_CLEAN = s => String(s ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/[\s　]+/g, " ").trim();
 
 // トーキョーN◎VA THE AXLERATION: 能力値 / 制御値 for the four abilities, then 一般技能 and 特技 with levels.
 function asTnx(d) {
@@ -36,6 +36,15 @@ function asTnx(d) {
   return { params, skills, summary: style.replace(/,/g, "・") };
 }
 
+// フタリソウサ: the sheet also holds the partner (d.partner); only the owner's character (d.base) is read.
+function as2s(d) {
+  const b = d.base || {};
+  const quirks = Object.entries(d.abnormal || {}).filter(([k, v]) => /^text\d$/.test(k) && AS_CLEAN(v))
+    .sort().map(([k, v], i) => ({ label: `癖${i + 1}`, value: AS_CLEAN(v) }));
+  return { params: quirks, skills: [], summary: [b.role, b.roleclass, b.background].map(AS_CLEAN).filter(Boolean).join("・"), stats: [],
+    notes: quirks.length ? "＜異常な癖＞\n" + quirks.map((q, i) => `${i + 1}：${q.value}`).join("\n") : "" };
+}
+
 function appspotToItem(sheet) {
   const d = sheet.data || {};
   const b = d.base || {};
@@ -44,18 +53,20 @@ function appspotToItem(sheet) {
   const alias = (AS_CLEAN(b.name).match(/["“”『「]([^"“”』」]+)["“”』」]/) || [])[1] || "";
   const unquote = s => AS_CLEAN(String(s ?? "").replace(/["“”『「][^"“”』」]*["“”』」]/g, ""));
   const name = unquote(b.name) || AS_CLEAN(b.name);
-  const extra = sheet.system === "tnx" ? asTnx(d) : { params: [], skills: [], summary: "" };
+  const extra = sheet.system === "tnx" ? asTnx(d) : sheet.system === "2s" ? as2s(d) : { params: [], skills: [], summary: "" };
   const profile = [
     ["PL", b.player], ["年齢", b.age], ["性別", b.sex], ["誕生日", b.birthday], ["出身", b.birth],
     ["身長", b.height], ["体重", b.weight], ["髪", b.hair], ["瞳", b.eyes], ["肌", b.skin],
+    ["職業", b.job], ["雰囲気", b.atmosphere], ["好きなもの", b.like], ["嫌いなもの", b.dislike],
+    ["パートナー", d.partner?.name && [AS_CLEAN(d.partner.name), AS_CLEAN(d.partner.role)].filter(Boolean).join("・")],
   ].filter(([, v]) => AS_CLEAN(v)).map(([k, v]) => `${k}: ${AS_CLEAN(v)}`);
-  const notes = [profile.join("\n"), String(b.memoir || "").trim(), String(b.memo || "").trim()].filter(Boolean).join("\n\n");
+  const notes = [profile.join("\n"), String(b.memoir || "").trim(), String(b.memo || "").trim(), extra.notes || ""].filter(Boolean).join("\n\n");
   return {
     url, site: "キャラクターシート倉庫",
     name, ruby: unquote(b.nameKana),
     system: sheet.systemName || sheet.system,
     summary: [alias && `“${alias}”`, extra.summary || AS_CLEAN(d.outline)].filter(Boolean).join(" "),
-    tags: [], notes, skills: extra.skills,
+    tags: [], notes, skills: extra.skills, ...(extra.stats ? { stats: extra.stats } : {}),
     ccfolia: {
       kind: "character",
       data: { name, memo: "", initiative: 0, externalUrl: url, status: [], params: extra.params, commands: "" },

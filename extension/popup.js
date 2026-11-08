@@ -6,6 +6,7 @@ const SITES = {
   "charash.jp": "キャラッシュ",
   "vinsanet.com": "vinsanet",
   "character-sheets.appspot.com": "キャラクターシート倉庫",
+  "docs.google.com": "Googleスプレッドシート",
 };
 
 const $ = id => document.getElementById(id);
@@ -55,14 +56,17 @@ async function loadSettings() {
 
 // Shows how many of the sheets are new; the add button only ever adds those.
 async function showAllCount() {
-  if (!iaAll || !notion.token) return;
+  if (!notion.token || (!iaAll && !items[0]?.url)) return;
   try {
-    const existing = await notionExistingUrls(notion.token, notion.db);
-    const fresh = iaAll.filter(i => !existing.has(i.url)).length;
-    $("sendAll").textContent = fresh ? `新規 ${fresh}人をNotionに追加` : "新しいシートはありません";
-    $("sendAll").disabled = !fresh;
-    setMsg(`全${iaAll.length}人（新規 ${fresh}人・追加済み ${iaAll.length - fresh}人）`);
+    const existing = showAllCount.cache ||= await notionExistingUrls(notion.token, notion.db);
+    if (iaAll) {
+      const fresh = iaAll.filter(i => !existing.has(i.url)).length;
+      $("sendAll").textContent = fresh ? `新規 ${fresh}人をNotionに追加` : "新しいシートはありません";
+      $("sendAll").disabled = !fresh;
+      setMsg(`全${iaAll.length}人（新規 ${fresh}人・追加済み ${iaAll.length - fresh}人）`);
+    }
     if (items[0]?.url && existing.has(items[0].url)) { $("send").textContent = "このシートは追加済みです"; $("send").disabled = true; }
+    else if (!iaAll) { $("send").textContent = "このシートをNotionに追加"; $("send").disabled = false; }
   } catch (e) { setMsg(e.message, true); }
 }
 
@@ -75,6 +79,7 @@ async function send(list) {
       setMsg(`${done} / ${total} 人を保存しました…\nこの画面を閉じると止まります。もう一度押せば続きから追加します。`));
     const parts = [`${r.added}人を追加しました`, r.skipped ? `追加済みの${r.skipped}人はそのままです` : "", r.failed.length ? `${r.failed.length}人は失敗しました: ${r.failed.map(f => f.name).join("、")}` : "", r.stopped || ""];
     setMsg(parts.filter(Boolean).join("\n"), !!(r.stopped || r.failed.length));
+    if (!r.stopped && !r.failed.length) for (const it of list) showAllCount.cache?.add(it.url);
   } catch (e) { setMsg(e.message, true); }
 }
 
@@ -97,6 +102,11 @@ const BULK_SITES = [
   { name: "キャラクターシート倉庫", single: true, host: /^https:\/\/character-sheets\.appspot\.com\//, sheet: /[?&]key=([A-Za-z0-9_-]+)/,
     fetch: appspotFetchSheets, convert: appspotToItem, ok: s => !!s?.data?.base,
     errors: { "open-sheet": "キャラクターシート倉庫のキャラクターシートを開いてから押してください。" } },
+  // フタリソウサの公式シート: one spreadsheet holds the 探偵 and the 助手; the visitor picks theirs.
+  { name: "Googleスプレッドシート", single: true, host: /^https:\/\/docs\.google\.com\/spreadsheets\/d\//, sheet: /\/spreadsheets\/d\/([A-Za-z0-9_-]+)/,
+    fetch: gsheetFetchSheets, convert: gsheetToItems, ok: s => !!s?.main,
+    errors: { "sheet-401": "このスプレッドシートを読めませんでした。Googleにログインしているか、共有設定を確かめてください。",
+              "sheet-403": "このスプレッドシートを読めませんでした。Googleにログインしているか、共有設定を確かめてください。" } },
 ];
 
 async function initBulk(tab, site) {
@@ -112,7 +122,13 @@ async function initBulk(tab, site) {
 
   if (site.single){
     const s = r?.sheets?.[0];
-    if (site.ok(s)) return showOne(site.convert(s));
+    if (site.ok(s)) {
+      const conv = site.convert(s);
+      if (!Array.isArray(conv)) return showOne(conv);
+      if (conv.length) return showPick(conv);
+      setStatus("warn", "このスプレッドシートからキャラクターが見つかりませんでした。フタリソウサの公式キャラクターシートか確かめてください。");
+      return;
+    }
     setStatus("warn", site.errors?.[r?.error] || `${site.name}から読み込めませんでした（${r?.error || "不明"}）。ページを再読み込みしてから試してください。`);
     return;
   }
@@ -153,6 +169,19 @@ function showOne(one) {
     : `${one.system}: このシステムの能力値はまだ読み取れません。名前・URL・プロフィールを追加します。`);
 }
 
+// Several characters on one sheet (フタリソウサ: 探偵 and 助手). Preselects the one whose PL name
+// matches the PL name saved the last time a sheet was added this way.
+async function showPick(list) {
+  const { plName } = await chrome.storage.local.get("plName");
+  const pick = $("pick");
+  pick.replaceChildren(...list.map((it, i) => new Option(`${it.role ? it.role + ": " : ""}${it.name}${it.plName ? `（PL ${it.plName}）` : ""}`, String(i))));
+  const mine = Math.max(0, list.findIndex(it => plName && it.plName === plName));
+  pick.value = String(mine);
+  pick.onchange = () => { showOne(list[Number(pick.value)]); showAllCount(); };
+  $("pickBox").hidden = false;
+  showOne(list[mine]);
+}
+
 async function initOther(tab) {
   let page = { url: tab?.url || "", title: tab?.title || "", ogTitle: "", ccfolia: null };
   try {
@@ -186,6 +215,7 @@ async function init() {
 }
 
 $("send").addEventListener("click", () => {
+  if (items[0]?.plName) chrome.storage.local.set({ plName: items[0].plName });
   const name = $("name").value.trim();
   send([{ ...items[0], name: name || items[0].name, ...(items[0].ccfolia && name ? { ccfolia: { ...items[0].ccfolia, data: { ...items[0].ccfolia.data, name } } } : {}) }]);
 });
@@ -194,6 +224,7 @@ $("open").addEventListener("click", () => chrome.tabs.create({ url: "https://www
 $("save").addEventListener("click", async () => {
   await chrome.storage.local.set({ notionToken: $("token").value.trim(), notionDb: notionDbId($("db").value) || NOTION_DEFAULT_DB });
   await loadSettings();
+  showAllCount.cache = null;
   setMsg("保存しました。");
   await showAllCount();
 });
