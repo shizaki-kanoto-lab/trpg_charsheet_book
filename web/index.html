@@ -176,24 +176,19 @@ button{cursor:pointer}
 .scentab{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .scentab thead th{text-align:left;font-size:.82rem;letter-spacing:.1em;color:var(--muted);background:var(--surface-2);padding:6px 12px;border-bottom:1px solid var(--line)}
 .scentab tbody th,.scentab td{padding:7px 12px;border-top:1px solid var(--line);vertical-align:top;text-align:left}
-.scentab tbody tr:not(.first) td{border-top:1px dashed var(--line)}
-.scentab td.ho{width:1%;white-space:nowrap;padding-right:4px}
-.scentab td.ho .role{margin:0}
+.role.after{margin:0 0 0 6px}
 .scentab tbody tr:first-child th,.scentab tbody tr:first-child td{border-top:0}
 .scentab tbody th{font-weight:700;width:34%;overflow-wrap:anywhere}
-.castline{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 18px}
+.castline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
 .castline li{white-space:nowrap}
 .castline a{color:var(--accent);text-decoration:none;font-weight:700}
 .castline a:hover{text-decoration:underline}
 .castline li.is-lost a{color:var(--muted)}
 @media (max-width:760px){
   .scentab thead{display:none}
-  .scentab tbody{display:block}
-  .scentab tr{display:flex;flex-wrap:wrap;align-items:baseline}
-  .scentab tbody th{display:block;flex-basis:100%;width:auto;padding-bottom:0}
-  .scentab td{display:block;border-top:0 !important;padding-top:2px}
-  .scentab td.ho{width:auto}
-  .scentab td:last-child{flex:1;min-width:0}
+  .scentab tr,.scentab tbody th,.scentab td{display:block;width:auto}
+  .scentab tbody th{padding-bottom:0}
+  .scentab td{border-top:0;padding-top:2px}
   .castline li{white-space:normal}
 }
 .role{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:0 7px;font-weight:700;font-size:.82rem;margin-right:6px;vertical-align:1px}
@@ -460,12 +455,9 @@ function renderScenTable(){
   $("scenCount").textContent = S.sq.trim() ? `${items.length} / ${all}本` : `${all}本`;
   $("count").textContent = `${all}本`;
   if (!items.length){ t.innerHTML = `<p class="none">${all ? "条件に合うシナリオはありません。" : "シナリオ名のタグが付いたキャラクターがいません。"}</p>`; return; }
-  const person = c => `<li${isLost(c) ? ` class="is-lost"` : ""}><a href="#sheet=${encodeURIComponent(sheetKey(c))}" title="${esc(c.name)}">${esc(shortName(c.name))}</a>${isLost(c) ? `<span class="lostmark">ロスト</span>` : ""}</li>`;
-  t.innerHTML = `<table class="scentab"><thead><tr><th scope="col">シナリオ</th><th scope="col">HO</th><th scope="col">キャラクター</th></tr></thead><tbody>${items.map(({name, cast}) => {
-    const byRole = [];   // cast is already sorted by HO
-    for (const x of cast){ const last = byRole[byRole.length-1]; if (last && last.role === x.role) last.cs.push(x.c); else byRole.push({role:x.role, cs:[x.c]}); }
-    return byRole.map((g, i) => `<tr${i ? "" : ` class="first"`}>${i ? "" : `<th scope="rowgroup" rowspan="${byRole.length}">${esc(name)}</th>`}<td class="ho">${g.role ? `<span class="role">${esc(g.role)}</span>` : ""}</td><td><ul class="castline">${g.cs.map(person).join("")}</ul></td></tr>`).join("");
-  }).join("")}</tbody></table>`;
+  t.innerHTML = `<table class="scentab"><thead><tr><th scope="col">シナリオ</th><th scope="col">キャラクター・HO</th></tr></thead><tbody>${items.map(({name, cast}) =>
+    `<tr><th scope="row">${esc(name)}</th><td><ul class="castline">${cast.map(({c, role}) =>
+      `<li${isLost(c) ? ` class="is-lost"` : ""}><a href="#sheet=${encodeURIComponent(sheetKey(c))}" title="${esc(c.name)}">${esc(shortName(c.name))}</a>${role ? `<span class="role after">${esc(role)}</span>` : ""}${isLost(c) ? `<span class="lostmark">ロスト</span>` : ""}</li>`).join("")}</ul></td></tr>`).join("")}</tbody></table>`;
 }
 function setView(v){
   S.view = v; store.set("view", v);
