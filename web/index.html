@@ -6,7 +6,7 @@
 /* Layout: an index-card rack on the left, the open sheet on the right; stat boxes read like a printed TRPG sheet. */
 :root{
   --bg:#F4EFE5; --surface:#FFFDF7; --surface-2:#EFE8DB; --ink:#1B2928; --muted:#4F5C5A; --line:#D8CFBF;
-  --accent:#244B4A; --accent-ink:#FFFDF7; --accent-soft:#DDE8E3; --copper:#B77A50;
+  --accent:#244B4A; --accent-ink:#FFFDF7; --accent-soft:#E7EBE2; --accent-fill:#244B4A; --copper:#B77A50;
   --hp:#C2413A; --mp:#2F70BC; --san:#7A4DB3; --danger:#B3261E;
   --f-display:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
   --f-body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
@@ -14,11 +14,11 @@
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0F1514; --surface:#172120; --surface-2:#1F2B2A; --ink:#ECE7DC; --muted:#AEB9B5; --line:#2C3A38;
-  --accent:#86C2BA; --accent-ink:#0F1514; --accent-soft:#1E3533; --copper:#D69B6E;
+  --accent:#B2C6BB; --accent-ink:#F1ECE2; --accent-soft:#222C2A; --accent-fill:#2F524F; --copper:#D69B6E;
   --hp:#EA6C63; --mp:#6EA6EC; --san:#B08AE6; --danger:#F07A72; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0F1514; --surface:#172120; --surface-2:#1F2B2A; --ink:#ECE7DC; --muted:#AEB9B5; --line:#2C3A38;
-  --accent:#86C2BA; --accent-ink:#0F1514; --accent-soft:#1E3533; --copper:#D69B6E;
+  --accent:#B2C6BB; --accent-ink:#F1ECE2; --accent-soft:#222C2A; --accent-fill:#2F524F; --copper:#D69B6E;
   --hp:#EA6C63; --mp:#6EA6EC; --san:#B08AE6; --danger:#F07A72; color-scheme:dark}
 
 *{box-sizing:border-box}
@@ -42,7 +42,7 @@ button{cursor:pointer}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn:hover{background:var(--surface-2)}
 .btn[hidden]{display:none}
-.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.btn.primary{background:var(--accent-fill);color:var(--accent-ink);border-color:var(--accent-fill);font-weight:700}
 .btn.primary:hover{filter:brightness(1.08)}
 .btn.danger{color:var(--danger)}
 .btn.danger.solid{background:var(--danger);color:#fff;border-color:var(--danger)}
@@ -55,7 +55,7 @@ button{cursor:pointer}
 .search{width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 10px;font-size:.86rem;color:var(--muted)}
-.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip[aria-pressed="true"]{background:var(--accent-fill);border-color:var(--accent-fill);color:var(--accent-ink)}
 .list{list-style:none;margin:0;padding:4px 10px 20px;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
 .card{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;width:100%;text-align:left;
   padding:8px 10px;border:1px solid transparent;border-radius:8px;background:transparent}
@@ -204,8 +204,8 @@ button{cursor:pointer}
 button.tag{background:transparent;cursor:pointer}
 button.tag:hover{border-color:var(--accent);color:var(--accent)}
 .loading{color:var(--muted);font-size:.9rem}
-.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.btn.primary:hover{filter:brightness(1.08);background:var(--accent)}
+.btn.primary{background:var(--accent-fill);color:var(--accent-ink);border-color:var(--accent-fill)}
+.btn.primary:hover{filter:brightness(1.1);background:var(--accent-fill)}
 dialog.gh{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:20px;max-width:min(520px,calc(100vw - 32px));width:100%}
 dialog.gh::backdrop{background:rgba(0,0,0,.45)}
 dialog.gh h2{margin:0 0 10px;font-family:var(--f-display);font-weight:800;font-size:1.15rem;letter-spacing:.04em}
