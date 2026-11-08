@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="180" viewBox="0 0 720 180" role="img" aria-labelledby="title desc">
+  <title id="title">キャラクターシート帳</title>
+  <desc id="desc">開いた記録帳とダイスをあしらったロゴ</desc>
+  <g transform="translate(18 18)">
+    <circle cx="72" cy="72" r="68" fill="#f5f0e6"/>
+    <circle cx="72" cy="72" r="62" fill="none" stroke="#244b4a" stroke-width="2"/>
+    <!-- open character record book -->
+    <path d="M29 47c16-5 29-2 43 7v53c-14-9-27-12-43-7z" fill="#fffdf7" stroke="#244b4a" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M115 47c-16-5-29-2-43 7v53c14-9 27-12 43-7z" fill="#fffdf7" stroke="#244b4a" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M72 54v53" stroke="#b77a50" stroke-width="3"/>
+    <path d="M38 61c9-2 17-1 25 3M38 72c8-2 15-1 22 2M106 61c-9-2-17-1-25 3M106 72c-8-2-15-1-22 2" fill="none" stroke="#a8b6a9" stroke-width="3" stroke-linecap="round"/>
+    <!-- small d20 seal -->
+    <path d="M72 20 88 29v18l-16 9-16-9V29z" fill="#b77a50" stroke="#fffdf7" stroke-width="2" stroke-linejoin="round"/>
+    <path d="m72 20 4 18-20-9m20 9 12-9M56 47l20-9 12 9" fill="none" stroke="#fff4e6" stroke-width="1.5" stroke-linejoin="round"/>
+    <circle cx="72" cy="38" r="2.5" fill="#fff4e6"/>
+  </g>
+  <text x="180" y="91" fill="#203c3b" font-family="'Hiragino Mincho ProN','Yu Mincho',serif" font-size="43" font-weight="700" letter-spacing="2">キャラクターシート帳</text>
+  <path d="M182 111h425" stroke="#b77a50" stroke-width="2"/>
+  <text x="184" y="139" fill="#617572" font-family="Georgia,serif" font-size="15" letter-spacing="3">CHARACTER SHEET ARCHIVE</text>
+</svg>

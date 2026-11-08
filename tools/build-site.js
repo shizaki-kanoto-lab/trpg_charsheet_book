@@ -113,9 +113,10 @@ async function main() {
 
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, "data.json"), JSON.stringify({ generatedAt: new Date().toISOString(), chars }));
+  for (const f of ["favicon.svg", "banner.svg"]) fs.copyFileSync(path.join(ROOT, "web", f), path.join(OUT, f));
   const page = fs.readFileSync(path.join(ROOT, "web", "index.html"), "utf8");
   fs.writeFileSync(path.join(OUT, "index.html"),
-    `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"></head><body>\n${page}\n</body></html>\n`);
+    `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body>\n${page}\n</body></html>\n`);
   console.log(`${chars.length}枚を書き出しました（本文を読み直し ${chars.length - reused}枚・前回分を再利用 ${reused}枚）`);
 }
 

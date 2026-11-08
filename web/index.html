@@ -32,10 +32,13 @@ button{cursor:pointer}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   border-bottom:1px solid var(--line);background:var(--surface);box-shadow:inset 0 -3px 0 var(--accent-soft)}
-.brand{display:flex;align-items:baseline;gap:10px}
+.brand{display:flex;align-items:center;gap:10px}
 .brand h1{font-family:var(--f-display);font-weight:800;font-size:1.4rem;margin:0;letter-spacing:.08em;display:flex;align-items:center;gap:10px}
-.brand h1::before{content:"";width:12px;height:12px;background:var(--accent);transform:rotate(45deg);flex:none;box-shadow:0 0 0 3px var(--accent-soft)}
-.brand span{color:var(--muted);font-size:.86rem}
+.brand h1 .emb{width:46px;height:46px;flex:none;display:block}
+.brand h1 .lt{display:flex;flex-direction:column;line-height:1.15;color:var(--ink);font-size:inherit}
+.brand h1 .en{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:.6rem;letter-spacing:.28em;color:var(--muted);
+  border-top:1.5px solid #b77a50;margin-top:4px;padding-top:3px;white-space:nowrap}
+.brand > span{color:var(--muted);font-size:.86rem}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn:hover{background:var(--surface-2)}
 .btn[hidden]{display:none}
@@ -167,7 +170,7 @@ button{cursor:pointer}
 .views button{border:0;background:var(--surface);padding:4px 14px;font-size:.86rem;color:var(--muted);white-space:nowrap}
 .brand{flex-wrap:wrap;row-gap:6px}
 .brand h1{white-space:nowrap}
-.brand span{white-space:nowrap}
+.brand > span{white-space:nowrap}
 .views button+button{border-left:1px solid var(--line)}
 .views button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:700}
 .app.scen .char-only{display:none}
@@ -215,7 +218,17 @@ dialog.gh .note{color:var(--muted);font-size:.84rem}
 </style>
 
 <header class="top">
-  <div class="brand"><h1>キャラクターシート帳</h1><span id="count"></span>
+  <div class="brand"><h1><svg class="emb" viewBox="0 0 144 144" aria-hidden="true" focusable="false">
+      <circle cx="72" cy="72" r="68" fill="#f5f0e6"/>
+      <circle cx="72" cy="72" r="62" fill="none" stroke="#244b4a" stroke-width="2"/>
+      <path d="M29 47c16-5 29-2 43 7v53c-14-9-27-12-43-7z" fill="#fffdf7" stroke="#244b4a" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M115 47c-16-5-29-2-43 7v53c14-9 27-12 43-7z" fill="#fffdf7" stroke="#244b4a" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M72 54v53" stroke="#b77a50" stroke-width="3"/>
+      <path d="M38 61c9-2 17-1 25 3M38 72c8-2 15-1 22 2M106 61c-9-2-17-1-25 3M106 72c-8-2-15-1-22 2" fill="none" stroke="#a8b6a9" stroke-width="3" stroke-linecap="round"/>
+      <path d="M72 20 88 29v18l-16 9-16-9V29z" fill="#b77a50" stroke="#fffdf7" stroke-width="2" stroke-linejoin="round"/>
+      <path d="m72 20 4 18-20-9m20 9 12-9M56 47l20-9 12 9" fill="none" stroke="#fff4e6" stroke-width="1.5" stroke-linejoin="round"/>
+      <circle cx="72" cy="38" r="2.5" fill="#fff4e6"/>
+    </svg><span class="lt">キャラクターシート帳<span class="en">CHARACTER SHEET ARCHIVE</span></span></h1><span id="count"></span>
     <nav class="views" id="views" aria-label="表示の切り替え"><button type="button" data-view="chars">キャラ</button><button type="button" data-view="scen">シナリオ</button></nav></div>
   <div class="hdr-actions">
     <span class="fresh" id="fresh"></span>
