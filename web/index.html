@@ -155,6 +155,11 @@ a.portrait{text-decoration:none}
 .imp .err{color:var(--danger);font-size:.88rem}
 .hdr-actions{display:flex;gap:8px;flex-wrap:wrap}
 
+/* Wide screens: the list scrolls on its own and stays in view while the detail scrolls. */
+@media (min-width:761px){
+  .rack{position:sticky;top:0;align-self:start;height:100vh;height:100dvh}
+  .list{flex:1;min-height:0;overscroll-behavior:contain}
+}
 @media (max-width:760px){
   .app{grid-template-columns:1fr}
   .rack{border-right:0}
