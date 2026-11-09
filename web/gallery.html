@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
-<title>人物名鑑 | TRPG Characters</title>
+<title>シザキカノトのTRPGキャラクター一覧</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap">
@@ -36,10 +36,10 @@ img{display:block}
 .wrap{max-width:1240px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
 
 /* ---------- hero ---------- */
-.hero{padding:clamp(48px,9vw,110px) 0 clamp(28px,5vw,48px);text-align:center;position:relative}
+.hero{padding:clamp(40px,7vw,80px) 0 clamp(24px,4vw,40px);text-align:center;position:relative}
 .hero .eyebrow{font-family:var(--f-latin);font-style:italic;font-size:clamp(1rem,2vw,1.25rem);letter-spacing:.32em;color:var(--accent);margin:0}
 .hero h1{font-family:var(--f-mincho);font-weight:800;font-size:clamp(2.6rem,9vw,5.6rem);letter-spacing:.18em;line-height:1.1;margin:.2em 0 .25em;padding-left:.18em}
-.hero .sub{font-family:var(--f-mincho);font-weight:500;letter-spacing:.24em;font-size:clamp(.95rem,2.2vw,1.15rem);margin:0;color:var(--muted);padding-left:.24em}
+.hero .sub{font-family:var(--f-mincho);font-weight:500;line-height:1.6;letter-spacing:.24em;font-size:clamp(.95rem,2.2vw,1.15rem);margin:.9em 0 0;color:var(--muted);padding-left:.24em}
 .rule{display:flex;align-items:center;justify-content:center;gap:14px;margin:26px auto 0;color:var(--accent);max-width:420px}
 .rule::before,.rule::after{content:"";flex:1;height:1px;background:currentColor;opacity:.45}
 .rule i{width:7px;height:7px;transform:rotate(45deg);border:1px solid currentColor;display:block}
@@ -237,8 +237,7 @@ function renderIndex(){
   $("root").innerHTML = `
   <header class="hero wrap">
     <p class="eyebrow">TRPG Character Archive</p>
-    <h1>人物名鑑</h1>
-    <p class="sub">シザキカノトのTRPGキャラクター一覧</p>
+    <h1 class="sub">シザキカノトのTRPGキャラクター一覧</h1>
     <div class="rule" aria-hidden="true"><i></i></div>
   </header>
   <main class="wrap">
@@ -252,7 +251,7 @@ function renderIndex(){
     ${list.length ? `<ul class="grid">${list.map(tileHTML).join("")}</ul>` : `<p class="empty">該当するキャラクターはいません。</p>`}
   </main>
   <footer class="foot">© Shizaki Kanoto</footer>`;
-  document.title = "人物名鑑 | TRPG Characters";
+  document.title = "シザキカノトのTRPGキャラクター一覧";
 }
 
 function profileHTML(p){
@@ -313,7 +312,7 @@ function profileHTML(p){
 
 function renderProfile(p){
   $("root").innerHTML = profileHTML(p);
-  document.title = `${p.name} | 人物名鑑`;
+  document.title = `${p.name} | シザキカノトのTRPGキャラクター一覧`;
   const more = $("more");
   if (more) more.onclick = () => { const c = p.sheets.find(x => x.id === S.sheet[p.key]) || p.sheets[0]; $("story").textContent = splitNotes(c.notes).text; more.remove(); };
 }
