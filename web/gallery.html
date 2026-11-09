@@ -295,11 +295,18 @@ function renderIndex(){
 /* HP, MP and the like; エモクロアの共鳴 is a session value, so the gallery leaves it out (here and in the stats). */
 const shownRes = c => (c.resources||[]).filter(r => r.label !== "共鳴");
 
+/* The sheet a profile opens on: the one picked with the sheet buttons, else the sheet of the
+   system tab the list was showing, else the first sheet. */
+function shownSheet(p){
+  return p.sheets.find(x => x.id === S.sheet[p.key])
+    || (S.sys && p.sheets.find(x => x.system === S.sys)) || p.sheets[0];
+}
+
 function profileHTML(p){
   const list = visible().some(x => x.key === p.key) ? visible() : S.people;
   const i = list.findIndex(x => x.key === p.key);
   const prev = list[(i - 1 + list.length) % list.length], next = list[(i + 1) % list.length];
-  const c = p.sheets.find(x => x.id === S.sheet[p.key]) || p.sheets[0];
+  const c = shownSheet(p);
   const lost = isLost(c);
   const face = okImg(c.image) ? c : p.face;
   const {profile, text} = splitNotes(c.notes);
@@ -356,7 +363,7 @@ function renderProfile(p){
   $("root").innerHTML = profileHTML(p);
   document.title = `${p.name} | シザキカノトのTRPGキャラクター一覧`;
   const more = $("more");
-  if (more) more.onclick = () => { const c = p.sheets.find(x => x.id === S.sheet[p.key]) || p.sheets[0]; $("story").textContent = splitNotes(c.notes).text; more.remove(); };
+  if (more) more.onclick = () => { const c = shownSheet(p); $("story").textContent = splitNotes(c.notes).text; more.remove(); };
 }
 
 let lastIndexY = 0;
@@ -364,7 +371,8 @@ function route(){
   if (!S.chars.length) return;
   const m = location.hash.match(/^#\/(.+)$/);
   const p = m && S.people.find(x => x.key === decodeURIComponent(m[1]));
-  if (p){ renderProfile(p); window.scrollTo(0, 0); }
+  // Opening a profile starts again from the list's system; the sheet buttons then change it.
+  if (p){ delete S.sheet[p.key]; renderProfile(p); window.scrollTo(0, 0); }
   else { renderIndex(); window.scrollTo(0, lastIndexY); }
 }
 window.addEventListener("hashchange", () => route());

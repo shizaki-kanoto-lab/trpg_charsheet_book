@@ -64,6 +64,15 @@ function chSkillLabel(defName, free) {
   return n;
 }
 
+// The scenarios this character played: エモクロアの残響の記録 (systems.<sys>.echoes) when it has any,
+// otherwise the 参加セッション list (shared.sessions), whose memo may name the HO.
+function chPassed(sheet) {
+  const clean = n => String(n || "").replace(/[\u200B-\u200D\u2060\uFEFF]/g, "").trim();
+  const echoes = (sheet.data?.systems?.[sheet.system]?.echoes || []).map(x => clean(x?.scenario)).filter(Boolean);
+  if (echoes.length) return echoes;
+  return (sheet.data?.shared?.sessions || []).map(s => notionScenarioWithHo(clean(s?.scenario), s?.memo)).filter(Boolean);
+}
+
 function charashToItem(sheet) {
   const sh = sheet.data?.shared || {};
   const sys = sheet.system;
@@ -79,11 +88,7 @@ function charashToItem(sheet) {
     system: CH_SYSTEMS[sys] || sys || "",
     summary: sh.occupation || "",
     tags: [...(sh.tags || []), sh.lost ? "ロスト" : ""].filter(Boolean),
-    // セッション履歴 and エモクロアの残響の記録 (systems.<sys>.echoes): the scenarios this character played.
-    passed: [
-      ...(sh.sessions || []).map(s => notionScenarioWithHo(s?.scenario, s?.memo)),
-      ...(sheet.data?.systems?.[sys]?.echoes || []).map(x => String(x?.scenario || "").replace(/[\u200B-\u200D\u2060\uFEFF]/g, "").trim()),
-    ].filter(Boolean),
+    passed: chPassed(sheet),
     notes: [profile.join("\n"), ...memos].filter(Boolean).join("\n\n"),
     skills: [],
     ccfolia: null,
