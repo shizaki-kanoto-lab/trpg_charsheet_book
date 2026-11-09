@@ -70,6 +70,23 @@ img{display:block}
   background:linear-gradient(to top,color-mix(in srgb,var(--band) 92%,transparent) 0 58%,transparent)}
 .tile .rb{display:block;font-size:.68rem;letter-spacing:.2em;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile .nm{display:block;font-family:var(--f-mincho);font-weight:700;font-size:1.12rem;letter-spacing:.14em;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Hover: the first scenario's full name comes up in front of the picture. */
+.tile .over{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  padding:18px 16px 70px;text-align:center;color:#fff;opacity:0;transition:opacity .3s;pointer-events:none;
+  background:linear-gradient(to bottom,rgb(10 10 16 / .72),rgb(10 10 16 / .5) 70%,transparent)}
+.tile .over .ol{font-family:var(--f-latin);font-style:italic;letter-spacing:.24em;font-size:.82rem;opacity:.85}
+.tile .over .ot{font-family:var(--f-mincho);font-weight:800;font-size:clamp(1.05rem,1.6vw,1.3rem);letter-spacing:.08em;line-height:1.5;
+  overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:6;overflow:hidden;
+  transform:translateY(8px);transition:transform .4s cubic-bezier(.2,.7,.2,1)}
+.tile .over .ot::before{content:"『"}.tile .over .ot::after{content:"』"}
+.tile .over .on{font-size:.72rem;letter-spacing:.14em;opacity:.8}
+.tile .over .on:empty{display:none}
+.tile .band{z-index:2}
+@media (hover:hover){
+  .tile:hover .over,.tile:focus-visible .over{opacity:1}
+  .tile:hover .over .ot,.tile:focus-visible .over .ot{transform:none}
+  .tile:hover .fs,.tile:focus-visible .fs{visibility:hidden}
+}
 .tile .fs{display:block;margin-top:2px;font-family:var(--f-mincho);font-size:.72rem;letter-spacing:.06em;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile .fs::before{content:"『"}.tile .fs::after{content:"』"}
 .tile .sys{display:block;width:max-content;max-width:100%;margin:6px 0 0 auto;font-size:.62rem;letter-spacing:.12em;padding:0 7px;border:1px solid rgb(255 255 255 / .55);color:rgb(255 255 255 / .9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -145,7 +162,7 @@ img{display:block}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .tile{animation:none;opacity:1;transform:none}
-  .tile img{transition:none}
+  .tile img,.tile .over,.tile .over .ot{transition:none}
 }
 </style>
 </head>
@@ -233,8 +250,9 @@ const visible = () => S.people.filter(p => (S.lost || !p.lost) && (!S.sys || p.s
 function tileHTML(p, i){
   const c = p.face, img = okImg(c.image) ? `<img src="${esc(c.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : "";
   const sys = S.sys ? sysShort(S.sys) : p.systems.map(sysShort).join(" / ");
-  return `<li><a class="tile${p.lost ? " lost" : ""}" href="#/${encodeURIComponent(p.key)}" style="--h:${tint(p.name)};--d:${Math.min(i,24)*0.03}s">
+  return `<li><a class="tile${p.lost ? " lost" : ""}" href="#/${encodeURIComponent(p.key)}" style="--h:${tint(p.name)};--d:${Math.min(i,24)*0.03}s"${p.first ? ` title="${esc(p.name)}『${esc(p.first)}』"` : ""}>
     <span class="ini" aria-hidden="true">${esc([...p.name][0]||"？")}</span>${img}
+    ${p.first ? `<span class="over" aria-hidden="true"><span class="ol">First Scenario</span><span class="ot">${esc(p.first)}</span><span class="on">${p.played > 1 ? `ほか ${p.played - 1} 本` : ""}</span></span>` : ""}
     <span class="band">${p.ruby ? `<span class="rb">${esc(p.ruby)}</span>` : ""}<span class="nm">${esc(p.name)}</span>${p.first ? `<span class="fs">${esc(p.first)}</span>` : ""}${sys ? `<span class="sys">${esc(sys)}</span>` : ""}</span></a></li>`;
 }
 
