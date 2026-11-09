@@ -152,12 +152,8 @@ a.portrait{text-decoration:none}
 .stamp{color:var(--muted);font-size:.86rem}
 
 .brand h1{cursor:pointer}
-.home{max-width:520px;margin:14vh auto 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px}
-.home .eyebrow{margin:0;font-family:var(--f-mono);font-size:.72rem;letter-spacing:.24em;color:var(--copper);text-transform:uppercase}
-.home .lead{margin:0;color:var(--muted)}
-.ways{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px}
-.way{text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:999px;padding:7px 18px;font-size:.9rem;background:var(--surface)}
-.way:hover{background:var(--surface-2)}
+.home{min-height:calc(100dvh - 190px);display:grid;place-items:center;text-align:center}
+.home .mark{margin:0;font-family:var(--f-display);font-weight:800;letter-spacing:.2em;font-size:clamp(1.6rem,3.6vw,3rem);color:var(--ink);opacity:.85}
 .empty{max-width:520px;margin:10vh auto 0;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:12px;align-items:center}
 .empty h2{font-family:var(--f-display);font-weight:800;letter-spacing:.06em;color:var(--ink);margin:0;font-size:1.4rem}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);
@@ -736,14 +732,7 @@ function renderMain(){
 /* ---------- top ---------- */
 /* Shown when no sheet is open. */
 function topHTML(){
-  return `<div class="home">
-    <p class="eyebrow">Character Sheet Archive</p>
-    <p class="lead">左の一覧からキャラクターを選んでください。</p>
-    <div class="ways">
-      <a class="way" href="#scen">シナリオ一覧</a>
-      ${S.static ? `<a class="way" href="gallery.html">ギャラリー</a>` : ""}
-    </div>
-  </div>`;
+  return `<div class="home"><p class="mark">Character Sheet Archive</p></div>`;
 }
 
 /* The CCFolia piece saved in Notion, with HP/MP/SAN taken from the current Notion values. */
