@@ -79,7 +79,8 @@ function charashToItem(sheet) {
     system: CH_SYSTEMS[sys] || sys || "",
     summary: sh.occupation || "",
     // セッション履歴: the scenarios this character played.
-    tags: [...(sh.tags || []), ...(sh.sessions || []).map(s => notionScenarioWithHo(s?.scenario, s?.memo)), sh.lost ? "ロスト" : ""].filter(Boolean),
+    tags: [...(sh.tags || []), sh.lost ? "ロスト" : ""].filter(Boolean),
+    passed: (sh.sessions || []).map(s => notionScenarioWithHo(s?.scenario, s?.memo)).filter(Boolean),
     notes: [profile.join("\n"), ...memos].filter(Boolean).join("\n\n"),
     skills: [],
     ccfolia: null,

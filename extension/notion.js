@@ -63,34 +63,117 @@ async function notionExistingUrls(token, db) {
   return urls;
 }
 
-// Scenario lines are the same scenario when one contains the other once spaces, brackets and
-// width are ignored ("プロヴィデンスの箱庭" is already in "プロヴィデンスの箱庭HO1").
-const notionScenarioKey = t => String(t).normalize("NFKC").toLowerCase().replace(/[\s「」『』【】\[\]()（）"'“”・:：\-－―~〜]+/g, "");
-// A more specific line ("…HO2") takes the place of the plain one it contains.
-function notionMergeScenarios(have, add) {
-  const out = [...have];
-  for (const t of add) {
-    const k = notionScenarioKey(t);
-    if (!k) continue;
-    if (out.some(o => { const ok = notionScenarioKey(o); return ok === k || (k.length >= 2 && ok.includes(k)); })) continue;
-    const plain = out.findIndex(o => { const ok = notionScenarioKey(o); return ok.length >= 2 && k.includes(ok); });
-    if (plain >= 0) out[plain] = t; else out.push(t);
+// Scenario lines. "シナリオ名HO2" is a scenario and its HO; a line that is only "HO4" is the HO
+// of the line before it (いあきゃら tags are split at spaces, so "VOID HO4" arrives as two).
+// "HO" followed by a number, a symbol or a Japanese word: "HO2", "HO-β", "HO探偵" (not the HO of
+// SHOTGUN or ECHO).
+const NOTION_HO = /H[OＯ](?=[0-9０-９:：\-－α-ωΑ-Ω\u3040-\u30ff\u3400-\u9fff\uff10-\uff19])/;
+function notionSplitHo(line) {
+  const t = String(line);
+  const m = t.match(NOTION_HO);
+  return m ? [t.slice(0, m.index).trim(), t.slice(m.index)] : [t.trim(), ""];
+}
+// Compared without spaces, punctuation, brackets, readings in parentheses and kana/width differences.
+const notionScenarioKey = t => String(t).normalize("NFKC").toLowerCase()
+  .replace(/[(（][^()（）]*[)）]/g, "")
+  .replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60))
+  .replace(/[\s「」『』【】\[\]"'“”・:：;；\-－―~〜、。,.!！?？…‥♪☆★]+/g, "");
+function notionEditDistance(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+// Same scenario: the names (without the HO) match, or differ by a typo (one letter in names of
+// 5 or more, two in 12 or more). Names that differ only in numbers are different episodes.
+function notionSameScenario(a, b) {
+  const x = notionScenarioKey(notionSplitHo(a)[0]), y = notionScenarioKey(notionSplitHo(b)[0]);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  if (x.replace(/\d+/g, "#") === y.replace(/\d+/g, "#")) return false;
+  const n = Math.min(x.length, y.length);
+  return n >= 5 && notionEditDistance(x, y) <= (n >= 12 ? 2 : 1);
+}
+// Two HOs agree when either is missing or one starts with the other ("HO1" and "HO1生還").
+function notionSameHo(a, b) {
+  const x = notionScenarioKey(notionSplitHo(a)[1]), y = notionScenarioKey(notionSplitHo(b)[1]);
+  return !x || !y || x.startsWith(y) || y.startsWith(x);
+}
+// Joins lone "HO…" lines to the line before ("VOID" + "HO4" -> "VOIDHO4"); a lone HO equal to
+// the one already on that line is dropped.
+function notionJoinHo(lines) {
+  const out = [];
+  for (const raw of lines) {
+    const t = String(raw).trim();
+    if (!t) continue;
+    if (out.length && NOTION_HO.test(t) && !notionSplitHo(t)[0]) {
+      const prev = out[out.length - 1];
+      const [base, ho] = notionSplitHo(prev);
+      if (base && !ho) { out[out.length - 1] = base + t; continue; }
+      if (notionScenarioKey(ho) === notionScenarioKey(t)) continue;
+    }
+    out.push(t);
   }
   return out;
 }
-// A passed scenario and its memo -> "シナリオ名HO2" when the memo names the HO
-// ("HO2", "HO：探偵", "HO異邦人"), the way scenario tags are written.
+// The scenario lines written on the sheet (tags) with the passed scenarios added. Written lines
+// win: a passed scenario already there (in any spelling, with any HO) is not added again, and
+// only gives its HO (or its full name) to a written line that lacks it. Written lines drop only repeats of themselves
+// (same scenario and the same HO); the same scenario with two HOs stays.
+function notionMergeScenarios(have, add = []) {
+  const out = [];
+  for (const t of notionJoinHo(have)) {
+    if (!notionScenarioKey(t)) continue;
+    const at = out.findIndex(o => notionSameScenario(o, t) && notionSameHo(o, t));
+    if (at < 0) { out.push(t); continue; }
+    const [base, ho] = notionSplitHo(out[at]);
+    if (!ho && notionSplitHo(t)[1]) out[at] = base + notionSplitHo(t)[1];
+  }
+  const written = out.length;
+  const adds = notionJoinHo(add).filter(t => notionScenarioKey(t));
+  // A written short name ("ループ橋") stands for the one passed scenario whose name contains it
+  // ("ループ橋でなにかが…"): that full name takes its place, keeping the written HO.
+  const baseKey = t => notionScenarioKey(notionSplitHo(t)[0]);
+  const used = new Set();
+  for (let i = 0; i < written; i++) {
+    const k = baseKey(out[i]);
+    if (k.length < 2 || adds.some(t => notionSameScenario(out[i], t))) continue;
+    const longer = adds.filter(t => baseKey(t).includes(k));
+    // A series name without an HO ("TRASH") gives way to its episodes ("TRASH1", "TRASH2").
+    if (longer.length > 1 && !notionSplitHo(out[i])[1]) { out[i] = ""; continue; }
+    if (longer.length !== 1 || used.has(longer[0])) continue;
+    const [base, ho] = notionSplitHo(longer[0]);
+    out[i] = base + (notionSplitHo(out[i])[1] || ho);
+    used.add(longer[0]);
+  }
+  for (let i = out.length - 1; i >= 0; i--) if (!out[i]) out.splice(i, 1);
+  for (const t of adds) {
+    if (used.has(t)) continue;
+    const at = out.findIndex(o => notionSameScenario(o, t));
+    if (at < 0) { out.push(t); continue; }
+    const [base, ho] = notionSplitHo(out[at]);
+    if (!ho && notionSplitHo(t)[1]) out[at] = base + notionSplitHo(t)[1];
+  }
+  return out;
+}
+// A passed scenario and its memo -> "シナリオ名HO2" when the memo names one HO and only one
+// ("HO2", "HO：探偵", "HO異邦人"). A memo that mentions several HOs is not used.
 function notionScenarioWithHo(name, memo) {
   name = String(name || "").trim();
-  if (!name || /(?<![A-Za-z])HO/i.test(name)) return name;
+  if (!name || NOTION_HO.test(name)) return name;
   const text = String(memo || "").replace(/https?:\/\/\S+/g, " ");
-  const m = text.match(/(?<![A-Za-z])H[OＯ]\s*[:：\-－]?\s*([0-9０-９A-Za-zα-ωΑ-Ωァ-ヶー一-龥]{1,12})/i);
-  return m ? `${name}HO${m[1].normalize("NFKC")}` : name;
+  const found = [...text.matchAll(/(?<![A-Za-z])H[OＯ]\s*[:：\-－]?\s*([0-9０-９A-Za-zα-ωΑ-Ωァ-ヶー一-龥]{1,12})/gi)].map(m => m[1].normalize("NFKC"));
+  return new Set(found).size === 1 ? `${name}HO${found[0]}` : name;
 }
-// The record's scenario lines: its tags other than the edition and similar marks.
+// The record's scenario lines: its tags other than the edition and similar marks, then the
+// passed scenarios read from the sheet.
 function notionScenarios(r) {
-  const all = [...new Set(r.tags.filter(t => t !== "ロスト").map(notionCleanTag).filter(Boolean))];
-  return notionMergeScenarios([], all.filter(t => !NOTION_META_TAG.test(t)));
+  const clean = list => (list || []).map(notionCleanTag).filter(t => t && t !== "ロスト" && !NOTION_META_TAG.test(t));
+  return notionMergeScenarios(clean(r.tags), clean(r.passed));
 }
 
 // The extension's item format -> the record saved to Notion.
@@ -99,7 +182,7 @@ function notionRecordFromItem(item) {
   const tags = item.tags || [];
   return {
     name: item.name || d.name || "", ruby: item.ruby || "", system: item.system || "", site: item.site || "",
-    summary: item.summary || "", tags, lost: tags.includes("ロスト"), url: item.url || d.externalUrl || "",
+    summary: item.summary || "", tags, passed: item.passed || [], lost: tags.includes("ロスト"), url: item.url || d.externalUrl || "",
     resources: (d.status || []).map(s => ({ label: s.label, cur: s.value, max: s.max })),
     image: item.image || d.iconUrl || "",
     stats: item.stats || d.params || [], skills: item.skills || [], notes: item.notes || d.memo || "", palette: d.commands || "",
@@ -197,7 +280,7 @@ async function notionAddNew(token, db, records, onProgress = () => {}) {
   const result = { total: records.length, skipped: records.length - fresh.length, added: 0, updated: 0, failed: [], stopped: null };
   for (const record of records.filter(r => r.url && existing.has(r.url))) {
     const page = existing.get(record.url);
-    const merged = notionMergeScenarios(page.scenarios, notionScenarios(record));
+    const merged = notionMergeScenarios(page.scenarios, notionScenarios(record));   // what is in Notion wins
     if (merged.join("\n") === page.scenarios.join("\n")) continue;
     try {
       await notionRequest(token, `/pages/${page.id}`, { properties: { "シナリオ": { rich_text: notionRich(merged.join("\n")) } } }, "PATCH");

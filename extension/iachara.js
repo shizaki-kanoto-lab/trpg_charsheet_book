@@ -118,7 +118,7 @@ function iacharaToItem(sheet) {
   const notes = [profileLines.join("\n"), d.memo || ""].filter(Boolean).join("\n\n");
   // 通過シナリオ: [{ name, memo }]
   const passed = (Array.isArray(d.passedScenarios) ? d.passedScenarios : []).map(s => notionScenarioWithHo(s?.name, s?.memo)).filter(Boolean);
-  const tags = [six ? "6版" : "7版", ...String(sheet.tag || "").split(/[,、\s]+/).filter(Boolean), ...passed, p.isLost ? "ロスト" : ""].filter(Boolean);
+  const tags = [six ? "6版" : "7版", ...String(sheet.tag || "").split(/[,、\s]+/).filter(Boolean), p.isLost ? "ロスト" : ""].filter(Boolean);
 
   return {
     url: "https://iachara.com/view/" + sheet.id,
@@ -127,7 +127,7 @@ function iacharaToItem(sheet) {
     ruby: p.furi || "",
     system: six ? "クトゥルフ神話TRPG 6版" : "クトゥルフ神話TRPG 7版",
     summary: p.profession || "",
-    tags, notes, skills,
+    tags, passed, notes, skills,
     image: (p.icons || []).find(i => i?.url)?.url || "",   // the first image shown on the sheet
     ccfolia: { kind: "character", data: { name: p.name || sheet.name || "", memo: "", initiative: v.dex, externalUrl: "https://iachara.com/view/" + sheet.id, status, params, commands } },
   };
