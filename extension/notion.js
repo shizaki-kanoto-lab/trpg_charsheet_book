@@ -46,16 +46,40 @@ async function notionRequest(token, path, body, method) {
   }
 }
 
-// The source URLs already in the database. A sheet is "new" when its URL is not in this set.
+// The sheets already in the database, by source URL: url -> { id, scenarios }.
+// A sheet is "new" when its URL is not in this map.
 async function notionExistingUrls(token, db) {
-  const urls = new Set();
+  const urls = new Map();
   let cursor;
   do {
     const r = await notionRequest(token, `/databases/${db}/query`, { page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) });
-    for (const page of r.results) { const u = page.properties?.["元シート"]?.url; if (u) urls.add(u); }
+    for (const page of r.results) {
+      const u = page.properties?.["元シート"]?.url;
+      const text = (page.properties?.["シナリオ"]?.rich_text || []).map(t => t.plain_text ?? t.text?.content ?? "").join("");
+      if (u) urls.set(u, { id: page.id, scenarios: text.split("\n").map(l => l.trim()).filter(Boolean) });
+    }
     cursor = r.has_more ? r.next_cursor : null;
   } while (cursor);
   return urls;
+}
+
+// Scenario lines are the same scenario when one contains the other once spaces, brackets and
+// width are ignored ("プロヴィデンスの箱庭" is already in "プロヴィデンスの箱庭HO1").
+const notionScenarioKey = t => String(t).normalize("NFKC").toLowerCase().replace(/[\s「」『』【】\[\]()（）"'“”・:：\-－―~〜]+/g, "");
+function notionMergeScenarios(have, add) {
+  const out = [...have];
+  for (const t of add) {
+    const k = notionScenarioKey(t);
+    if (!k) continue;
+    if (out.some(o => { const ok = notionScenarioKey(o); return ok === k || (k.length >= 2 && ok.includes(k)) || (ok.length >= 2 && k.includes(ok)); })) continue;
+    out.push(t);
+  }
+  return out;
+}
+// The record's scenario lines: its tags other than the edition and similar marks.
+function notionScenarios(r) {
+  const all = [...new Set(r.tags.filter(t => t !== "ロスト").map(notionCleanTag).filter(Boolean))];
+  return notionMergeScenarios([], all.filter(t => !NOTION_META_TAG.test(t)));
 }
 
 // The extension's item format -> the record saved to Notion.
@@ -97,7 +121,7 @@ function notionProperties(r) {
   const others = r.resources.filter(x => !["HP", "MP", "SAN"].includes(x.label)).map(x => `${x.label} ${x.cur}`);
   const all = [...new Set(r.tags.filter(t => t !== "ロスト").map(notionCleanTag).filter(Boolean))];
   const tags = all.filter(t => NOTION_META_TAG.test(t));
-  const scenarios = all.filter(t => !NOTION_META_TAG.test(t));
+  const scenarios = notionScenarios(r);
   const props = {
     "名前": { title: notionRich(r.name || "名無し") },
     "ふりがな": { rich_text: notionRich(r.ruby) },
@@ -154,10 +178,25 @@ async function notionCreateSheet(token, db, record) {
 }
 
 // Adds only the records whose URL is not yet in the database. Safe to run again after an interruption.
+// A sheet already there only gets the scenarios (passed scenarios, scenario tags) it is missing;
+// nothing else on its page changes.
 async function notionAddNew(token, db, records, onProgress = () => {}) {
   const existing = await notionExistingUrls(token, db);
   const fresh = records.filter(r => !r.url || !existing.has(r.url));
-  const result = { total: records.length, skipped: records.length - fresh.length, added: 0, failed: [], stopped: null };
+  const result = { total: records.length, skipped: records.length - fresh.length, added: 0, updated: 0, failed: [], stopped: null };
+  for (const record of records.filter(r => r.url && existing.has(r.url))) {
+    const page = existing.get(record.url);
+    const merged = notionMergeScenarios(page.scenarios, notionScenarios(record));
+    if (merged.length === page.scenarios.length) continue;
+    try {
+      await notionRequest(token, `/pages/${page.id}`, { properties: { "シナリオ": { rich_text: notionRich(merged.join("\n")) } } }, "PATCH");
+      result.updated++;
+    } catch (e) {
+      if (e.fatal) { result.stopped = e.message; return result; }
+      result.failed.push({ name: record.name, url: record.url, message: e.message });
+    }
+    await notionSleep(NOTION_GAP_MS);
+  }
   for (const record of fresh) {
     try {
       await notionCreateSheet(token, db, record);
@@ -173,5 +212,5 @@ async function notionAddNew(token, db, records, onProgress = () => {}) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { NOTION_DEFAULT_DB, NOTION_GAP_MS, NOTION_META_TAG, notionCleanTag, notionRequest, notionSleep, notionDbId, notionExistingUrls, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
+  module.exports = { NOTION_DEFAULT_DB, NOTION_GAP_MS, NOTION_META_TAG, notionCleanTag, notionRequest, notionSleep, notionDbId, notionExistingUrls, notionMergeScenarios, notionScenarios, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
 }

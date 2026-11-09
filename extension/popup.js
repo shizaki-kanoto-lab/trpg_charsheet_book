@@ -61,11 +61,12 @@ async function showAllCount() {
     const existing = showAllCount.cache ||= await notionExistingUrls(notion.token, notion.db);
     if (iaAll) {
       const fresh = iaAll.filter(i => !existing.has(i.url)).length;
-      $("sendAll").textContent = fresh ? `新規 ${fresh}人をNotionに追加` : "新しいシートはありません";
-      $("sendAll").disabled = !fresh;
+      // Sheets already added still get their missing scenarios, so the button stays usable.
+      $("sendAll").textContent = fresh ? `新規 ${fresh}人をNotionに追加` : "追加済みのシナリオを更新";
+      $("sendAll").disabled = false;
       setMsg(`全${iaAll.length}人（新規 ${fresh}人・追加済み ${iaAll.length - fresh}人）`);
     }
-    if (items[0]?.url && existing.has(items[0].url)) { $("send").textContent = "このシートは追加済みです"; $("send").disabled = true; }
+    if (items[0]?.url && existing.has(items[0].url)) { $("send").textContent = "追加済み：シナリオを更新"; $("send").disabled = false; }
     else if (!iaAll) { $("send").textContent = "このシートをNotionに追加"; $("send").disabled = false; }
   } catch (e) { setMsg(e.message, true); }
 }
@@ -77,9 +78,10 @@ async function send(list) {
   try {
     const r = await notionAddNew(notion.token, notion.db, list.map(notionRecordFromItem), (done, total) =>
       setMsg(`${done} / ${total} 人を保存しました…\nこの画面を閉じると止まります。もう一度押せば続きから追加します。`));
-    const parts = [`${r.added}人を追加しました`, r.skipped ? `追加済みの${r.skipped}人はそのままです` : "", r.failed.length ? `${r.failed.length}人は失敗しました: ${r.failed.map(f => f.name).join("、")}` : "", r.stopped || ""];
+    const parts = [`${r.added}人を追加しました`, r.updated ? `追加済みの${r.updated}人にシナリオを追記しました` : "",
+      r.skipped - r.updated > 0 ? `追加済みの${r.skipped - r.updated}人はそのままです` : "", r.failed.length ? `${r.failed.length}人は失敗しました: ${r.failed.map(f => f.name).join("、")}` : "", r.stopped || ""];
     setMsg(parts.filter(Boolean).join("\n"), !!(r.stopped || r.failed.length));
-    if (!r.stopped && !r.failed.length) for (const it of list) showAllCount.cache?.add(it.url);
+    showAllCount.cache = null;
   } catch (e) { setMsg(e.message, true); }
 }
 

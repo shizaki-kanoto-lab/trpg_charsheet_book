@@ -116,7 +116,9 @@ function iacharaToItem(sheet) {
     p.height && "身長: " + p.height, p.weight && "体重: " + p.weight, p.from && "出身: " + p.from,
   ].filter(Boolean);
   const notes = [profileLines.join("\n"), d.memo || ""].filter(Boolean).join("\n\n");
-  const tags = [six ? "6版" : "7版", ...String(sheet.tag || "").split(/[,、\s]+/).filter(Boolean), p.isLost ? "ロスト" : ""].filter(Boolean);
+  // 通過シナリオ: [{ name, memo }]
+  const passed = (Array.isArray(d.passedScenarios) ? d.passedScenarios : []).map(s => String(s?.name || "").trim()).filter(Boolean);
+  const tags = [six ? "6版" : "7版", ...String(sheet.tag || "").split(/[,、\s]+/).filter(Boolean), ...passed, p.isLost ? "ロスト" : ""].filter(Boolean);
 
   return {
     url: "https://iachara.com/view/" + sheet.id,

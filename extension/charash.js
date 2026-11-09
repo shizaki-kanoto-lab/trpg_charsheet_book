@@ -78,7 +78,8 @@ function charashToItem(sheet) {
     name: sh.name || "", ruby: sh.nameKana || "",
     system: CH_SYSTEMS[sys] || sys || "",
     summary: sh.occupation || "",
-    tags: [...(sh.tags || []), sh.lost ? "ロスト" : ""].filter(Boolean),
+    // セッション履歴: the scenarios this character played.
+    tags: [...(sh.tags || []), ...(sh.sessions || []).map(s => String(s?.scenario || "").trim()), sh.lost ? "ロスト" : ""].filter(Boolean),
     notes: [profile.join("\n"), ...memos].filter(Boolean).join("\n\n"),
     skills: [],
     ccfolia: null,
