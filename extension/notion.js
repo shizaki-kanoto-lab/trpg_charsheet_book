@@ -154,6 +154,9 @@ function notionMergeScenarios(have, add = []) {
   for (let i = out.length - 1; i >= 0; i--) if (!out[i]) out.splice(i, 1);
   for (const t of adds) {
     if (used.has(t)) continue;
+    // Already written out in more detail ("星原にて" in "星原にて、僕は君と踊る夢を見るKPC").
+    const k = baseKey(t);
+    if (k.length >= 2 && out.some(o => baseKey(o).length > k.length && baseKey(o).includes(k))) continue;
     const at = out.findIndex(o => notionSameScenario(o, t));
     if (at < 0) { out.push(t); continue; }
     const [base, ho] = notionSplitHo(out[at]);
