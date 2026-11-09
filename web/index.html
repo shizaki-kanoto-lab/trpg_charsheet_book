@@ -441,8 +441,11 @@ async function loadDetail(c){
 /* Tags hold scenario names. An HO is either written after the name ("命盟HO2", "アメシャトKPC")
    or is a tag of its own ("HO1") next to the scenario tag it belongs to. */
 const META_TAG = /^(?:[67]版|ロスト|.*コンバート|CoC転生)$/;
-const ROLE_ONLY = /^(?:HO|PC\d|KPC$|NPC$)/;
-const ROLE_SUFFIX = /^(.+?)((?:HO|KPC|NPC|PC\d).*)$/;
+// "HO" counts only before a number, a mark or Japanese ("HO2", "HO：探偵", "HO鉄血"), so the "HO" inside
+// "SHOTGUN" or "PHOTO" is part of the name. Same rule as the extension (notion.js NOTION_HO).
+const HO_AT = "HO(?=[0-9０-９:：\\-－α-ωΑ-Ω\\u3040-\\u30ff\\u3400-\\u9fff\\uff10-\\uff19]|$)";
+const ROLE_ONLY = new RegExp(`^(?:${HO_AT}|PC\\d|KPC$|NPC$)`);
+const ROLE_SUFFIX = new RegExp(`^(.+?)((?:${HO_AT}|KPC|NPC|PC\\d).*)$`);
 function scenariosOf(c){
   const out = [];   // [{name, role}]
   const tags = (c.tags||[]).filter(t => !META_TAG.test(t));
