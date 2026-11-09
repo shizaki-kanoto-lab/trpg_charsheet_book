@@ -225,11 +225,11 @@ function buildPeople(){
   for (const c of S.chars){
     const k = personKey(c);
     if (c.galleryHidden) continue;          // ギャラリー非表示 = 非表示 in Notion
-    if (!scenariosOf(c).length) continue;   // only characters who have played a scenario
     if (!map.has(k)) map.set(k, {key:k, sheets:[]});
     map.get(k).sheets.push(c);
   }
-  const people = [...map.values()];
+  // Only characters who have played a scenario; once they have, every sheet of theirs is shown.
+  const people = [...map.values()].filter(p => p.sheets.some(c => scenariosOf(c).length));
   for (const p of people){
     p.sheets.sort((a,b) => (isLost(a)-isLost(b)) || (b.updatedAt||0)-(a.updatedAt||0));
     p.face = p.sheets.find(c => okImg(c.image)) || p.sheets[0];
@@ -239,7 +239,7 @@ function buildPeople(){
     p.systems = [...new Set(p.sheets.map(c => c.system).filter(Boolean))].sort(bySystem);
     // Scenarios across all of the person's sheets; one played under two systems counts once.
     // The first scenario on the sheet listed first by system (CoC6th, CoC7th, emoklore, …).
-    p.first = (scenariosOf([...p.sheets].sort((a,b) => bySystem(a.system, b.system))[0])[0] || {}).name || "";
+    p.first = ([...p.sheets].sort((a,b) => bySystem(a.system, b.system)).flatMap(scenariosOf)[0] || {}).name || "";
     p.played = new Set(p.sheets.flatMap(c => scenariosOf(c).map(x => x.name.normalize("NFKC").replace(/\s+/g, "")))).size;
   }
   // Most scenarios played first, whatever the system.
