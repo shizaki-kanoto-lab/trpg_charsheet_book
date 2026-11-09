@@ -151,6 +151,36 @@ a.portrait{text-decoration:none}
 .none{color:var(--muted);font-size:.9rem}
 .stamp{color:var(--muted);font-size:.86rem}
 
+.brand h1{cursor:pointer}
+.top{max-width:980px;display:flex;flex-direction:column;gap:6px}
+.top-hero{padding:8px 0 14px;border-bottom:1px solid var(--line)}
+.top-hero .eyebrow{margin:0 0 6px;font-family:var(--f-mono);font-size:.72rem;letter-spacing:.22em;color:var(--copper);text-transform:uppercase}
+.top-hero h2{font-family:var(--f-display);font-weight:800;letter-spacing:.08em;font-size:clamp(1.6rem,3.2vw,2.2rem);margin:4px 0 6px}
+.top-hero .lead{margin:0;color:var(--muted);max-width:60ch}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;align-items:baseline;gap:6px}
+.kpi b{font-family:var(--f-mono);font-size:1.9rem;line-height:1;font-weight:700;color:var(--accent)}
+.kpi span{color:var(--muted);font-size:.9rem;white-space:nowrap}
+.top-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 28px}
+.sysbars,.recent{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.sysbars button{width:100%;display:grid;grid-template-columns:minmax(0,11em) minmax(0,1fr) 3ch;gap:10px;align-items:center;border:0;background:none;color:inherit;font:inherit;padding:5px 6px;border-radius:6px;text-align:left;cursor:pointer}
+.sysbars button:hover{background:var(--surface-2)}
+.sysbars .nm{font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sysbars .bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.sysbars .bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.sysbars .n{font-family:var(--f-mono);font-size:.9rem;text-align:right}
+.recent button{width:100%;display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;align-items:center;border:1px solid transparent;background:none;color:inherit;font:inherit;padding:5px 6px;border-radius:6px;text-align:left;cursor:pointer}
+.recent button:hover{background:var(--surface);border-color:var(--line)}
+.recent .avatar{width:36px;height:36px}
+.recent .tx{display:flex;flex-direction:column;min-width:0;line-height:1.35}
+.recent .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent .sub{font-size:.8rem;color:var(--muted)}
+.ways{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.way{display:flex;flex-direction:column;gap:2px;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--copper);border-radius:8px;padding:12px 14px}
+.way:hover{background:var(--surface-2)}
+.way b{font-family:var(--f-display);letter-spacing:.06em}
+.way span{font-size:.86rem;color:var(--muted)}
+@media (max-width:1000px){.top-grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .empty{max-width:520px;margin:10vh auto 0;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:12px;align-items:center}
 .empty h2{font-family:var(--f-display);font-weight:800;letter-spacing:.06em;color:var(--ink);margin:0;font-size:1.4rem}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);
@@ -397,7 +427,6 @@ async function loadStatic(refresh){
   $("rebuild").hidden = false;
   $("galleryLink").hidden = false;   // gallery.html sits next to data.json on the published site
   if (S.sel && !current()) S.sel = null;
-  if (!S.sel && S.chars.length && matchMedia("(min-width:761px)").matches) S.sel = grouped(filtered())[0]?.c.id || null;
   renderBanner(); renderList(); renderMain();
   return true;
 }
@@ -424,7 +453,6 @@ async function load(refresh){
     S.ready = true; S.error = null;
     $("fresh").textContent = storedAt ? `${fmtDate(storedAt)} 時点` : `${fmtDate(Date.now())} 時点`;
     if (S.sel && !current()) S.sel = null;
-    if (!S.sel && S.chars.length && matchMedia("(min-width:761px)").matches) S.sel = grouped(filtered())[0]?.c.id || null;
   } catch (e){
     S.error = e || {code:"upstream_error"};
     if (["needs_reauth","server_not_connected","not_in_manifest","blocked_by_policy","approval_required","consent_required"].includes(S.error.code)){ S.chars = []; S.ready = false; }
@@ -684,11 +712,7 @@ function renderMain(){
   const m = $("main");
   $("app").classList.toggle("detail", !!S.sel);
   const c = current();
-  if (!c){
-    m.innerHTML = S.ready ? `<div class="empty"><h2>シートを選んでください</h2>
-      <p>左の一覧からキャラクターを開くと、能力値・技能・メモ・チャットパレットをまとめて確認できます。HPやメモの編集はNotionで行います。</p></div>` : "";
-    return;
-  }
+  if (!c){ m.innerHTML = S.ready ? topHTML() : ""; return; }
   const res = c.resources, stats = c.stats, skills = c.skills;
   const fam = S.group ? groupOf(c) : [c];
   const d = S.details[c.id] || {};
@@ -732,6 +756,48 @@ function renderMain(){
   </article>`;
 }
 
+/* ---------- top ---------- */
+/* Shown when no sheet is open: totals, people per system, recently updated sheets, and the other views. */
+function topHTML(){
+  const people = new Map();
+  for (const c of S.chars){ const k = personKey(c); if (!people.has(k)) people.set(k, []); people.get(k).push(c); }
+  const lostPeople = [...people.values()].filter(cs => cs.every(isLost)).length;
+  const bySys = new Map();
+  for (const cs of people.values()) for (const s of new Set(cs.map(c => c.system || ""))) bySys.set(s, (bySys.get(s)||0) + 1);
+  const sys = [...bySys].sort((a,b) => b[1]-a[1]);
+  const maxSys = Math.max(1, ...sys.map(x => x[1]));
+  const recent = [...S.chars].sort((a,b) => (b.updatedAt||0)-(a.updatedAt||0)).slice(0, 8);
+  return `<div class="top">
+    <section class="top-hero">
+      <p class="eyebrow">Character Sheet Archive</p>
+      <p class="lead">左の一覧からキャラクターを開くと、能力値・技能・メモ・チャットパレットをまとめて見られます。HPやメモの編集はNotionで行います。</p>
+    </section>
+    <section class="kpis" aria-label="登録数">
+      <div class="kpi"><b>${people.size}</b><span>人</span></div>
+      <div class="kpi"><b>${S.chars.length}</b><span>シート</span></div>
+      <div class="kpi"><b>${scenarioIndex().size}</b><span>シナリオ</span></div>
+      <div class="kpi"><b>${lostPeople}</b><span>ロスト</span></div>
+    </section>
+    <div class="top-grid">
+      <section class="sec"><h2>システム別</h2>
+        <ul class="sysbars">${sys.map(([s,n]) => `<li><button type="button" data-topsys="${esc(s)}" title="${esc(s || "システム未設定")}で絞り込む">
+          <span class="nm">${esc(s || "システム未設定")}</span><span class="bar"><i style="width:${(n/maxSys*100).toFixed(1)}%"></i></span><span class="n">${n}</span></button></li>`).join("")}</ul>
+      </section>
+      <section class="sec"><h2>最近更新したシート</h2>
+        <ul class="recent">${recent.map(c => `<li><button type="button" data-goto="${esc(c.id)}">
+          ${avatarHTML(c, "avatar", false)}
+          <span class="tx"><span class="nm">${esc(shortName(c.name))}</span><span class="sub">${esc(sysShort(c.system))}${c.updatedAt ? "・" + esc(fmtDate(c.updatedAt).split(" ")[0]) : ""}</span></span></button></li>`).join("")}</ul>
+      </section>
+    </div>
+    <section class="sec"><h2>ほかの見かた</h2>
+      <div class="ways">
+        <a class="way" href="#scen"><b>シナリオ一覧</b><span>シナリオごとに、通ったキャラクターとHOをまとめて見られます。</span></a>
+        ${S.static ? `<a class="way" href="gallery.html"><b>ギャラリー</b><span>立ち絵を大きく並べた紹介ページです。</span></a>` : ""}
+      </div>
+    </section>
+  </div>`;
+}
+
 /* The CCFolia piece saved in Notion, with HP/MP/SAN taken from the current Notion values. */
 function pieceText(c){
   const p = JSON.parse(JSON.stringify(S.details[c.id].piece));
@@ -754,11 +820,18 @@ $("main").addEventListener("input", e => { if (e.target.id === "scenSearch"){ S.
 window.addEventListener("hashchange", route);
 $("list").addEventListener("click", e => {
   const b = e.target.closest("[data-id]"); if (!b) return; S.sel = b.dataset.id; renderList(); renderMain(); window.scrollTo(0,0); });
+/* The title goes back to the top page. */
+document.querySelector(".brand h1").addEventListener("click", () => {
+  S.sel = null; S.selKey = null;
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  setView("chars"); window.scrollTo(0,0);
+});
 $("reload").addEventListener("click", () => { if (!S.static) S.details = {}; load(true); });
 $("banner").addEventListener("click", e => { if (e.target.id === "allow") load(true); });
 $("main").addEventListener("click", e => {
   const sc = e.target.closest("[data-scen]"); if (sc){ S.sq = sc.dataset.scen; location.hash = "#scen"; window.scrollTo(0,0); return; }
   const g = e.target.closest("[data-goto]"); if (g){ S.sel = g.dataset.goto; renderList(); renderMain(); return; }
+  const t = e.target.closest("[data-topsys]"); if (t){ S.sys = t.dataset.topsys; renderList(); return; }
   const b = e.target.closest("[data-act]"); if (!b) return;
   const c = current();
   if (b.dataset.act === "back"){ S.sel = null; renderList(); renderMain(); }
