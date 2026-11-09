@@ -465,10 +465,17 @@ function scenariosOf(c){
 function scenarioIndex(){
   if (scenarioIndex.src === S.chars) return scenarioIndex.map;
   const map = new Map();
+  // Full-width and half-width digits name the same scenario ("５日間" = "5日間"); the list shows
+  // the spelling seen first.
+  const shown = new Map();
+  const nameKey = n => n.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xfee0));
   // One entry per person in a scenario: the newest sheet, with whichever sheet names the HO.
   const people = new Map();
-  for (const c of S.chars) for (const {name, role} of scenariosOf(c)){
-    const k = name + "\u0000" + personKey(c);
+  for (const c of S.chars) for (const {name: raw, role} of scenariosOf(c)){
+    const nk = nameKey(raw);
+    if (!shown.has(nk)) shown.set(nk, raw);
+    const name = shown.get(nk);
+    const k = nk + "\u0000" + personKey(c);
     const x = people.get(k);
     if (!x){ people.set(k, {name, c, role}); continue; }
     if (!x.role) x.role = role;
