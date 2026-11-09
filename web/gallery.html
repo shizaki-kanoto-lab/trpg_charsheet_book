@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
-<title>シザキカノト TRPG Characters</title>
+<title>人物名鑑 | TRPG Characters</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap">
@@ -200,6 +200,7 @@ function buildPeople(){
   const map = new Map();
   for (const c of S.chars){
     const k = personKey(c);
+    if (!scenariosOf(c).length) continue;   // only characters who have played a scenario
     if (!map.has(k)) map.set(k, {key:k, sheets:[]});
     map.get(k).sheets.push(c);
   }
@@ -234,7 +235,7 @@ function renderIndex(){
   $("root").innerHTML = `
   <header class="hero wrap">
     <p class="eyebrow">TRPG Character Archive</p>
-    <h1>シザキカノト</h1>
+    <h1>人物名鑑</h1>
     <p class="sub">シザキカノトのTRPGキャラクター一覧</p>
     <div class="rule" aria-hidden="true"><i></i></div>
   </header>
@@ -249,7 +250,7 @@ function renderIndex(){
     ${list.length ? `<ul class="grid">${list.map(tileHTML).join("")}</ul>` : `<p class="empty">該当するキャラクターはいません。</p>`}
   </main>
   <footer class="foot">© Shizaki Kanoto</footer>`;
-  document.title = "シザキカノト TRPG Characters";
+  document.title = "人物名鑑 | TRPG Characters";
 }
 
 function profileHTML(p){
@@ -310,7 +311,7 @@ function profileHTML(p){
 
 function renderProfile(p){
   $("root").innerHTML = profileHTML(p);
-  document.title = `${p.name} | シザキカノト TRPG Characters`;
+  document.title = `${p.name} | 人物名鑑`;
   const more = $("more");
   if (more) more.onclick = () => { const c = p.sheets.find(x => x.id === S.sheet[p.key]) || p.sheets[0]; $("story").textContent = splitNotes(c.notes).text; more.remove(); };
 }
