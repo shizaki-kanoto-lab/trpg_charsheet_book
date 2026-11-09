@@ -118,7 +118,8 @@ function iacharaToItem(sheet) {
   const notes = [profileLines.join("\n"), d.memo || ""].filter(Boolean).join("\n\n");
   // 通過シナリオ: [{ name, memo }]
   const passed = (Array.isArray(d.passedScenarios) ? d.passedScenarios : []).map(s => notionScenarioWithHo(s?.name, s?.memo)).filter(Boolean);
-  const tags = [six ? "6版" : "7版", ...String(sheet.tag || "").split(/[,、\s]+/).filter(Boolean), p.isLost ? "ロスト" : ""].filter(Boolean);
+  // Tags are separated by spaces (or commas); "、" belongs to names such as 「影よ、影よ！」.
+  const tags = [six ? "6版" : "7版", ...String(sheet.tag || "").split(/[,\s]+/).filter(Boolean), p.isLost ? "ロスト" : ""].filter(Boolean);
 
   return {
     url: "https://iachara.com/view/" + sheet.id,
