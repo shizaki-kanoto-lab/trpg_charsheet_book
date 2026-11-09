@@ -138,6 +138,8 @@ async function main() {
     else if (!links.length && mine.length) report.shared.push(`${r.sheet.name}：${title}`);
     if (all.length && SYSTEM[r.sheet.system] && system && SYSTEM[r.sheet.system] !== system) report.crossSystem.push(`${r.sheet.name}（${r.sheet.system}）：${title}（${system}）`);
     report.added++; if (links.length) report.linked++;
+    report.list = report.list || [];
+    report.list.push(`${r.sheet.name}（${r.sheet.system}）：${title}${r.ho ? " " + r.ho : ""}${r.role !== "PL" ? " " + r.role : ""}${links.length ? "" : "（卓報告なし）"}`);
     if (!write) continue;
     await notionRequest(token, "/pages", {
       parent: { database_id: RUNS_DB },
@@ -153,7 +155,7 @@ async function main() {
     await notionSleep(NOTION_GAP_MS);
   }
 
-  console.log(`${write ? "追加" : "追加予定"} ${report.added} 件（うち卓報告とリンク ${report.linked} 件）`);
+  console.log(`${write ? "追加" : "追加予定"} ${report.added} 件（うち卓報告とリンク ${report.linked} 件）\n` + (report.list || []).join("\n"));
 
   // The rows already in 通過記録, as they stand now (after edits by hand).
   const sheetById = new Map(sheets.map(s => [s.id, s]));
