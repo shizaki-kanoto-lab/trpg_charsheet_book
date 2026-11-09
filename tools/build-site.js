@@ -126,24 +126,10 @@ async function copyBlockedImages(chars) {
 }
 
 // ケダモノオペラ characters live in their own Notion database ("ケダモノオペラCS"): one page per
-// ケダモノ, with the cover as its picture and the page text as notes. They are added to the
+// ケダモノ, with the cover as its picture and 設定・メモ as notes (the page body is not read). They are added to the
 // sheet book as system "ケダモノオペラ". Notion file URLs expire, so the picture is copied under img/.
 const KEDAMONO_DB = "20c1b663c48f8089b06ec8b31f89f6c6";
 const KEDAMONO_FIELDS = ["ケダモノ種", "亜種", "権能", "欲望", "伝説", "疑似餌の姿", "住処", "群れ"];
-const TEXT_BLOCKS = new Set(["paragraph", "heading_1", "heading_2", "heading_3", "bulleted_list_item", "numbered_list_item", "quote", "callout", "to_do"]);
-
-async function topBlocks(token, id) {
-  const blocks = [];
-  let cursor;
-  do {
-    const r = await notionRequest(token, `/blocks/${id}/children?page_size=100${cursor ? "&start_cursor=" + cursor : ""}`);
-    blocks.push(...r.results);
-    cursor = r.has_more ? r.next_cursor : null;
-    await notionSleep(NOTION_GAP_MS);
-  } while (cursor);
-  return blocks;
-}
-
 async function copyNotionImage(url, key) {
   const r = await fetch(url);
   const type = r.headers.get("content-type") || "";
@@ -164,10 +150,8 @@ async function kedamonoChars(token) {
   for (const page of pages) {
     const p = page.properties;
     const get = name => prop(p[name]);
-    const blocks = await topBlocks(token, page.id);
-    const body = blocks.filter(b => TEXT_BLOCKS.has(b.type)).map(b => text(b[b.type].rich_text)).filter(t => t.trim());
     const fileUrl = f => f?.type === "external" ? f.external.url : f?.file?.url;
-    const picture = fileUrl(page.cover) || fileUrl(blocks.find(b => b.type === "image")?.image);
+    const picture = fileUrl(page.cover);
     let image = "";
     if (picture) {
       try { image = await copyNotionImage(picture, page.id); }
@@ -179,7 +163,7 @@ async function kedamonoChars(token) {
       id: page.url, name: get("ケダモノ名") || "", ruby: "", system: "ケダモノオペラ", sourceSite: "Notion", sourceUrl: "",
       image, summary: get("ケダモノ種") || "", tags: [], resources: [], stats: [], skills: [], profile,
       updatedAt: Date.parse(page.last_edited_time) || 0, galleryHidden: false,
-      notes: [get("設定・メモ") || "", ...body].filter(t => String(t).trim()).join("\n\n"), palette: "", piece: null,
+      notes: String(get("設定・メモ") || "").trim(), palette: "", piece: null,
     });
   }
   console.log(`ケダモノオペラCS ${out.length}体を読みました`);
