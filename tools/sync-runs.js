@@ -51,10 +51,9 @@ const personKey = name => String(name || "").normalize("NFKC").replace(/[(（][^
 const ROLE_OF = { PL: ["PL"], KPC: ["KP", "DL", "GM", "SKP"] };
 
 // Scenario names the user confirmed (2026-11-10) where the sheet is right and only part matches 卓報告:
-// a scenario of its own (魔法少女希望譚HARD is not 魔法少女希望譚), or 卓報告's session under a
-// fuller name (TRASH1 of TRASH1 / TRASH2; 探索者：Uの証言), which keeps the sheet's name and
-// still links to 卓報告.
-const OWN_SCENARIO = new Set(["魔法少女希望譚HARD"].map(notionScenarioKey));
+// 卓報告's session under a fuller name (TRASH1 of TRASH1 / TRASH2; 探索者：Uの証言), which keeps
+// the sheet's name and still links to 卓報告. Scenarios of their own, not part of a 卓報告 name, go in OWN_SCENARIO.
+const OWN_SCENARIO = new Set([].map(notionScenarioKey));
 const KEEP_NAME = new Set(["TRASH1", "探索者：Uの証言"].map(notionScenarioKey));
 
 // "シナリオ名HO2" / "シナリオ名KPC" / "シナリオ名NPC" -> { base, ho, role }
