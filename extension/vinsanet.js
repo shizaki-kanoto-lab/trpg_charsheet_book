@@ -41,21 +41,21 @@ async function vinsanetImage(id) {
 function vinsanetToItem(sheet) {
   const d = sheet.data || {};
   const url = `https://vinsanet.com/characters/${sheet.id}/view`;
+  const rule = d.rule && d.rule !== "基本ルール" ? d.rule : "";   // a rulebook, not a scenario: kept in the notes
   const profile = [
-    ["肩書き", d.title], ["年齢", d.age], ["性別", d.gender], ["職業", d.profession],
+    ["ルール", rule], ["肩書き", d.title], ["年齢", d.age], ["性別", d.gender], ["職業", d.profession],
     ["出身", d.home], ["階級", d.rank], ["家庭", d.family],
   ].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`);
   const remarks = (d.remarks || []).filter(r => r.body).map(r => (r.title ? `【${r.title}】\n` : "") + r.body);
   const base = (d.skills || []).map(s => ({ label: String(s.name), value: String(Number(s.value) || 0) }));
   const specialities = (d.specialities || []).filter(s => Number(s.value) > 0)
     .map(s => ({ label: String(s.name), value: String(Number(s.value)) }));
-  const rule = d.rule && d.rule !== "基本ルール" ? d.rule : "";
   return {
     url, site: "vinsanet", image: sheet.image || "",
     name: d.name || "", ruby: d.kana || "",
     system: "Kutulu",
     summary: d.title || d.profession || "",
-    tags: [...(d.tags || []), rule, d.isLost ? "ロスト" : ""].filter(Boolean),
+    tags: [...(d.tags || []), d.isLost ? "ロスト" : ""].filter(Boolean),
     notes: [profile.join("\n"), ...remarks].filter(Boolean).join("\n\n"),
     skills: specialities,
     ccfolia: {
