@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
+<title>シザキカノト TRPG Characters</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap">
+<style>
+/* A character introduction page: a wall of portraits, and a profile page for each character.
+   Reads the same data.json as the sheet book (index.html). */
+:root{
+  --bg:#F3EFE7; --paper:#FBF8F2; --ink:#1A1A22; --muted:#5E5B63; --line:#D9D2C5; --soft:#E9E3D7;
+  --accent:#8E2E3B; --accent-2:#2D3F63; --band:#16151C; --band-ink:#F6F1E7;
+  --f-mincho:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --f-sans:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --f-latin:"Cormorant Garamond","Times New Roman",serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111117; --paper:#18181F; --ink:#ECE6DA; --muted:#A7A2AC; --line:#2D2C36; --soft:#202029;
+  --accent:#D9707E; --accent-2:#94A8D6; --band:#08080C; --band-ink:#F6F1E7; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111117; --paper:#18181F; --ink:#ECE6DA; --muted:#A7A2AC; --line:#2D2C36; --soft:#202029;
+  --accent:#D9707E; --accent-2:#94A8D6; --band:#08080C; --band-ink:#F6F1E7; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-sans);font-size:15px;line-height:1.8;
+  background-image:radial-gradient(color-mix(in srgb,var(--ink) 7%,transparent) 1px,transparent 1.2px);background-size:22px 22px}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer}
+img{display:block}
+.wrap{max-width:1240px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
+
+/* ---------- hero ---------- */
+.hero{padding:clamp(48px,9vw,110px) 0 clamp(28px,5vw,48px);text-align:center;position:relative}
+.hero .eyebrow{font-family:var(--f-latin);font-style:italic;font-size:clamp(1rem,2vw,1.25rem);letter-spacing:.32em;color:var(--accent);margin:0}
+.hero h1{font-family:var(--f-mincho);font-weight:800;font-size:clamp(2.6rem,9vw,5.6rem);letter-spacing:.18em;line-height:1.1;margin:.2em 0 .25em;padding-left:.18em}
+.hero .sub{font-family:var(--f-mincho);font-weight:500;letter-spacing:.24em;font-size:clamp(.95rem,2.2vw,1.15rem);margin:0;color:var(--muted);padding-left:.24em}
+.rule{display:flex;align-items:center;justify-content:center;gap:14px;margin:26px auto 0;color:var(--accent);max-width:420px}
+.rule::before,.rule::after{content:"";flex:1;height:1px;background:currentColor;opacity:.45}
+.rule i{width:7px;height:7px;transform:rotate(45deg);border:1px solid currentColor;display:block}
+
+/* ---------- filter ---------- */
+.bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 18px;margin:0 0 34px}
+.tabs{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 2px}
+.tabs button{background:none;border:0;padding:6px 12px;font-family:var(--f-mincho);font-weight:700;letter-spacing:.08em;color:var(--muted);position:relative}
+.tabs button small{font-family:var(--f-latin);font-size:.9em;margin-left:4px;opacity:.8}
+.tabs button::after{content:"";position:absolute;left:12px;right:12px;bottom:2px;height:2px;background:var(--accent);transform:scaleX(0);transition:transform .25s}
+.tabs button[aria-pressed="true"]{color:var(--ink)}
+.tabs button[aria-pressed="true"]::after,.tabs button:hover::after{transform:scaleX(1)}
+.lostsw{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted);cursor:pointer;user-select:none}
+.lostsw input{accent-color:var(--accent)}
+
+/* ---------- grid ---------- */
+.grid{list-style:none;margin:0;padding:0 0 80px;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
+.tile{display:block;text-decoration:none;position:relative;border-radius:2px;overflow:hidden;aspect-ratio:3/4;
+  background:var(--h);isolation:isolate;box-shadow:0 1px 0 color-mix(in srgb,var(--ink) 10%,transparent);
+  opacity:0;transform:translateY(14px);animation:rise .6s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:var(--d,0s)}
+.tile::before{content:"";position:absolute;inset:0;z-index:-1;
+  background:repeating-linear-gradient(135deg,transparent 0 14px,rgb(255 255 255 / .07) 14px 15px),
+             linear-gradient(160deg,rgb(255 255 255 / .16),transparent 55%)}
+.tile .ini{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-mincho);font-weight:800;font-size:4.5rem;color:rgb(255 255 255 / .55)}
+.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 12%;transition:transform .6s cubic-bezier(.2,.7,.2,1),filter .4s}
+.tile:hover img,.tile:focus-visible img{transform:scale(1.045)}
+.tile .band{position:absolute;left:0;right:0;bottom:0;padding:22px 12px 10px;color:var(--band-ink);
+  background:linear-gradient(to top,color-mix(in srgb,var(--band) 92%,transparent) 0 58%,transparent)}
+.tile .rb{display:block;font-size:.68rem;letter-spacing:.2em;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .nm{display:block;font-family:var(--f-mincho);font-weight:700;font-size:1.12rem;letter-spacing:.14em;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .sys{position:absolute;top:10px;left:10px;font-size:.66rem;letter-spacing:.12em;padding:1px 8px;border:1px solid rgb(255 255 255 / .7);color:#fff;background:rgb(0 0 0 / .28);backdrop-filter:blur(2px)}
+.tile.lost img{filter:grayscale(1) contrast(.95) brightness(.85)}
+.tile.lost .sys::after{content:" ／ LOST";color:#ffb3bd}
+.tile:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@keyframes rise{to{opacity:1;transform:none}}
+.empty{text-align:center;color:var(--muted);padding:60px 0}
+
+/* ---------- profile ---------- */
+.prof{padding:32px 0 90px}
+.crumbs{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:26px;font-size:.88rem}
+.crumbs a{text-decoration:none;color:var(--muted);letter-spacing:.1em}
+.crumbs a:hover{color:var(--accent)}
+.pager{display:flex;gap:16px}
+.layout{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(24px,4vw,56px);align-items:start}
+.figure{position:sticky;top:24px}
+.stage{position:relative;aspect-ratio:3/4;background:var(--h);overflow:hidden;border-radius:2px}
+.stage::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,transparent 0 18px,rgb(255 255 255 / .07) 18px 19px)}
+.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:50% 100%}
+.stage .ini{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-mincho);font-weight:800;font-size:7rem;color:rgb(255 255 255 / .5)}
+.stage.lost img{filter:grayscale(1)}
+.vert{position:absolute;top:16px;right:14px;writing-mode:vertical-rl;font-family:var(--f-latin);font-style:italic;letter-spacing:.3em;color:rgb(255 255 255 / .8);font-size:.95rem;text-shadow:0 1px 6px rgb(0 0 0 / .4)}
+.cap{margin-top:8px;font-size:.78rem;color:var(--muted);text-align:right}
+.cap a{text-decoration:none}
+.cap a:hover{color:var(--accent)}
+
+.pill{display:inline-block;font-size:.75rem;letter-spacing:.14em;padding:2px 12px;border:1px solid var(--accent);color:var(--accent);border-radius:999px}
+.pill.lost{border-color:var(--muted);color:var(--muted)}
+.pname{font-family:var(--f-mincho);font-weight:800;font-size:clamp(2rem,5vw,3.1rem);letter-spacing:.12em;line-height:1.25;margin:14px 0 4px;overflow-wrap:anywhere}
+.pruby{font-family:var(--f-mincho);letter-spacing:.3em;color:var(--muted);margin:0 0 6px}
+.prole{font-family:var(--f-latin);font-style:italic;font-size:1.25rem;color:var(--accent);margin:0}
+.sheets{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 0}
+.sheets button{border:1px solid var(--line);background:var(--paper);padding:3px 12px;font-size:.8rem;border-radius:2px;color:var(--muted)}
+.sheets button[aria-current="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+.sec{margin-top:40px}
+.sec h2{display:flex;align-items:baseline;gap:12px;margin:0 0 14px;font-family:var(--f-mincho);font-weight:700;font-size:1.05rem;letter-spacing:.2em}
+.sec h2 .en{font-family:var(--f-latin);font-style:italic;font-weight:500;font-size:1.35rem;letter-spacing:.06em;color:var(--accent)}
+.sec h2::after{content:"";flex:1;height:1px;background:var(--line);align-self:center}
+.dl{display:grid;grid-template-columns:max-content minmax(0,1fr);margin:0;border-top:1px solid var(--line)}
+.dl dt,.dl dd{margin:0;padding:9px 14px;border-bottom:1px solid var(--line)}
+.dl dt{font-size:.82rem;letter-spacing:.2em;color:var(--muted);background:color-mix(in srgb,var(--soft) 60%,transparent)}
+.dl dd{font-family:var(--f-mincho);font-weight:500;overflow-wrap:anywhere}
+.story{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font-family:var(--f-mincho);font-size:1rem;line-height:2.05}
+.more{margin-top:8px;background:none;border:0;padding:0;color:var(--accent);font-size:.85rem;letter-spacing:.1em}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.stat{background:var(--paper);padding:8px 10px 6px;text-align:center}
+.stat .k{font-family:var(--f-latin);font-weight:600;letter-spacing:.14em;font-size:.86rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .v{font-family:var(--f-latin);font-weight:600;font-size:1.65rem;line-height:1.1}
+.res{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:12px;font-size:.88rem;color:var(--muted)}
+.res b{font-family:var(--f-latin);font-size:1.15rem;color:var(--ink);margin-left:6px}
+.skills{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px 26px}
+.skills li{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px;padding:5px 0 3px;border-bottom:1px dotted var(--line);position:relative}
+.skills li .l{overflow-wrap:anywhere;font-size:.92rem}
+.skills li .v{font-family:var(--f-latin);font-weight:600;font-size:1.1rem}
+.skills li::after{content:"";position:absolute;left:0;bottom:-1px;height:2px;width:calc(var(--p) * 1%);background:var(--accent);opacity:.55}
+.scen{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.scen li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:10px 4px;border-bottom:1px solid var(--line)}
+.scen li .no{font-family:var(--f-latin);font-style:italic;color:var(--accent);font-size:1rem;min-width:2ch}
+.scen li .t{font-family:var(--f-mincho);font-weight:500;overflow-wrap:anywhere}
+.scen li .r{font-size:.75rem;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);padding:0 8px;white-space:nowrap}
+.foot{text-align:center;color:var(--muted);font-family:var(--f-latin);letter-spacing:.2em;font-size:.85rem;padding:20px 0 40px}
+
+@media (max-width:760px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .tabs{flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;width:100%;scrollbar-width:none;padding-bottom:2px}
+  .tabs button{flex:none;white-space:nowrap}
+  .tile .nm{font-size:.98rem;letter-spacing:.08em}
+  .layout{grid-template-columns:1fr}
+  .figure{position:static;max-width:420px;width:100%;margin:0 auto}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .tile{animation:none;opacity:1;transform:none}
+  .tile img{transition:none}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+const store = {get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} }};
+function hue(str){ let h=0; for (const c of String(str)) h=(h*31+c.codePointAt(0))%360; return h; }
+const tint = n => `hsl(${hue(n)} 30% 34%)`;
+const okImg = u => /^https?:\/\//.test(String(u||"")) || /^img\/[0-9a-f]+\.(png|jpg|gif|webp)$/.test(String(u||""));
+const isLost = c => (c.tags||[]).includes("ロスト");
+const SYS_SHORT = {"クトゥルフ神話TRPG 6版":"CoC 6th", "クトゥルフ神話TRPG 7版":"CoC 7th", "エモクロアTRPG":"Emoklore", "ガイアケアTRPG":"GaiaCare",
+  "ダブルクロス The 3rd Edition":"Double Cross", "ソード・ワールド2.5":"SW 2.5", "ソード・ワールド2.0":"SW 2.0"};
+const sysShort = s => SYS_SHORT[s] || s || "";
+const sysJa = s => String(s||"その他").replace(/TRPG\s*/,"").replace(/ The 3rd Edition/,"").replace(/ THE AXLERATION/i,"").replace(/^クトゥルフ神話/,"クトゥルフ");
+/* Same person as in the sheet book: NFKC, no spaces, no trailing （よみ）. */
+const personKey = c => String(c.name||"").normalize("NFKC").replace(/[(（][^()（）]*[)）]\s*$/,"").replace(/[\s　・]+/g,"").toLowerCase() || "#"+c.id;
+const shortName = n => String(n||"名無し").replace(/\s*[(（][^()（）]*[)）]\s*$/, "") || n;
+const rubyOf = c => c.ruby || ((String(c.name||"").match(/[(（]([^()（）]*)[)）]\s*$/)||[])[1]) || "";
+
+/* Scenario tags, same rules as the sheet book: an HO is written after the name or is a tag of its own. */
+const META_TAG = /^(?:[67]版|ロスト|.*コンバート|CoC転生|要確認)$/;
+const HO_AT = "HO(?=[0-9０-９:：\\-－α-ωΑ-Ω\\u3040-\\u30ff\\u3400-\\u9fff\\uff10-\\uff19]|$)";
+const ROLE_ONLY = new RegExp(`^(?:${HO_AT}|PC\\d|KPC$|NPC$)`);
+const ROLE_SUFFIX = new RegExp(`^(.+?)((?:${HO_AT}|KPC|NPC|PC\\d).*)$`);
+function scenariosOf(c){
+  const out = []; let pending = "";
+  for (const t of (c.tags||[]).filter(t => !META_TAG.test(t))){
+    if (ROLE_ONLY.test(t)){ const last = out[out.length-1]; if (last && !last.role) last.role = t; else pending = t; continue; }
+    const m = t.match(ROLE_SUFFIX);
+    out.push(m ? {name:m[1].trim(), role:m[2]} : {name:t, role:pending});
+    pending = "";
+  }
+  return out;
+}
+/* Notes start with "職業: …" lines (written by the importer); the rest is the character's text. */
+const PROFILE_KEYS = ["職業","年齢","性別","身長","体重","出身"];
+function splitNotes(notes){
+  const profile = [], rest = [];
+  for (const line of String(notes||"").split("\n")){
+    const m = line.match(/^(職業|年齢|性別|身長|体重|出身)\s*[:：]\s*(.+)$/);
+    if (m && !rest.some(l => l.trim())) profile.push([m[1], m[2].trim()]); else rest.push(line);
+  }
+  return {profile, text: rest.join("\n").replace(/^\s+|\s+$/g, "")};
+}
+
+const S = {chars:[], people:[], sys: store.get("gSys") || "", lost: store.get("gLost") === "1", sheet:{}};
+
+/* One entry per person; the face is the newest sheet that has an image. */
+function buildPeople(){
+  const map = new Map();
+  for (const c of S.chars){
+    const k = personKey(c);
+    if (!map.has(k)) map.set(k, {key:k, sheets:[]});
+    map.get(k).sheets.push(c);
+  }
+  const people = [...map.values()];
+  for (const p of people){
+    p.sheets.sort((a,b) => (isLost(a)-isLost(b)) || (b.updatedAt||0)-(a.updatedAt||0));
+    p.face = p.sheets.find(c => okImg(c.image)) || p.sheets[0];
+    p.name = shortName(p.sheets[0].name);
+    p.ruby = p.sheets.map(rubyOf).find(Boolean) || "";
+    p.lost = p.sheets.every(isLost);
+    p.systems = [...new Set(p.sheets.map(c => c.system).filter(Boolean))];
+  }
+  people.sort((a,b) => (a.ruby||a.name).localeCompare(b.ruby||b.name, "ja"));
+  S.people = people;
+}
+const visible = () => S.people.filter(p => (S.lost || !p.lost) && (!S.sys || p.systems.includes(S.sys)));
+
+function tileHTML(p, i){
+  const c = p.face, img = okImg(c.image) ? `<img src="${esc(c.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : "";
+  const sys = S.sys ? sysShort(S.sys) : p.systems.map(sysShort).join(" / ");
+  return `<li><a class="tile${p.lost ? " lost" : ""}" href="#/${encodeURIComponent(p.key)}" style="--h:${tint(p.name)};--d:${Math.min(i,24)*0.03}s">
+    <span class="ini" aria-hidden="true">${esc([...p.name][0]||"？")}</span>${img}
+    ${sys ? `<span class="sys">${esc(sys)}</span>` : ""}
+    <span class="band">${p.ruby ? `<span class="rb">${esc(p.ruby)}</span>` : ""}<span class="nm">${esc(p.name)}</span></span></a></li>`;
+}
+
+function renderIndex(){
+  const systems = new Map();
+  for (const p of S.people) if (S.lost || !p.lost) for (const s of p.systems) systems.set(s, (systems.get(s)||0)+1);
+  const list = visible();
+  const all = S.people.filter(p => S.lost || !p.lost).length;
+  $("root").innerHTML = `
+  <header class="hero wrap">
+    <p class="eyebrow">TRPG Character Archive</p>
+    <h1>シザキカノト</h1>
+    <p class="sub">シザキカノトのTRPGキャラクター一覧</p>
+    <div class="rule" aria-hidden="true"><i></i></div>
+  </header>
+  <main class="wrap">
+    <div class="bar">
+      <nav class="tabs" aria-label="システムで絞り込む">
+        <button type="button" data-sys="" aria-pressed="${!S.sys}">すべて<small>${all}</small></button>
+        ${[...systems].sort((a,b)=>b[1]-a[1]).map(([s,n]) => `<button type="button" data-sys="${esc(s)}" aria-pressed="${S.sys===s}">${esc(sysJa(s))}<small>${n}</small></button>`).join("")}
+      </nav>
+      <label class="lostsw"><input type="checkbox" id="lostsw" ${S.lost ? "checked" : ""}> ロストした探索者も表示</label>
+    </div>
+    ${list.length ? `<ul class="grid">${list.map(tileHTML).join("")}</ul>` : `<p class="empty">該当するキャラクターはいません。</p>`}
+  </main>
+  <footer class="foot">© Shizaki Kanoto</footer>`;
+  document.title = "シザキカノト TRPG Characters";
+}
+
+function profileHTML(p){
+  const list = visible().some(x => x.key === p.key) ? visible() : S.people;
+  const i = list.findIndex(x => x.key === p.key);
+  const prev = list[(i - 1 + list.length) % list.length], next = list[(i + 1) % list.length];
+  const c = p.sheets.find(x => x.id === S.sheet[p.key]) || p.sheets[0];
+  const lost = isLost(c);
+  const face = okImg(c.image) ? c : p.face;
+  const {profile, text} = splitNotes(c.notes);
+  if (c.summary && !profile.some(([k]) => k === "職業")) profile.unshift(["職業", c.summary]);
+  const scen = scenariosOf(c);
+  const skills = [...(c.skills||[])].sort((a,b) => num(b.value)-num(a.value));
+  const long = text.length > 420;
+  return `
+  <main class="wrap prof">
+    <div class="crumbs">
+      <a href="#">← 一覧へ戻る</a>
+      <span class="pager">${list.length > 1 ? `<a href="#/${encodeURIComponent(prev.key)}">‹ ${esc(prev.name)}</a><a href="#/${encodeURIComponent(next.key)}">${esc(next.name)} ›</a>` : ""}</span>
+    </div>
+    <div class="layout">
+      <div class="figure">
+        <div class="stage${lost ? " lost" : ""}" style="--h:${tint(p.name)}">
+          <span class="ini" aria-hidden="true">${esc([...p.name][0]||"？")}</span>
+          ${okImg(face.image) ? `<img src="${esc(face.image)}" alt="${esc(p.name)}" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}
+          <span class="vert" aria-hidden="true">${esc(sysShort(c.system))}</span>
+        </div>
+        ${c.sourceUrl ? `<p class="cap"><a href="${esc(c.sourceUrl)}" target="_blank" rel="noopener noreferrer">キャラクターシート（${esc(c.sourceSite||"")}） ↗</a></p>` : ""}
+      </div>
+      <article>
+        <span class="pill${lost ? " lost" : ""}">${esc(c.system || "システム未設定")}${lost ? "　ロスト" : ""}</span>
+        <h1 class="pname">${esc(p.name)}</h1>
+        ${p.ruby ? `<p class="pruby">${esc(p.ruby)}</p>` : ""}
+        ${c.summary ? `<p class="prole">${esc(c.summary)}</p>` : ""}
+        ${p.sheets.length > 1 ? `<div class="sheets" role="group" aria-label="シートを切り替える">${p.sheets.map(x => `<button type="button" data-sheet="${esc(x.id)}" aria-current="${x.id===c.id}">${esc(sysJa(x.system))}${isLost(x) ? "（ロスト）" : ""}</button>`).join("")}</div>` : ""}
+
+        ${profile.length ? `<section class="sec"><h2><span class="en">Profile</span>プロフィール</h2>
+          <dl class="dl">${profile.map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></section>` : ""}
+
+        ${text ? `<section class="sec"><h2><span class="en">About</span>人物</h2>
+          <p class="story" id="story">${esc(long ? text.slice(0, 400) + "…" : text)}</p>
+          ${long ? `<button class="more" type="button" id="more">続きを読む</button>` : ""}</section>` : ""}
+
+        ${(c.stats||[]).length ? `<section class="sec"><h2><span class="en">Status</span>能力値</h2>
+          <div class="stats">${c.stats.map(s => `<div class="stat"><div class="k">${esc(s.label)}</div><div class="v">${esc(s.value)}</div></div>`).join("")}</div>
+          ${(c.resources||[]).length ? `<div class="res">${c.resources.map(r => `<span>${esc(r.label)}<b>${esc(r.max ?? r.cur)}</b></span>`).join("")}</div>` : ""}</section>` : ""}
+
+        ${skills.length ? `<section class="sec"><h2><span class="en">Skills</span>技能</h2>
+          <ul class="skills">${skills.map(s => `<li style="--p:${Math.max(0, Math.min(100, num(s.value)))}"><span class="l">${esc(s.label)}</span><span class="v">${esc(s.value)}</span></li>`).join("")}</ul></section>` : ""}
+
+        ${scen.length ? `<section class="sec"><h2><span class="en">Scenarios</span>通過シナリオ</h2>
+          <ol class="scen">${scen.map((s, n) => `<li><span class="no">${n+1}</span><span class="t">${esc(s.name)}</span>${s.role ? `<span class="r">${esc(s.role)}</span>` : "<span></span>"}</li>`).join("")}</ol></section>` : ""}
+      </article>
+    </div>
+  </main>
+  <footer class="foot">© Shizaki Kanoto</footer>`;
+}
+
+function renderProfile(p){
+  $("root").innerHTML = profileHTML(p);
+  document.title = `${p.name} | シザキカノト TRPG Characters`;
+  const more = $("more");
+  if (more) more.onclick = () => { const c = p.sheets.find(x => x.id === S.sheet[p.key]) || p.sheets[0]; $("story").textContent = splitNotes(c.notes).text; more.remove(); };
+}
+
+let lastIndexY = 0;
+function route(){
+  if (!S.chars.length) return;
+  const m = location.hash.match(/^#\/(.+)$/);
+  const p = m && S.people.find(x => x.key === decodeURIComponent(m[1]));
+  if (p){ renderProfile(p); window.scrollTo(0, 0); }
+  else { renderIndex(); window.scrollTo(0, lastIndexY); }
+}
+window.addEventListener("hashchange", () => route());
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-sys]");
+  if (t){ S.sys = t.dataset.sys; store.set("gSys", S.sys); renderIndex(); return; }
+  const sh = e.target.closest("[data-sheet]");
+  if (sh){ const m = location.hash.match(/^#\/(.+)$/); const p = m && S.people.find(x => x.key === decodeURIComponent(m[1]));
+    if (p){ S.sheet[p.key] = sh.dataset.sheet; renderProfile(p); } return; }
+  if (e.target.closest(".tile")) lastIndexY = window.scrollY;
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "lostsw"){ S.lost = e.target.checked; store.set("gLost", S.lost ? "1" : "0"); renderIndex(); }
+});
+
+(async () => {
+  try {
+    const r = await fetch("data.json", {cache: "no-cache"});
+    if (!r.ok) throw new Error(r.status);
+    S.chars = (await r.json()).chars || [];
+  } catch {
+    $("root").innerHTML = `<p class="empty">キャラクターを読み込めませんでした。</p>`;
+    return;
+  }
+  buildPeople();
+  if (S.sys && !S.people.some(p => p.systems.includes(S.sys))) S.sys = "";
+  route();
+})();
+</script>
+</body>
+</html>
