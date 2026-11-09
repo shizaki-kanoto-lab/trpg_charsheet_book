@@ -89,7 +89,15 @@ a.portrait{text-decoration:none}
 .sheets button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 10px;font-size:.86rem;text-align:left;line-height:1.35}
 .sheets button small{display:block;color:var(--muted);font-size:.7rem}
 .sheets button[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:700}
-.search-help{font-size:.86rem;color:var(--muted);margin:-4px 0 0}
+.search-help{font-size:.86rem;color:var(--muted);margin:0}
+.filters summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;font-size:.86rem;font-weight:700;color:var(--muted);padding:2px 0;user-select:none}
+.filters summary::-webkit-details-marker{display:none}
+.filters summary::before{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .15s;margin:0 2px}
+.filters[open] summary::before{transform:rotate(45deg)}
+.filters summary:hover{color:var(--ink)}
+.fsum{font-weight:400;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filters[open] .fsum{display:none}
+.filters-body{display:flex;flex-direction:column;gap:10px;padding-top:8px}
 .rack-empty{padding:24px 16px;color:var(--muted);font-size:.9rem}
 
 .main{min-width:0;padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -249,12 +257,17 @@ dialog.gh .note{color:var(--muted);font-size:.84rem}
   <aside class="rack">
     <div class="rack-tools">
       <input class="search" id="search" type="search" placeholder="名前・タグ・技能名で検索" aria-label="キャラクターを検索">
-      <p class="search-help char-only">例：<code>目星</code>　<code>目星70</code>（70以上）　<code>図書館&gt;=60 6版</code></p>
-      <div class="seg char-only" id="lostSeg" role="group" aria-label="ロストで絞り込む">
-        <button type="button" data-lost="alive">生存</button><button type="button" data-lost="lost">ロスト</button><button type="button" data-lost="all">すべて</button>
-      </div>
-      <label class="grp char-only"><input type="checkbox" id="groupToggle" checked> 同じ名前を1人にまとめる</label>
-      <div class="chips char-only" id="chips"></div>
+      <details class="filters char-only" id="filters">
+        <summary><span>絞り込み</span><span class="fsum" id="filterSum"></span></summary>
+        <div class="filters-body">
+          <p class="search-help">例：<code>目星</code>　<code>目星70</code>（70以上）　<code>図書館&gt;=60 6版</code></p>
+          <div class="seg" id="lostSeg" role="group" aria-label="ロストで絞り込む">
+            <button type="button" data-lost="alive">生存</button><button type="button" data-lost="lost">ロスト</button><button type="button" data-lost="all">すべて</button>
+          </div>
+          <label class="grp"><input type="checkbox" id="groupToggle" checked> 同じ名前を1人にまとめる</label>
+          <div class="chips" id="chips"></div>
+        </div>
+      </details>
     </div>
     <ul class="list" id="list"></ul>
   </aside>
@@ -629,6 +642,7 @@ function renderList(){
     b.setAttribute("aria-pressed", String(S.lost===k));
     b.innerHTML = `${({alive:"生存",lost:"ロスト",all:"すべて"})[k]}${S.ready ? `<small>${n}</small>` : ""}`;
   }
+  $("filterSum").textContent = [({alive:"生存",lost:"ロスト",all:"ロストも含む"})[S.lost], S.group ? "" : "シートごと", S.sys].filter(Boolean).join("・");
   const systems = [...new Set(S.chars.map(c=>c.system).filter(Boolean))];
   $("chips").innerHTML = systems.length>1 ? [["","すべて"],...systems.map(s=>[s,s])].map(([v,l]) =>
     `<button class="chip" type="button" data-sys="${esc(v)}" aria-pressed="${S.sys===v}">${esc(l)}</button>`).join("") : "";
@@ -819,6 +833,8 @@ $("ghDlg").addEventListener("close", () => {
 S.lost = ["alive","lost","all"].includes(store.get("lostFilter")) ? store.get("lostFilter") : "alive";
 S.group = store.get("groupByName") !== "0";
 $("groupToggle").checked = S.group;
+$("filters").open = store.get("filtersOpen") !== "0";
+$("filters").addEventListener("toggle", () => store.set("filtersOpen", $("filters").open ? "1" : "0"));
 if (!location.hash && store.get("view") === "scen") history.replaceState(null, "", "#scen");
 route();
 S.mcp = undefined;
