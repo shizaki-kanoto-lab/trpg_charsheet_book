@@ -82,7 +82,21 @@ async function main() {
   // Who has each scenario (and 立場): only a scenario one person played can be tied to its 卓報告 pages.
   const runs = [];
   for (const s of sheets) for (const line of s.lines) runs.push({ sheet: s, ...parseLine(line) });
-  const takuOf = r => taku.filter(t => notionSameScenario(t.name, r.base));
+  // A sheet line that only partly matches a 卓報告 name takes that name: "Paranormal Crime Episode 1：…"
+  // and "TRASH1" are 卓報告's "Paranormal Crime" and "TRASH", "公演型まれびとこぞりて" is "まれびとこぞりて",
+  // and "ヤドリギあやかし探偵社" is its episodes when only one of them fits. The rest after
+  // the 卓報告 name becomes the HO when it is one ("トナリ美術館の5つの問PC3" -> PC3).
+  const takuOf = r => {
+    const same = taku.filter(t => notionSameScenario(t.name, r.base));
+    if (same.length) return same;
+    const k = notionScenarioKey(r.base);
+    const part = taku.filter(t => { const tk = notionScenarioKey(t.name); return tk.length >= 4 && (k.includes(tk) || tk.includes(k) && k.length >= 4); });
+    const names = [...new Set(part.map(t => notionScenarioKey(t.name)))];
+    if (names.length !== 1) return [];
+    const rest = r.base.normalize("NFKC").slice(r.base.normalize("NFKC").indexOf(part[0].name.normalize("NFKC").trim()) + part[0].name.normalize("NFKC").trim().length).trim();
+    if (!r.ho && /^(PC|HO)\S{1,8}$/i.test(rest)) r.ho = rest;
+    return part;
+  };
   const playersOf = new Map();
   for (const r of runs) {
     const k = r.role + "|" + notionScenarioKey(r.base);
