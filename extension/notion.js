@@ -169,8 +169,9 @@ function notionMergeScenarios(have, add = []) {
 function notionScenarioWithHo(name, memo) {
   name = String(name || "").trim();
   if (!name || NOTION_HO.test(name)) return name;
-  const text = String(memo || "").replace(/https?:\/\/\S+/g, " ");
-  const found = [...text.matchAll(/(?<![A-Za-z])H[OＯ]\s*[:：\-－]?\s*([0-9０-９A-Za-zα-ωΑ-Ωァ-ヶー一-龥]{1,12})/gi)].map(m => m[1].normalize("NFKC"));
+  // NFKC so a full-width "ＨＯ" counts too; "HO「三根春花（みつねはるか）について」" gives 三根春花.
+  const text = String(memo || "").normalize("NFKC").replace(/https?:\/\/\S+/g, " ");
+  const found = [...text.matchAll(/(?<![A-Za-z])HO\s*[:\-]?\s*[「『]?\s*([0-9A-Za-zα-ωΑ-Ωァ-ヶー一-龥]{1,12})/gi)].map(m => m[1]);
   return new Set(found).size === 1 ? `${name}HO${found[0]}` : name;
 }
 // The record's scenario lines: its tags other than the edition and similar marks, then the
