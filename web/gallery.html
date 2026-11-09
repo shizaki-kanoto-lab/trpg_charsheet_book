@@ -248,7 +248,7 @@ function renderIndex(){
     <div class="bar">
       <nav class="tabs" aria-label="システムで絞り込む">
         <button type="button" data-sys="" aria-pressed="${!S.sys}">すべて<small>${all}</small></button>
-        ${[...systems].sort((a,b)=>b[1]-a[1]).map(([s,n]) => `<button type="button" data-sys="${esc(s)}" aria-pressed="${S.sys===s}">${esc(sysJa(s))}<small>${n}</small></button>`).join("")}
+        ${[...systems].sort((a,b)=>bySystem(a[0],b[0])).map(([s,n]) => `<button type="button" data-sys="${esc(s)}" aria-pressed="${S.sys===s}">${esc(sysJa(s))}<small>${n}</small></button>`).join("")}
       </nav>
       <label class="lostsw"><input type="checkbox" id="lostsw" ${S.lost ? "checked" : ""}> ロストした探索者も表示</label>
     </div>
