@@ -170,7 +170,13 @@ function notionScenarioWithHo(name, memo) {
   name = String(name || "").trim();
   if (!name || NOTION_HO.test(name)) return name;
   // NFKC so a full-width "ＨＯ" counts too; "HO「三根春花（みつねはるか）について」" gives 三根春花.
-  const text = String(memo || "").normalize("NFKC").replace(/https?:\/\/\S+/g, " ");
+  // A line that is only an HO followed by a sheet link ("HO2" then "https://iachara.com/view/…")
+  // names the other player's character, so it is left out.
+  const lines = String(memo || "").normalize("NFKC").split("\n");
+  const isLink = l => /^\s*https?:\/\//.test(l || "");
+  const nextLine = i => lines.slice(i + 1).find(l => l.trim());
+  const text = lines.filter((l, i) => !(/^\s*HO\s*[:\-]?\s*\S{0,12}\s*(https?:\/\/\S+\s*)?$/i.test(l) && (/https?:\/\//.test(l) || isLink(nextLine(i)))))
+    .join("\n").replace(/https?:\/\/\S+/g, " ");
   const found = [...text.matchAll(/(?<![A-Za-z])HO\s*[:\-]?\s*[「『]?\s*([0-9A-Za-zα-ωΑ-Ωァ-ヶー一-龥]{1,12})/gi)].map(m => m[1]);
   return new Set(found).size === 1 ? `${name}HO${found[0]}` : name;
 }
