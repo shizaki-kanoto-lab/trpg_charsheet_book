@@ -212,8 +212,11 @@ function buildPeople(){
     p.ruby = p.sheets.map(rubyOf).find(Boolean) || "";
     p.lost = p.sheets.every(isLost);
     p.systems = [...new Set(p.sheets.map(c => c.system).filter(Boolean))];
+    // Scenarios across all of the person's sheets; one played under two systems counts once.
+    p.played = new Set(p.sheets.flatMap(c => scenariosOf(c).map(x => x.name.normalize("NFKC").replace(/\s+/g, "")))).size;
   }
-  people.sort((a,b) => (a.ruby||a.name).localeCompare(b.ruby||b.name, "ja"));
+  // Most scenarios played first, whatever the system.
+  people.sort((a,b) => b.played - a.played || (a.ruby||a.name).localeCompare(b.ruby||b.name, "ja"));
   S.people = people;
 }
 const visible = () => S.people.filter(p => (S.lost || !p.lost) && (!S.sys || p.systems.includes(S.sys)));
