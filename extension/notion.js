@@ -66,15 +66,26 @@ async function notionExistingUrls(token, db) {
 // Scenario lines are the same scenario when one contains the other once spaces, brackets and
 // width are ignored ("プロヴィデンスの箱庭" is already in "プロヴィデンスの箱庭HO1").
 const notionScenarioKey = t => String(t).normalize("NFKC").toLowerCase().replace(/[\s「」『』【】\[\]()（）"'“”・:：\-－―~〜]+/g, "");
+// A more specific line ("…HO2") takes the place of the plain one it contains.
 function notionMergeScenarios(have, add) {
   const out = [...have];
   for (const t of add) {
     const k = notionScenarioKey(t);
     if (!k) continue;
-    if (out.some(o => { const ok = notionScenarioKey(o); return ok === k || (k.length >= 2 && ok.includes(k)) || (ok.length >= 2 && k.includes(ok)); })) continue;
-    out.push(t);
+    if (out.some(o => { const ok = notionScenarioKey(o); return ok === k || (k.length >= 2 && ok.includes(k)); })) continue;
+    const plain = out.findIndex(o => { const ok = notionScenarioKey(o); return ok.length >= 2 && k.includes(ok); });
+    if (plain >= 0) out[plain] = t; else out.push(t);
   }
   return out;
+}
+// A passed scenario and its memo -> "シナリオ名HO2" when the memo names the HO
+// ("HO2", "HO：探偵", "HO異邦人"), the way scenario tags are written.
+function notionScenarioWithHo(name, memo) {
+  name = String(name || "").trim();
+  if (!name || /(?<![A-Za-z])HO/i.test(name)) return name;
+  const text = String(memo || "").replace(/https?:\/\/\S+/g, " ");
+  const m = text.match(/(?<![A-Za-z])H[OＯ]\s*[:：\-－]?\s*([0-9０-９A-Za-zα-ωΑ-Ωァ-ヶー一-龥]{1,12})/i);
+  return m ? `${name}HO${m[1].normalize("NFKC")}` : name;
 }
 // The record's scenario lines: its tags other than the edition and similar marks.
 function notionScenarios(r) {
@@ -187,7 +198,7 @@ async function notionAddNew(token, db, records, onProgress = () => {}) {
   for (const record of records.filter(r => r.url && existing.has(r.url))) {
     const page = existing.get(record.url);
     const merged = notionMergeScenarios(page.scenarios, notionScenarios(record));
-    if (merged.length === page.scenarios.length) continue;
+    if (merged.join("\n") === page.scenarios.join("\n")) continue;
     try {
       await notionRequest(token, `/pages/${page.id}`, { properties: { "シナリオ": { rich_text: notionRich(merged.join("\n")) } } }, "PATCH");
       result.updated++;
@@ -212,5 +223,5 @@ async function notionAddNew(token, db, records, onProgress = () => {}) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { NOTION_DEFAULT_DB, NOTION_GAP_MS, NOTION_META_TAG, notionCleanTag, notionRequest, notionSleep, notionDbId, notionExistingUrls, notionMergeScenarios, notionScenarios, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
+  module.exports = { NOTION_DEFAULT_DB, NOTION_GAP_MS, NOTION_META_TAG, notionCleanTag, notionRequest, notionSleep, notionDbId, notionExistingUrls, notionMergeScenarios, notionScenarios, notionScenarioWithHo, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
 }
