@@ -134,7 +134,8 @@ function notionMergeScenarios(have, add = []) {
     if (!ho && notionSplitHo(t)[1]) out[at] = base + notionSplitHo(t)[1];
   }
   const written = out.length;
-  const adds = notionJoinHo(add).filter(t => notionScenarioKey(t));
+  // NFC: a sheet may store "ジ" as "シ" + a combining mark; it is written as the one letter.
+  const adds = notionJoinHo(add.map(t => String(t).normalize("NFC"))).filter(t => notionScenarioKey(t));
   // A written short name ("ループ橋") stands for the one passed scenario whose name contains it
   // ("ループ橋でなにかが…"): that full name takes its place, keeping the written HO.
   const baseKey = t => notionScenarioKey(notionSplitHo(t)[0]);

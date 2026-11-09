@@ -49,6 +49,30 @@ function iaDb7(n) {
   const k = 2 + Math.floor((n - 205) / 80); return ["+" + k + "d6", k + 1];
 }
 
+// Tags are separated by spaces (or commas); "、" belongs to names such as 「影よ、影よ！」. A name
+// with spaces stays one tag: a passed scenario written out ("胡桃炸裂症候群 -Drosselmeyer Syndrome-"),
+// the start of a passed scenario's name ("Paranormal Crime" of "Paranormal Crime Episode 1：…"),
+// or a part that begins with a mark ("地球戦争 -火星からの侵略者-").
+function iaSplitTags(tag, passedNames = []) {
+  let s = String(tag || "");
+  const names = passedNames.map(n => String(n || "").trim()).filter(Boolean);
+  for (const name of names) {
+    if (/\s/.test(name) && s.includes(name)) s = s.split(name).join(name.replace(/\s/g, "\u0000"));
+  }
+  const key = t => notionScenarioKey(notionSplitHo(t)[0]);
+  const keys = names.map(key).filter(Boolean);
+  const out = [];
+  for (const raw of s.split(/[,\s]+/).filter(Boolean)) {
+    const t = raw.replace(/\u0000/g, " ");
+    const prev = out[out.length - 1];
+    const joined = prev && key(prev + " " + t);
+    if (prev && !keys.includes(key(prev)) && (/^[-－―~～〜(（「『【〈《:：]/.test(t)
+      || (joined && joined !== key(prev) && keys.some(k => k.startsWith(joined))))) out[out.length - 1] = prev + " " + t;
+    else out.push(t);
+  }
+  return out;
+}
+
 function iacharaToItem(sheet) {
   const d = sheet.data || {}, ab = d.abilities || {}, p = d.profile || {};
   const six = d.version !== "7th";
@@ -118,8 +142,7 @@ function iacharaToItem(sheet) {
   const notes = [profileLines.join("\n"), d.memo || ""].filter(Boolean).join("\n\n");
   // 通過シナリオ: [{ name, memo }]
   const passed = (Array.isArray(d.passedScenarios) ? d.passedScenarios : []).map(s => notionScenarioWithHo(s?.name, s?.memo)).filter(Boolean);
-  // Tags are separated by spaces (or commas); "、" belongs to names such as 「影よ、影よ！」.
-  const tags = [six ? "6版" : "7版", ...String(sheet.tag || "").split(/[,\s]+/).filter(Boolean), p.isLost ? "ロスト" : ""].filter(Boolean);
+  const tags = [six ? "6版" : "7版", ...iaSplitTags(sheet.tag, (d.passedScenarios || []).map(s => s?.name)), p.isLost ? "ロスト" : ""].filter(Boolean);
 
   return {
     url: "https://iachara.com/view/" + sheet.id,
