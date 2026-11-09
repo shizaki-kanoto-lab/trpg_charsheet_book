@@ -79,10 +79,12 @@ async function main() {
     id: bare(pg.id), name: prop(pg.properties["シナリオ"]) || "", system: prop(pg.properties["システム"]) || "",
     date: prop(pg.properties["日付"]) || "", role: prop(pg.properties["PL/GM"]) || "",
   })).filter(r => r.name);
-  const existing = new Set((await allPages(token, RUNS_DB)).map(pg => {
+  const rows = (await allPages(token, RUNS_DB)).map(pg => {
     const p = pg.properties;
-    return `${(prop(p["キャラ"]) || [])[0]}|${notionScenarioKey(prop(p["シナリオ"]))}|${notionScenarioKey(prop(p["HO"]) || "")}`;
-  }));
+    return { chars: prop(p["キャラ"]) || [], title: prop(p["シナリオ"]) || "", ho: prop(p["HO"]) || "",
+      system: prop(p["システム"]) || "", taku: prop(p["卓報告"]) || [], role: prop(p["立場"]) || "" };
+  });
+  const existing = new Set(rows.map(r => `${r.chars[0]}|${notionScenarioKey(r.title)}|${notionScenarioKey(r.ho)}`));
   console.log(`シート ${sheets.length} 枚、卓報告 ${taku.length} 件、通過記録 ${existing.size} 件`);
 
   // Who has each scenario (and 立場): only a scenario one person played can be tied to its 卓報告 pages.
@@ -104,6 +106,16 @@ async function main() {
     if (!r.ho && /^(PC|HO)\S{1,8}$/i.test(rest)) r.ho = rest;
     return part;
   };
+  // The sheet-side names a 通過記録 title can stand for (itself, or the sheet lines that took this 卓報告 name).
+  const basesOf = new Map();   // 卓報告 name key -> the sheet names that took it
+  for (const base of new Set(runs.map(r => r.base))) {
+    const t = takuOf({ base, ho: "" });
+    if (!t.length) continue;
+    const k = notionScenarioKey(t[0].name);
+    if (!basesOf.has(k)) basesOf.set(k, []);
+    basesOf.get(k).push(base);
+  }
+  const takuOfName = title => basesOf.get(notionScenarioKey(title)) || [];
   const playersOf = new Map();
   for (const r of runs) {
     const k = r.role + "|" + notionScenarioKey(r.base);
@@ -142,6 +154,26 @@ async function main() {
   }
 
   console.log(`${write ? "追加" : "追加予定"} ${report.added} 件（うち卓報告とリンク ${report.linked} 件）`);
+
+  // The rows already in 通過記録, as they stand now (after edits by hand).
+  const sheetById = new Map(sheets.map(s => [s.id, s]));
+  const takuById = new Map(taku.map(t => [t.id, t]));
+  const label = r => `${r.chars.map(id => sheetById.get(id)?.name || "?").join("・") || "（キャラなし）"}：${r.title}${r.ho ? " " + r.ho : ""}`;
+  const noChar = rows.filter(r => !r.chars.length).map(label);
+  const noLink = rows.filter(r => r.chars.length && !r.taku.length).map(label);
+  const wrongSys = rows.filter(r => r.chars.some(id => { const sys = SYSTEM[sheetById.get(id)?.system]; return sys && r.system && sys !== r.system; }))
+    .map(r => `${label(r)}（通過記録 ${r.system} / シート ${r.chars.map(id => sheetById.get(id)?.system).join("・")}）`);
+  const takuSys = rows.filter(r => r.system && r.taku.some(id => takuById.get(id) && takuById.get(id).system !== r.system))
+    .map(r => `${label(r)}（通過記録 ${r.system} / 卓報告 ${[...new Set(r.taku.map(id => takuById.get(id)?.system))].join("・")}）`);
+  // A row whose sheet no longer lists that scenario.
+  const listed = new Set(runs.map(r => r.sheet.id + "|" + notionScenarioKey(r.base)));
+  const gone = rows.filter(r => r.chars.length && !r.chars.some(id => listed.has(id + "|" + notionScenarioKey(r.title))) && takuOfName(r.title).every(t => !r.chars.some(id => listed.has(id + "|" + notionScenarioKey(t))))).map(label);
+  console.log(`\n=== 通過記録 ${rows.length} 件の点検 ===`);
+  console.log(`\n■ キャラが空の行 ${noChar.length} 件\n` + noChar.join("\n"));
+  console.log(`\n■ 卓報告が空の行 ${noLink.length} 件\n` + noLink.join("\n"));
+  console.log(`\n■ キャラのシートとシステムが違う行 ${wrongSys.length} 件\n` + wrongSys.join("\n"));
+  console.log(`\n■ リンクした卓報告とシステムが違う行 ${takuSys.length} 件\n` + takuSys.join("\n"));
+  console.log(`\n■ シートのシナリオ欄にもう無い行 ${gone.length} 件\n` + gone.join("\n"));
   console.log(`\n■ 卓報告に見当たらないシナリオ ${report.noTaku.length} 件\n` + report.noTaku.join("\n"));
   console.log(`\n■ 複数のキャラが通っていて、どの卓か決められないもの ${report.shared.length} 件\n` + report.shared.join("\n"));
   console.log(`\n■ シートと卓報告でシステムが違うもの ${report.crossSystem.length} 件\n` + report.crossSystem.join("\n"));
