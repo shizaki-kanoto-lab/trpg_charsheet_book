@@ -70,6 +70,8 @@ img{display:block}
   background:linear-gradient(to top,color-mix(in srgb,var(--band) 92%,transparent) 0 58%,transparent)}
 .tile .rb{display:block;font-size:.68rem;letter-spacing:.2em;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile .nm{display:block;font-family:var(--f-mincho);font-weight:700;font-size:1.12rem;letter-spacing:.14em;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .fs{display:block;margin-top:2px;font-family:var(--f-mincho);font-size:.72rem;letter-spacing:.06em;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .fs::before{content:"『"}.tile .fs::after{content:"』"}
 .tile .sys{display:block;width:max-content;max-width:100%;margin:6px 0 0 auto;font-size:.62rem;letter-spacing:.12em;padding:0 7px;border:1px solid rgb(255 255 255 / .55);color:rgb(255 255 255 / .9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile.lost img{filter:grayscale(1) contrast(.95) brightness(.85)}
 .tile.lost .sys::after{content:" ／ LOST";color:#ffb3bd}
@@ -204,6 +206,7 @@ function buildPeople(){
   const map = new Map();
   for (const c of S.chars){
     const k = personKey(c);
+    if (c.galleryHidden) continue;          // ギャラリー非表示 = 非表示 in Notion
     if (!scenariosOf(c).length) continue;   // only characters who have played a scenario
     if (!map.has(k)) map.set(k, {key:k, sheets:[]});
     map.get(k).sheets.push(c);
@@ -217,6 +220,8 @@ function buildPeople(){
     p.lost = p.sheets.every(isLost);
     p.systems = [...new Set(p.sheets.map(c => c.system).filter(Boolean))].sort(bySystem);
     // Scenarios across all of the person's sheets; one played under two systems counts once.
+    // The first scenario on the sheet listed first by system (CoC6th, CoC7th, emoklore, …).
+    p.first = (scenariosOf([...p.sheets].sort((a,b) => bySystem(a.system, b.system))[0])[0] || {}).name || "";
     p.played = new Set(p.sheets.flatMap(c => scenariosOf(c).map(x => x.name.normalize("NFKC").replace(/\s+/g, "")))).size;
   }
   // Most scenarios played first, whatever the system.
@@ -230,7 +235,7 @@ function tileHTML(p, i){
   const sys = S.sys ? sysShort(S.sys) : p.systems.map(sysShort).join(" / ");
   return `<li><a class="tile${p.lost ? " lost" : ""}" href="#/${encodeURIComponent(p.key)}" style="--h:${tint(p.name)};--d:${Math.min(i,24)*0.03}s">
     <span class="ini" aria-hidden="true">${esc([...p.name][0]||"？")}</span>${img}
-    <span class="band">${p.ruby ? `<span class="rb">${esc(p.ruby)}</span>` : ""}<span class="nm">${esc(p.name)}</span>${sys ? `<span class="sys">${esc(sys)}</span>` : ""}</span></a></li>`;
+    <span class="band">${p.ruby ? `<span class="rb">${esc(p.ruby)}</span>` : ""}<span class="nm">${esc(p.name)}</span>${p.first ? `<span class="fs">${esc(p.first)}</span>` : ""}${sys ? `<span class="sys">${esc(sys)}</span>` : ""}</span></a></li>`;
 }
 
 function renderIndex(){

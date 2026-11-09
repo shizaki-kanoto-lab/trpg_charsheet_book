@@ -81,6 +81,7 @@ function toChar(page, body) {
     stats: split(get("能力値")).map(s => { const m = s.match(/^(.*\S)\s+(-?\d+)$/); return m ? { label: m[1], value: m[2] } : { label: s, value: "" }; }),
     skills: split(get("技能")).map(s => { const m = s.match(/^(.*?)(-?\d+)$/); return m ? { label: m[1], value: m[2] } : { label: s, value: "" }; }),
     updatedAt: Date.parse(page.last_edited_time) || 0,
+    galleryHidden: get("ギャラリー非表示") === "非表示",   // left out of gallery.html
     ...body,
   };
 }
