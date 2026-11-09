@@ -50,6 +50,13 @@ const personKey = name => String(name || "").normalize("NFKC").replace(/[(（][^
 // 卓報告's PL/GM for each 立場: a PC played as a PL, or the KP's own character.
 const ROLE_OF = { PL: ["PL"], KPC: ["KP", "DL", "GM", "SKP"] };
 
+// Scenario names the user confirmed (2026-11-10) where the sheet is right and only part matches 卓報告:
+// a scenario of its own (魔法少女希望譚HARD is not 魔法少女希望譚), or 卓報告's session under a
+// fuller name (TRASH1 of TRASH1 / TRASH2; 探索者：Uの証言), which keeps the sheet's name and
+// still links to 卓報告.
+const OWN_SCENARIO = new Set(["魔法少女希望譚HARD"].map(notionScenarioKey));
+const KEEP_NAME = new Set(["TRASH1", "探索者：Uの証言"].map(notionScenarioKey));
+
 // "シナリオ名HO2" / "シナリオ名KPC" / "シナリオ名NPC" -> { base, ho, role }
 function parseLine(line) {
   let t = String(line).trim(), role = "PL";
@@ -90,6 +97,7 @@ async function main() {
     const same = taku.filter(t => notionSameScenario(t.name, r.base));
     if (same.length) return same;
     const k = notionScenarioKey(r.base);
+    if (OWN_SCENARIO.has(k)) return [];
     const part = taku.filter(t => { const tk = notionScenarioKey(t.name); return tk.length >= 4 && (k.includes(tk) || tk.includes(k) && k.length >= 4); });
     const names = [...new Set(part.map(t => notionScenarioKey(t.name)))];
     if (names.length !== 1) return [];
@@ -107,7 +115,7 @@ async function main() {
   const report = { added: 0, linked: 0, noTaku: [], shared: [], crossSystem: [] };
   for (const r of runs) {
     const all = takuOf(r);
-    const title = all[0]?.name || r.base;
+    const title = all.length && !KEEP_NAME.has(notionScenarioKey(r.base)) ? all[0].name : r.base;
     const key = `${r.sheet.id}|${notionScenarioKey(title)}|${notionScenarioKey(r.ho)}`;
     if (existing.has(key)) continue;
     existing.add(key);
