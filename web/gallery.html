@@ -89,7 +89,7 @@ img{display:block}
   .tile:hover .fs,.tile:focus-visible .fs{visibility:hidden}
 }
 .tile .fs{display:block;margin-top:2px;font-family:var(--f-mincho);font-size:.72rem;letter-spacing:.06em;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tile .fs::before{content:"『"}.tile .fs::after{content:"』"}
+.tile .fs:not(.plain)::before{content:"『"}.tile .fs:not(.plain)::after{content:"』"}
 .tile .sys{display:block;width:max-content;max-width:100%;margin:6px 0 0 auto;font-size:.62rem;letter-spacing:.12em;padding:0 7px;border:1px solid rgb(255 255 255 / .55);color:rgb(255 255 255 / .9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile.lost img{filter:grayscale(1) contrast(.95) brightness(.85)}
 .tile.lost .sys::after{content:" ／ LOST";color:#ffb3bd}
@@ -181,6 +181,7 @@ const isLost = c => (c.tags||[]).includes("ロスト");
 const SYS_SHORT = {"クトゥルフ神話TRPG 6版":"CoC6th", "クトゥルフ神話TRPG 7版":"CoC7th", "エモクロアTRPG":"emoklore", "ガイアケアTRPG":"GaiaCare",
   "ダブルクロス The 3rd Edition":"Double Cross", "ケダモノオペラ":"Kedamono Opera", "ソード・ワールド2.5":"SW 2.5", "ソード・ワールド2.0":"SW 2.0"};
 const sysShort = s => SYS_SHORT[s] || s || "";
+const NO_SCENARIOS = new Set(["ケダモノオペラ"]);
 /* System order: CoC 6th, CoC 7th, Emoklore, then the rest in 50音順. */
 const SYS_FIRST = ["クトゥルフ神話TRPG 6版", "クトゥルフ神話TRPG 7版", "エモクロアTRPG"];
 const sysRank = s => { const i = SYS_FIRST.indexOf(s); return i < 0 ? SYS_FIRST.length : i; };
@@ -229,7 +230,8 @@ function buildPeople(){
     map.get(k).sheets.push(c);
   }
   // Only characters who have played a scenario; once they have, every sheet of theirs is shown.
-  const people = [...map.values()].filter(p => p.sheets.some(c => scenariosOf(c).length));
+  // ケダモノオペラ has no scenario list, so its characters are always shown.
+  const people = [...map.values()].filter(p => p.sheets.some(c => scenariosOf(c).length || NO_SCENARIOS.has(c.system)));
   for (const p of people){
     p.sheets.sort((a,b) => (isLost(a)-isLost(b)) || (b.updatedAt||0)-(a.updatedAt||0));
     p.face = p.sheets.find(c => okImg(c.image)) || p.sheets[0];
@@ -254,7 +256,7 @@ function tileHTML(p, i){
   return `<li><a class="tile${p.lost ? " lost" : ""}" href="#/${encodeURIComponent(p.key)}" style="--h:${tint(p.name)};--d:${Math.min(i,24)*0.03}s"${p.first ? ` title="${esc(p.name)}『${esc(p.first)}』"` : ""}>
     <span class="ini" aria-hidden="true">${esc([...p.name][0]||"？")}</span>${img}
     ${p.first ? `<span class="over" aria-hidden="true"><span class="ol">First Scenario</span><span class="ot">${esc(p.first)}</span><span class="on">${p.played > 1 ? `ほか ${p.played - 1} 本` : ""}</span></span>` : ""}
-    <span class="band">${p.ruby ? `<span class="rb">${esc(p.ruby)}</span>` : ""}<span class="nm">${esc(p.name)}</span>${p.first ? `<span class="fs">${esc(p.first)}</span>` : ""}${sys ? `<span class="sys">${esc(sys)}</span>` : ""}</span></a></li>`;
+    <span class="band">${p.ruby ? `<span class="rb">${esc(p.ruby)}</span>` : ""}<span class="nm">${esc(p.name)}</span>${p.first ? `<span class="fs">${esc(p.first)}</span>` : p.face.summary && NO_SCENARIOS.has(p.face.system) ? `<span class="fs plain">${esc(p.face.summary)}</span>` : ""}${sys ? `<span class="sys">${esc(sys)}</span>` : ""}</span></a></li>`;
 }
 
 function renderIndex(){
