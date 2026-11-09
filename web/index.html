@@ -143,6 +143,10 @@ a.portrait{text-decoration:none}
 .skills li .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:700}
 
 .items{margin:0;padding-left:1.2em}
+.prof{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:0;margin:0;border-top:1px solid var(--line)}
+.prof dt,.prof dd{margin:0;padding:6px 12px;border-bottom:1px solid var(--line)}
+.prof dt{font-size:.86rem;color:var(--muted);font-weight:700;background:var(--surface-2)}
+.prof dd{overflow-wrap:anywhere}
 .notes{white-space:pre-wrap;max-width:70ch;margin:0;overflow-wrap:anywhere}
 .none{color:var(--muted);font-size:.9rem}
 .stamp{color:var(--muted);font-size:.86rem}
@@ -709,7 +713,7 @@ function renderMain(){
           <a class="src" href="${esc(c.id)}" target="_blank" rel="noopener">Notionで編集 ↗</a>
         </p>
         <div class="actions">
-          <button class="btn sm" type="button" data-act="ccf" ${d.ok && d.piece ? "" : "disabled"}>ココフォリア駒をコピー</button>
+          ${d.ok && !d.piece ? "" : `<button class="btn sm" type="button" data-act="ccf" ${d.ok && d.piece ? "" : "disabled"}>ココフォリア駒をコピー</button>`}
           ${d.ok && d.palette ? `<button class="btn sm" type="button" data-act="pal">チャットパレットをコピー</button>` : ""}
         </div>
       </div>
@@ -719,8 +723,9 @@ function renderMain(){
       return `<div class="resrow"><div class="hd"><span class="lb">${esc(r.label)}</span>
         <span class="num">${cur}<small> / ${max}</small></span></div>
         <div class="bar" style="--c:${RES_COLOR[r.label]||"var(--accent)"}"><i style="width:${pct}%"></i></div></div>`; }).join("")}</div></section>` : ""}
+    ${(c.profile||[]).length ? `<section class="sec"><h2>プロフィール</h2><dl class="prof">${c.profile.map(x=>`<dt>${esc(x.label)}</dt><dd>${esc(x.value)}</dd>`).join("")}</dl></section>` : ""}
     ${stats.length ? `<section class="sec"><h2>能力値</h2><div class="stats">${stats.map(s=>`<div class="stat"><div class="lb">${esc(s.label)}</div><div class="v">${esc(s.value)}</div></div>`).join("")}</div></section>` : ""}
-    <section class="sec"><h2>技能</h2>${skills.length ? `<ul class="skills">${skills.map(s=>`<li><span class="l">${esc(s.label)}</span><span class="d"></span><span class="v">${esc(s.value)}</span></li>`).join("")}</ul>` : `<p class="none">技能は登録されていません。</p>`}</section>
+    ${!skills.length && (c.profile||[]).length ? "" : `<section class="sec"><h2>技能</h2>${skills.length ? `<ul class="skills">${skills.map(s=>`<li><span class="l">${esc(s.label)}</span><span class="d"></span><span class="v">${esc(s.value)}</span></li>`).join("")}</ul>` : `<p class="none">技能は登録されていません。</p>`}</section>`}
     <section class="sec"><h2>メモ・設定</h2>${d.ok ? (d.notes ? `<p class="notes">${esc(d.notes)}</p>` : `<p class="none">メモはありません。</p>`) : detailNote}</section>
     ${d.ok && d.palette ? `<section class="sec"><h2>チャットパレット</h2><pre class="palette">${esc(d.palette)}</pre></section>` : ""}
     ${c.updatedAt ? `<div class="stamp">Notionでの最終更新 ${fmtDate(c.updatedAt)}</div>` : ""}

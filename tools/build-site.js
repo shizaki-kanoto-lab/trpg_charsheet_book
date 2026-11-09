@@ -125,6 +125,67 @@ async function copyBlockedImages(chars) {
   if (copied) console.log(`立ち絵 ${copied}枚をサイトにコピーしました`);
 }
 
+// ケダモノオペラ characters live in their own Notion database ("ケダモノオペラCS"): one page per
+// ケダモノ, with the cover as its picture and the page text as notes. They are added to the
+// sheet book as system "ケダモノオペラ". Notion file URLs expire, so the picture is copied under img/.
+const KEDAMONO_DB = "20c1b663c48f8089b06ec8b31f89f6c6";
+const KEDAMONO_FIELDS = ["ケダモノ種", "亜種", "権能", "欲望", "伝説", "疑似餌の姿", "住処", "群れ"];
+const TEXT_BLOCKS = new Set(["paragraph", "heading_1", "heading_2", "heading_3", "bulleted_list_item", "numbered_list_item", "quote", "callout", "to_do"]);
+
+async function topBlocks(token, id) {
+  const blocks = [];
+  let cursor;
+  do {
+    const r = await notionRequest(token, `/blocks/${id}/children?page_size=100${cursor ? "&start_cursor=" + cursor : ""}`);
+    blocks.push(...r.results);
+    cursor = r.has_more ? r.next_cursor : null;
+    await notionSleep(NOTION_GAP_MS);
+  } while (cursor);
+  return blocks;
+}
+
+async function copyNotionImage(url, key) {
+  const r = await fetch(url);
+  const type = r.headers.get("content-type") || "";
+  if (!r.ok || !type.startsWith("image/")) throw new Error(`${r.status} ${type}`);
+  const ext = { "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp" }[type] || ".png";
+  const name = require("crypto").createHash("sha1").update(key).digest("hex").slice(0, 16);
+  fs.mkdirSync(path.join(OUT, "img"), { recursive: true });
+  fs.writeFileSync(path.join(OUT, "img", name + ext), Buffer.from(await r.arrayBuffer()));
+  return `img/${name}${ext}`;
+}
+
+async function kedamonoChars(token) {
+  const db = notionDbId(process.env.NOTION_KEDAMONO_DB_ID) || KEDAMONO_DB;
+  let pages;
+  try { pages = await allPages(token, db); }
+  catch (e) { console.log(`ケダモノオペラCSを読めませんでした (${e.message})。インテグレーションをこのデータベースにつないでください。`); return []; }
+  const out = [];
+  for (const page of pages) {
+    const p = page.properties;
+    const get = name => prop(p[name]);
+    const blocks = await topBlocks(token, page.id);
+    const body = blocks.filter(b => TEXT_BLOCKS.has(b.type)).map(b => text(b[b.type].rich_text)).filter(t => t.trim());
+    const fileUrl = f => f?.type === "external" ? f.external.url : f?.file?.url;
+    const picture = fileUrl(page.cover) || fileUrl(blocks.find(b => b.type === "image")?.image);
+    let image = "";
+    if (picture) {
+      try { image = await copyNotionImage(picture, page.id); }
+      catch (e) { console.log(`立ち絵をコピーできませんでした: ${get("ケダモノ名")} (${e.message})`); }
+    }
+    const profile = KEDAMONO_FIELDS.map(k => { const v = get(k); return [k, Array.isArray(v) ? v.join("・") : String(v || "").trim()]; })
+      .filter(([, v]) => v).map(([label, value]) => ({ label, value }));
+    out.push({
+      id: page.url, name: get("ケダモノ名") || "", ruby: "", system: "ケダモノオペラ", sourceSite: "Notion", sourceUrl: "",
+      image, summary: get("ケダモノ種") || "", tags: [], resources: [], stats: [], skills: [], profile,
+      updatedAt: Date.parse(page.last_edited_time) || 0, galleryHidden: false,
+      notes: [get("設定・メモ") || "", ...body].filter(t => String(t).trim()).join("\n\n"), palette: "", piece: null,
+    });
+  }
+  console.log(`ケダモノオペラCS ${out.length}体を読みました`);
+  return out;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const prevAt = args.indexOf("--previous");
@@ -146,6 +207,7 @@ async function main() {
 
   fs.mkdirSync(OUT, { recursive: true });
   await copyBlockedImages(chars);
+  chars.push(...await kedamonoChars(token));
   fs.writeFileSync(path.join(OUT, "data.json"), JSON.stringify({ generatedAt: new Date().toISOString(), chars }));
   for (const f of ["favicon.svg", "banner.svg", "gallery.html"]) fs.copyFileSync(path.join(ROOT, "web", f), path.join(OUT, f));
   const page = fs.readFileSync(path.join(ROOT, "web", "index.html"), "utf8");

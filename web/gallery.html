@@ -179,7 +179,7 @@ const tint = n => `hsl(${hue(n)} 30% 34%)`;
 const okImg = u => /^https?:\/\//.test(String(u||"")) || /^img\/[0-9a-f]+\.(png|jpg|gif|webp)$/.test(String(u||""));
 const isLost = c => (c.tags||[]).includes("ロスト");
 const SYS_SHORT = {"クトゥルフ神話TRPG 6版":"CoC6th", "クトゥルフ神話TRPG 7版":"CoC7th", "エモクロアTRPG":"emoklore", "ガイアケアTRPG":"GaiaCare",
-  "ダブルクロス The 3rd Edition":"Double Cross", "ソード・ワールド2.5":"SW 2.5", "ソード・ワールド2.0":"SW 2.0"};
+  "ダブルクロス The 3rd Edition":"Double Cross", "ケダモノオペラ":"Kedamono Opera", "ソード・ワールド2.5":"SW 2.5", "ソード・ワールド2.0":"SW 2.0"};
 const sysShort = s => SYS_SHORT[s] || s || "";
 /* System order: CoC 6th, CoC 7th, Emoklore, then the rest in 50音順. */
 const SYS_FIRST = ["クトゥルフ神話TRPG 6版", "クトゥルフ神話TRPG 7版", "エモクロアTRPG"];
@@ -290,7 +290,8 @@ function profileHTML(p){
   const lost = isLost(c);
   const face = okImg(c.image) ? c : p.face;
   const {profile, text} = splitNotes(c.notes);
-  if (c.summary && !profile.some(([k]) => k === "職業")) profile.unshift(["職業", c.summary]);
+  if ((c.profile||[]).length) profile.unshift(...c.profile.map(x => [x.label, x.value]));   // ケダモノオペラ: ケダモノ種, 権能, …
+  else if (c.summary && !profile.some(([k]) => k === "職業")) profile.unshift(["職業", c.summary]);
   const scen = scenariosOf(c);
   const skills = [...(c.skills||[])].sort((a,b) => num(b.value)-num(a.value));
   const long = text.length > 420;
