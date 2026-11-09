@@ -57,7 +57,7 @@ img{display:block}
 
 /* ---------- grid ---------- */
 .grid{list-style:none;margin:0;padding:0 0 80px;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
-.tile{display:block;text-decoration:none;position:relative;border-radius:2px;overflow:hidden;aspect-ratio:3/4;
+.tile{display:block;text-decoration:none;position:relative;container-type:inline-size;border-radius:2px;overflow:hidden;aspect-ratio:3/4;
   background:var(--h);isolation:isolate;box-shadow:0 1px 0 color-mix(in srgb,var(--ink) 10%,transparent);
   opacity:0;transform:translateY(14px);animation:rise .6s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:var(--d,0s)}
 .tile::before{content:"";position:absolute;inset:0;z-index:-1;
@@ -72,10 +72,11 @@ img{display:block}
 .tile .nm{display:block;font-family:var(--f-mincho);font-weight:700;font-size:1.12rem;letter-spacing:.14em;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Hover: the first scenario's full name comes up in front of the picture. */
 .tile .over{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-  padding:18px 16px 70px;text-align:center;color:#fff;opacity:0;transition:opacity .3s;pointer-events:none;
+  padding:18px 4cqi 70px;text-align:center;color:#fff;opacity:0;transition:opacity .3s;pointer-events:none;
   background:linear-gradient(to bottom,rgb(10 10 16 / .72),rgb(10 10 16 / .5) 70%,transparent)}
 .tile .over .ol{font-family:var(--f-latin);font-style:italic;letter-spacing:.24em;font-size:.82rem;opacity:.85}
-.tile .over .ot{font-family:var(--f-mincho);font-weight:800;font-size:clamp(1.05rem,1.6vw,1.3rem);letter-spacing:.08em;line-height:1.5;
+/* Sized to the tile: about ten characters plus 『』 fit on one line. */
+.tile .over .ot{font-family:var(--f-mincho);font-weight:800;font-size:clamp(.85rem,7.4cqi,1.3rem);letter-spacing:.04em;line-height:1.5;
   overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:6;overflow:hidden;
   transform:translateY(8px);transition:transform .4s cubic-bezier(.2,.7,.2,1)}
 .tile .over .ot::before{content:"『"}.tile .over .ot::after{content:"』"}
