@@ -73,6 +73,7 @@ async function main() {
 
   const sheets = (await allPages(token, sheetDb)).map(pg => ({
     id: bare(pg.id), name: prop(pg.properties["名前"]) || "", system: prop(pg.properties["システム"]) || "",
+    site: prop(pg.properties["サイト"]) || "",
     lines: String(prop(pg.properties["シナリオ"]) || "").split("\n").map(s => s.trim()).filter(Boolean),
   }));
   const taku = (await allPages(token, TAKU_DB)).map(pg => ({
@@ -171,10 +172,12 @@ async function main() {
   const listed = new Set(runs.map(r => r.sheet.id + "|" + notionScenarioKey(r.base)));
   const goneRows = rows.filter(r => r.chars.length && !r.chars.some(id => listed.has(id + "|" + notionScenarioKey(r.title))) && takuOfName(r.title).every(t => !r.chars.some(id => listed.has(id + "|" + notionScenarioKey(t)))));
   const gone = goneRows.map(label);
-  // --prune-emoklore: エモクロア sheets take their scenarios only from 残響 and 参加セッション, so a
-  // row of an エモクロア sheet that the sheet no longer lists goes to the trash (restorable in Notion).
-  if (process.argv.includes("--prune-emoklore")) {
-    const prune = goneRows.filter(r => r.chars.every(id => sheetById.get(id)?.system === "エモクロアTRPG"));
+  // --prune: a row the sheet no longer lists goes to the trash (restorable in Notion), for sheets
+  // whose シナリオ欄 is washed from the source site (いあきゃら, キャラッシュ) and for エモクロア sheets,
+  // which take their scenarios only from 残響 and 参加セッション. Hand-kept sheets are left alone.
+  const WASHED = new Set(["いあきゃら", "キャラッシュ"]);
+  if (process.argv.includes("--prune")) {
+    const prune = goneRows.filter(r => r.chars.every(id => { const s = sheetById.get(id); return s && (WASHED.has(s.site) || s.system === "エモクロアTRPG"); }));
     for (const r of prune) {
       await notionRequest(token, `/pages/${r.id}`, { archived: true }, "PATCH");
       await notionSleep(NOTION_GAP_MS);

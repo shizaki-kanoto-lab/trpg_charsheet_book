@@ -64,12 +64,21 @@ function chSkillLabel(defName, free) {
   return n;
 }
 
+// A 参加セッション may name the system it was played in (「クトゥルフ7版」「Kutulu」…): one played
+// in another system belongs on that system's sheet, not this one. A blank or unknown system counts.
+const CH_SYSTEM_NAME = { emoklore: /エモクロア|emoklore/i, gaiacare: /ガイア|gaiacare/i };
+function chSameSystem(sys, played) {
+  const p = String(played || "").trim();
+  return !p || !CH_SYSTEM_NAME[sys] || CH_SYSTEM_NAME[sys].test(p);
+}
+
 // The scenarios this character played: エモクロアの残響の記録 (systems.<sys>.echoes) and the
 // 参加セッション list (shared.sessions), whose memo may name the HO. The same scenario in both counts once.
 function chPassed(sheet) {
   const clean = n => String(n || "").replace(/[\u200B-\u200D\u2060\uFEFF]/g, "").trim();
   const echoes = (sheet.data?.systems?.[sheet.system]?.echoes || []).map(x => clean(x?.scenario)).filter(Boolean);
-  const sessions = (sheet.data?.shared?.sessions || []).map(s => notionScenarioWithHo(clean(s?.scenario), s?.memo)).filter(Boolean);
+  const sessions = (sheet.data?.shared?.sessions || []).filter(s => chSameSystem(sheet.system, s?.system))
+    .map(s => notionScenarioWithHo(clean(s?.scenario), s?.memo)).filter(Boolean);
   return [...sessions, ...echoes];
 }
 // エモクロア sheets take their scenarios only from 残響の記録 and 参加セッション: the sheet's tags
