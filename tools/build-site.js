@@ -126,22 +126,28 @@ async function copyBlockedImages(chars) {
 }
 
 // ケダモノオペラ characters live in their own Notion database ("ケダモノオペラCS"): one page per
-// ケダモノ, with the cover as its picture and 設定・メモ as notes. From the page body only the links to
-// 卓報告 pages are read, as the scenarios played. They are added to the
+// ケダモノ, with 設定・メモ as notes. From the page body only the first picture (the 擬似餌; the cover
+// when there is none) and the links to 卓報告 pages, as the scenarios played, are read. They are added to the
 // sheet book as system "ケダモノオペラ". Notion file URLs expire, so the picture is copied under img/.
 const KEDAMONO_DB = "20c1b663c48f8089b06ec8b31f89f6c6";
 const KEDAMONO_FIELDS = ["ケダモノ種", "亜種", "権能", "欲望", "伝説", "疑似餌の姿", "住処", "群れ"];
-// Session logs (卓報告) linked from a ケダモノ page body with @-mentions are the scenarios it played.
+// Session logs (卓報告) linked from a ケダモノ page body (@-mentions or page links) are the scenarios it played.
 // Only links to pages in the 卓報告 database count; their title (シナリオ) is the scenario name.
 const TAKU_DB = "1351b663c48f803db061e20fee803137", TAKU_DS = "1351b663c48f8178bd49000b5c5cdd72";
 const bare = id => String(id || "").replace(/-/g, "");
-async function mentionedScenarios(token, pageId) {
+async function kedamonoBody(token, pageId) {
   const ids = [];
+  let picture = "";
   let cursor;
   do {
     const r = await notionRequest(token, `/blocks/${pageId}/children?page_size=100${cursor ? "&start_cursor=" + cursor : ""}`);
-    for (const b of r.results) for (const t of b[b.type]?.rich_text || [])
-      if (t.type === "mention" && t.mention?.type === "page" && !ids.includes(t.mention.page.id)) ids.push(t.mention.page.id);
+    for (const b of r.results) {
+      // The first picture in the body is the 擬似餌 (the cover is the ケダモノ itself).
+      if (!picture && b.type === "image") picture = b.image.type === "external" ? b.image.external.url : b.image.file?.url || "";
+      if (b.type === "link_to_page" && b.link_to_page.page_id && !ids.includes(b.link_to_page.page_id)) ids.push(b.link_to_page.page_id);
+      for (const t of b[b.type]?.rich_text || [])
+        if (t.type === "mention" && t.mention?.type === "page" && !ids.includes(t.mention.page.id)) ids.push(t.mention.page.id);
+    }
     cursor = r.has_more ? r.next_cursor : null;
     await notionSleep(NOTION_GAP_MS);
   } while (cursor);
@@ -157,7 +163,7 @@ async function mentionedScenarios(token, pageId) {
       if (name && !names.includes(name)) names.push(name);
     } catch (e) { console.log(`リンク先の卓報告を読めませんでした: ${id} (${e.message})`); }
   }
-  return names;
+  return { scenarios: names, picture };
 }
 
 async function copyNotionImage(url, key) {
@@ -181,7 +187,8 @@ async function kedamonoChars(token) {
     const p = page.properties;
     const get = name => prop(p[name]);
     const fileUrl = f => f?.type === "external" ? f.external.url : f?.file?.url;
-    const picture = fileUrl(page.cover);
+    const body = await kedamonoBody(token, page.id);
+    const picture = body.picture || fileUrl(page.cover);
     let image = "";
     if (picture) {
       try { image = await copyNotionImage(picture, page.id); }
@@ -191,7 +198,7 @@ async function kedamonoChars(token) {
       .filter(([, v]) => v).map(([label, value]) => ({ label, value }));
     out.push({
       id: page.url, name: get("ケダモノ名") || "", ruby: "", system: "ケダモノオペラ", sourceSite: "Notion", sourceUrl: "",
-      image, summary: get("ケダモノ種") || "", tags: await mentionedScenarios(token, page.id), resources: [], stats: [], skills: [], profile,
+      image, summary: get("ケダモノ種") || "", tags: body.scenarios, resources: [], stats: [], skills: [], profile,
       updatedAt: Date.parse(page.last_edited_time) || 0, galleryHidden: false,
       notes: String(get("設定・メモ") || "").trim(), palette: "", piece: null,
     });
