@@ -78,9 +78,12 @@ function charashToItem(sheet) {
     name: sh.name || "", ruby: sh.nameKana || "",
     system: CH_SYSTEMS[sys] || sys || "",
     summary: sh.occupation || "",
-    // セッション履歴: the scenarios this character played.
     tags: [...(sh.tags || []), sh.lost ? "ロスト" : ""].filter(Boolean),
-    passed: (sh.sessions || []).map(s => notionScenarioWithHo(s?.scenario, s?.memo)).filter(Boolean),
+    // セッション履歴 and エモクロアの残響の記録 (systems.<sys>.echoes): the scenarios this character played.
+    passed: [
+      ...(sh.sessions || []).map(s => notionScenarioWithHo(s?.scenario, s?.memo)),
+      ...(sheet.data?.systems?.[sys]?.echoes || []).map(x => String(x?.scenario || "").replace(/[\u200B-\u200D\u2060\uFEFF]/g, "").trim()),
+    ].filter(Boolean),
     notes: [profile.join("\n"), ...memos].filter(Boolean).join("\n\n"),
     skills: [],
     ccfolia: null,
