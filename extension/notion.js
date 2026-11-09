@@ -162,7 +162,15 @@ function notionMergeScenarios(have, add = []) {
     const alsoKpc = adds.some(a => isKpcOf(a, k));
     if (k.length >= 2 && out.some(o => baseKey(o).length > k.length && baseKey(o).includes(k) && !(alsoKpc && isKpcOf(o, k)))) continue;
     const at = out.findIndex(o => notionSameScenario(o, t));
-    if (at < 0) { out.push(t); continue; }
+    if (at < 0) {
+      // "XKPC" marks the written "X" (even spelled a little differently) as run by the KPC,
+      // unless the list also has "X" as a session of its own.
+      const plain = /KPC$/i.test(t) ? t.replace(/\s*KPC$/i, "") : "";
+      const j = plain && !adds.some(a => baseKey(a) === baseKey(plain))
+        ? out.findIndex(o => !/KPC$/i.test(o) && !notionSplitHo(o)[1] && notionSameScenario(o, plain)) : -1;
+      if (j >= 0) out[j] += "KPC"; else out.push(t);
+      continue;
+    }
     const [base, ho] = notionSplitHo(out[at]);
     if (!ho && notionSplitHo(t)[1]) out[at] = base + notionSplitHo(t)[1];
   }
