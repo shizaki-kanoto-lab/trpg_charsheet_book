@@ -64,14 +64,18 @@ function chSkillLabel(defName, free) {
   return n;
 }
 
-// The scenarios this character played: エモクロアの残響の記録 (systems.<sys>.echoes) when it has any,
-// otherwise the 参加セッション list (shared.sessions), whose memo may name the HO.
+// The scenarios this character played: エモクロアの残響の記録 (systems.<sys>.echoes) and the
+// 参加セッション list (shared.sessions), whose memo may name the HO. The same scenario in both counts once.
 function chPassed(sheet) {
   const clean = n => String(n || "").replace(/[\u200B-\u200D\u2060\uFEFF]/g, "").trim();
   const echoes = (sheet.data?.systems?.[sheet.system]?.echoes || []).map(x => clean(x?.scenario)).filter(Boolean);
-  if (echoes.length) return echoes;
-  return (sheet.data?.shared?.sessions || []).map(s => notionScenarioWithHo(clean(s?.scenario), s?.memo)).filter(Boolean);
+  const sessions = (sheet.data?.shared?.sessions || []).map(s => notionScenarioWithHo(clean(s?.scenario), s?.memo)).filter(Boolean);
+  return [...sessions, ...echoes];
 }
+// エモクロア sheets take their scenarios only from 残響の記録 and 参加セッション: the sheet's tags
+// keep only marks such as 「CoCコンバート」, since scenario tags there often name sessions of the
+// character's CoC original.
+const chTags = (sheet, tags) => sheet.system === "emoklore" ? tags.filter(t => NOTION_META_TAG.test(t)) : tags;
 
 function charashToItem(sheet) {
   const sh = sheet.data?.shared || {};
@@ -87,7 +91,7 @@ function charashToItem(sheet) {
     name: sh.name || "", ruby: sh.nameKana || "",
     system: CH_SYSTEMS[sys] || sys || "",
     summary: sh.occupation || "",
-    tags: [...(sh.tags || []), sh.lost ? "ロスト" : ""].filter(Boolean),
+    tags: [...chTags(sheet, sh.tags || []), sh.lost ? "ロスト" : ""].filter(Boolean),
     passed: chPassed(sheet),
     notes: [profile.join("\n"), ...memos].filter(Boolean).join("\n\n"),
     skills: [],

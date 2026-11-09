@@ -7,6 +7,10 @@ on:
         description: "Notionに書き込む（オフなら追加予定の一覧だけ出す）"
         type: boolean
         default: false
+      prune_emoklore:
+        description: "エモクロアのシートからなくなった行をゴミ箱へ移す"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -23,4 +27,4 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ vars.NOTION_DATABASE_ID }}
-        run: node tools/sync-runs.js ${{ inputs.write && '--write' || '' }}
+        run: node tools/sync-runs.js ${{ inputs.write && '--write' || '' }} ${{ inputs.prune_emoklore && '--prune-emoklore' || '' }}

@@ -81,7 +81,7 @@ async function main() {
   })).filter(r => r.name);
   const rows = (await allPages(token, RUNS_DB)).map(pg => {
     const p = pg.properties;
-    return { chars: prop(p["キャラ"]) || [], title: prop(p["シナリオ"]) || "", ho: prop(p["HO"]) || "",
+    return { id: bare(pg.id), chars: prop(p["キャラ"]) || [], title: prop(p["シナリオ"]) || "", ho: prop(p["HO"]) || "",
       system: prop(p["システム"]) || "", taku: prop(p["卓報告"]) || [], role: prop(p["立場"]) || "" };
   });
   const existing = new Set(rows.map(r => `${r.chars[0]}|${notionScenarioKey(r.title)}|${notionScenarioKey(r.ho)}`));
@@ -169,7 +169,18 @@ async function main() {
     .map(r => `${label(r)}（通過記録 ${r.system} / 卓報告 ${[...new Set(r.taku.map(id => takuById.get(id)?.system))].join("・")}）`);
   // A row whose sheet no longer lists that scenario.
   const listed = new Set(runs.map(r => r.sheet.id + "|" + notionScenarioKey(r.base)));
-  const gone = rows.filter(r => r.chars.length && !r.chars.some(id => listed.has(id + "|" + notionScenarioKey(r.title))) && takuOfName(r.title).every(t => !r.chars.some(id => listed.has(id + "|" + notionScenarioKey(t))))).map(label);
+  const goneRows = rows.filter(r => r.chars.length && !r.chars.some(id => listed.has(id + "|" + notionScenarioKey(r.title))) && takuOfName(r.title).every(t => !r.chars.some(id => listed.has(id + "|" + notionScenarioKey(t)))));
+  const gone = goneRows.map(label);
+  // --prune-emoklore: エモクロア sheets take their scenarios only from 残響 and 参加セッション, so a
+  // row of an エモクロア sheet that the sheet no longer lists goes to the trash (restorable in Notion).
+  if (process.argv.includes("--prune-emoklore")) {
+    const prune = goneRows.filter(r => r.chars.every(id => sheetById.get(id)?.system === "エモクロアTRPG"));
+    for (const r of prune) {
+      await notionRequest(token, `/pages/${r.id}`, { archived: true }, "PATCH");
+      await notionSleep(NOTION_GAP_MS);
+    }
+    console.log(`\nゴミ箱へ移した行 ${prune.length} 件\n` + prune.map(label).join("\n"));
+  }
   console.log(`\n=== 通過記録 ${rows.length} 件の点検 ===`);
   console.log(`\n■ キャラが空の行 ${noChar.length} 件\n` + noChar.join("\n"));
   console.log(`\n■ 卓報告が空の行 ${noLink.length} 件\n` + noLink.join("\n"));
