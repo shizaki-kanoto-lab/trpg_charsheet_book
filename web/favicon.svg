@@ -1,8 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#244b4a"/>
-  <path d="M8 22c8-3 15-1 24 4v27c-9-6-16-7-24-4z" fill="#fffdf7" stroke="#f5f0e6" stroke-width="2.4" stroke-linejoin="round"/>
-  <path d="M56 22c-8-3-15-1-24 4v27c9-6 16-7 24-4z" fill="#fffdf7" stroke="#f5f0e6" stroke-width="2.4" stroke-linejoin="round"/>
-  <path d="M32 26v27M14 32c5-1 9 0 13 2M50 32c-5-1-9 0-13 2" fill="none" stroke="#a8b6a9" stroke-width="2" stroke-linecap="round"/>
-  <path d="m32 5 9 5v10l-9 5-9-5V10z" fill="#b77a50" stroke="#fff4e6" stroke-width="1.5" stroke-linejoin="round"/>
-  <path d="m32 5 2 10-11-5m11 5 7-5m-16 10 11-5 7 5" fill="none" stroke="#fff4e6" stroke-width="1" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="キャラクターシート帳">
+  <circle cx="32" cy="32" r="31" fill="#f5f0e6"/>
+  <circle cx="32" cy="32" r="28" fill="none" stroke="#244b4a" stroke-width="1.5"/>
+  <!-- Open record book, matching the banner mark -->
+  <path d="M12 22c7-2 13-1 20 4v24c-7-4-13-5-20-3z" fill="#fffdf7" stroke="#244b4a" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M52 22c-7-2-13-1-20 4v24c7-4 13-5 20-3z" fill="#fffdf7" stroke="#244b4a" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M32 26v24" stroke="#b77a50" stroke-width="1.8"/>
+  <path d="M16 29c4-1 8 0 12 2M16 35c4-1 7 0 11 1M48 29c-4-1-8 0-12 2M48 35c-4-1-7 0-11 1" fill="none" stroke="#a8b6a9" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- D20 seal -->
+  <path d="m32 7 8 4.5v9L32 25l-8-4.5v-9z" fill="#b77a50" stroke="#fffdf7" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="m32 7 2 9-10-4.5m10 4.5 6-4.5m-14 9 10-4.5 6 4.5" fill="none" stroke="#fff4e6" stroke-width=".9" stroke-linejoin="round"/>
+  <circle cx="32" cy="16" r="1.2" fill="#fff4e6"/>
 </svg>

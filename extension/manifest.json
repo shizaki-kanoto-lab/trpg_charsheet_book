@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "シート帳へ送る",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "description": "いあきゃら・キャラッシュ・vinsanet・ゆとシート・キャラクター保管所・キャラクターシート倉庫・フタリソウサのGoogleスプレッドシートなどのシートを、Notionのキャラクターシート帳へ追加します。",
   "icons": {
     "16": "icons/icon16.png",
