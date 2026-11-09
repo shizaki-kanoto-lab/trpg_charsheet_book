@@ -250,7 +250,15 @@ function buildPeople(){
 }
 const visible = () => S.people.filter(p => (S.lost || !p.lost) && (!S.sys || p.systems.includes(S.sys)));
 
+/* The scenarios a tile shows: with a system tab chosen, only that system's sheets count. */
+function scenOf(p){
+  if (!S.sys) return {first: p.first, played: p.played};
+  const list = [...p.sheets].filter(c => c.system === S.sys).flatMap(scenariosOf);
+  return {first: (list[0] || {}).name || "", played: new Set(list.map(x => x.name.normalize("NFKC").replace(/\s+/g, ""))).size};
+}
+
 function tileHTML(p, i){
+  p = {...p, ...scenOf(p)};
   const c = p.face, img = okImg(c.image) ? `<img src="${esc(c.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : "";
   const sys = S.sys ? sysShort(S.sys) : p.systems.map(sysShort).join(" / ");
   return `<li><a class="tile${p.lost ? " lost" : ""}" href="#/${encodeURIComponent(p.key)}" style="--h:${tint(p.name)};--d:${Math.min(i,24)*0.03}s"${p.first ? ` title="${esc(p.name)}『${esc(p.first)}』"` : ""}>
