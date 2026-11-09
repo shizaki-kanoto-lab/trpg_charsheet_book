@@ -152,7 +152,7 @@ a.portrait{text-decoration:none}
 .stamp{color:var(--muted);font-size:.86rem}
 
 .brand h1{cursor:pointer}
-.top{max-width:980px;display:flex;flex-direction:column;gap:6px}
+.home{max-width:980px;display:flex;flex-direction:column;gap:6px}
 .top-hero{padding:8px 0 14px;border-bottom:1px solid var(--line)}
 .top-hero .eyebrow{margin:0 0 6px;font-family:var(--f-mono);font-size:.72rem;letter-spacing:.22em;color:var(--copper);text-transform:uppercase}
 .top-hero h2{font-family:var(--f-display);font-weight:800;letter-spacing:.08em;font-size:clamp(1.6rem,3.2vw,2.2rem);margin:4px 0 6px}
@@ -767,7 +767,7 @@ function topHTML(){
   const sys = [...bySys].sort((a,b) => b[1]-a[1]);
   const maxSys = Math.max(1, ...sys.map(x => x[1]));
   const recent = [...S.chars].sort((a,b) => (b.updatedAt||0)-(a.updatedAt||0)).slice(0, 8);
-  return `<div class="top">
+  return `<div class="home">
     <section class="top-hero">
       <p class="eyebrow">Character Sheet Archive</p>
       <p class="lead">左の一覧からキャラクターを開くと、能力値・技能・メモ・チャットパレットをまとめて見られます。HPやメモの編集はNotionで行います。</p>
