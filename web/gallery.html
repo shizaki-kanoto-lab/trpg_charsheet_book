@@ -292,7 +292,7 @@ function renderIndex(){
   document.title = "シザキカノトのTRPGキャラクター一覧";
 }
 
-/* HP, MP and the like; エモクロアの共鳴 is a session value, so the gallery leaves it out. */
+/* HP, MP and the like; エモクロアの共鳴 is a session value, so the gallery leaves it out (here and in the stats). */
 const shownRes = c => (c.resources||[]).filter(r => r.label !== "共鳴");
 
 function profileHTML(p){
@@ -338,7 +338,7 @@ function profileHTML(p){
           ${long ? `<button class="more" type="button" id="more">続きを読む</button>` : ""}</section>` : ""}
 
         ${(c.stats||[]).length ? `<section class="sec"><h2><span class="en">Status</span>能力値</h2>
-          <div class="stats">${c.stats.map(s => `<div class="stat"><div class="k">${esc(s.label)}</div><div class="v">${esc(s.value)}</div></div>`).join("")}</div>
+          <div class="stats">${c.stats.filter(s => s.label !== "共鳴").map(s => `<div class="stat"><div class="k">${esc(s.label)}</div><div class="v">${esc(s.value)}</div></div>`).join("")}</div>
           ${shownRes(c).length ? `<div class="res">${shownRes(c).map(r => `<span>${esc(r.label)}<b>${esc(r.max ?? r.cur)}</b></span>`).join("")}</div>` : ""}</section>` : ""}
 
         ${skills.length ? `<section class="sec"><h2><span class="en">Skills</span>技能</h2>
