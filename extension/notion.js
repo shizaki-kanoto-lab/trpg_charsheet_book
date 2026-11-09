@@ -138,12 +138,14 @@ function notionMergeScenarios(have, add = []) {
   // A written short name ("ループ橋") stands for the one passed scenario whose name contains it
   // ("ループ橋でなにかが…"): that full name takes its place, keeping the written HO.
   const baseKey = t => notionScenarioKey(notionSplitHo(t)[0]);
+  // "よむとてとKPC" is the same scenario run as the KPC, not a fuller name of "よむとてと".
+  const isKpcOf = (t, k) => baseKey(t) === k + "kpc";
   const used = new Set();
   for (let i = 0; i < written; i++) {
     const k = baseKey(out[i]);
     if (k.length < 2 || adds.some(t => notionSameScenario(out[i], t))) continue;
     // A name with a subtitle ("爛爛-二人のための間奏曲-") is a sequel, not the full name.
-    const longer = adds.filter(t => baseKey(t).includes(k) && !/[-－―～〜:：〈《]/.test(notionSplitHo(t)[0].normalize("NFKC")));
+    const longer = adds.filter(t => isKpcOf(t, k) || (baseKey(t).includes(k) && !/[-－―～〜:：〈《]/.test(notionSplitHo(t)[0].normalize("NFKC"))));
     // A series name without an HO ("TRASH") gives way to its episodes ("TRASH1", "TRASH2").
     if (longer.length > 1 && !notionSplitHo(out[i])[1]) { out[i] = ""; continue; }
     if (longer.length !== 1 || used.has(longer[0])) continue;
@@ -156,7 +158,9 @@ function notionMergeScenarios(have, add = []) {
     if (used.has(t)) continue;
     // Already written out in more detail ("星原にて" in "星原にて、僕は君と踊る夢を見るKPC").
     const k = baseKey(t);
-    if (k.length >= 2 && out.some(o => baseKey(o).length > k.length && baseKey(o).includes(k))) continue;
+    // Kept when the same list also has it as the KPC: two sessions, one as a player and one as the KPC.
+    const alsoKpc = adds.some(a => isKpcOf(a, k));
+    if (k.length >= 2 && out.some(o => baseKey(o).length > k.length && baseKey(o).includes(k) && !(alsoKpc && isKpcOf(o, k)))) continue;
     const at = out.findIndex(o => notionSameScenario(o, t));
     if (at < 0) { out.push(t); continue; }
     const [base, ho] = notionSplitHo(out[at]);
@@ -165,7 +169,8 @@ function notionMergeScenarios(have, add = []) {
   return out;
 }
 // A passed scenario and its memo -> "シナリオ名HO2" when the memo names one HO and only one
-// ("HO2", "HO：探偵", "HO異邦人"). A memo that mentions several HOs is not used.
+// ("HO2", "HO：探偵", "HO異邦人"), or "シナリオ名KPC" when a memo line says "KPC". A memo that
+// mentions several HOs is not used.
 function notionScenarioWithHo(name, memo) {
   name = String(name || "").trim();
   if (!name || NOTION_HO.test(name)) return name;
@@ -173,6 +178,8 @@ function notionScenarioWithHo(name, memo) {
   // A line that is only an HO followed by a sheet link ("HO2" then "https://iachara.com/view/…")
   // names the other player's character, so it is left out.
   const lines = String(memo || "").normalize("NFKC").split("\n");
+  // A memo line that is only "KPC" (or "KPCとして") means the character was the KPC: "シナリオ名KPC".
+  if (lines.some(l => /^\s*KPC(として)?\s*$/i.test(l))) return /KPC$/i.test(name) ? name : `${name}KPC`;
   const isLink = l => /^\s*https?:\/\//.test(l || "");
   const nextLine = i => lines.slice(i + 1).find(l => l.trim());
   const text = lines.filter((l, i) => !(/^\s*HO\s*[:\-]?\s*\S{0,12}\s*(https?:\/\/\S+\s*)?$/i.test(l) && (/https?:\/\//.test(l) || isLink(nextLine(i)))))
