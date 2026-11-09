@@ -158,9 +158,13 @@ function hue(str){ let h=0; for (const c of String(str)) h=(h*31+c.codePointAt(0
 const tint = n => `hsl(${hue(n)} 30% 34%)`;
 const okImg = u => /^https?:\/\//.test(String(u||"")) || /^img\/[0-9a-f]+\.(png|jpg|gif|webp)$/.test(String(u||""));
 const isLost = c => (c.tags||[]).includes("ロスト");
-const SYS_SHORT = {"クトゥルフ神話TRPG 6版":"CoC 6th", "クトゥルフ神話TRPG 7版":"CoC 7th", "エモクロアTRPG":"Emoklore", "ガイアケアTRPG":"GaiaCare",
+const SYS_SHORT = {"クトゥルフ神話TRPG 6版":"CoC6th", "クトゥルフ神話TRPG 7版":"CoC7th", "エモクロアTRPG":"emoklore", "ガイアケアTRPG":"GaiaCare",
   "ダブルクロス The 3rd Edition":"Double Cross", "ソード・ワールド2.5":"SW 2.5", "ソード・ワールド2.0":"SW 2.0"};
 const sysShort = s => SYS_SHORT[s] || s || "";
+/* System order: CoC 6th, CoC 7th, Emoklore, then the rest in 50音順. */
+const SYS_FIRST = ["クトゥルフ神話TRPG 6版", "クトゥルフ神話TRPG 7版", "エモクロアTRPG"];
+const sysRank = s => { const i = SYS_FIRST.indexOf(s); return i < 0 ? SYS_FIRST.length : i; };
+const bySystem = (a, b) => sysRank(a) - sysRank(b) || String(a||"").localeCompare(String(b||""), "ja");
 const sysJa = s => String(s||"その他").replace(/TRPG\s*/,"").replace(/ The 3rd Edition/,"").replace(/ THE AXLERATION/i,"").replace(/^クトゥルフ神話/,"クトゥルフ");
 /* Same person as in the sheet book: NFKC, no spaces, no trailing （よみ）. */
 const personKey = c => String(c.name||"").normalize("NFKC").replace(/[(（][^()（）]*[)）]\s*$/,"").replace(/[\s　・]+/g,"").toLowerCase() || "#"+c.id;
@@ -211,7 +215,7 @@ function buildPeople(){
     p.name = shortName(p.sheets[0].name);
     p.ruby = p.sheets.map(rubyOf).find(Boolean) || "";
     p.lost = p.sheets.every(isLost);
-    p.systems = [...new Set(p.sheets.map(c => c.system).filter(Boolean))];
+    p.systems = [...new Set(p.sheets.map(c => c.system).filter(Boolean))].sort(bySystem);
     // Scenarios across all of the person's sheets; one played under two systems counts once.
     p.played = new Set(p.sheets.flatMap(c => scenariosOf(c).map(x => x.name.normalize("NFKC").replace(/\s+/g, "")))).size;
   }
