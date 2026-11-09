@@ -94,7 +94,7 @@ function notionSameScenario(a, b) {
   const x = notionScenarioKey(notionSplitHo(a)[0]), y = notionScenarioKey(notionSplitHo(b)[0]);
   if (!x || !y) return false;
   if (x === y) return true;
-  if (x.replace(/\d+/g, "#") === y.replace(/\d+/g, "#")) return false;
+  if (x.replace(/\d+/g, "") === y.replace(/\d+/g, "")) return false;
   const n = Math.min(x.length, y.length);
   return n >= 5 && notionEditDistance(x, y) <= (n >= 12 ? 2 : 1);
 }
@@ -142,7 +142,8 @@ function notionMergeScenarios(have, add = []) {
   for (let i = 0; i < written; i++) {
     const k = baseKey(out[i]);
     if (k.length < 2 || adds.some(t => notionSameScenario(out[i], t))) continue;
-    const longer = adds.filter(t => baseKey(t).includes(k));
+    // A name with a subtitle ("爛爛-二人のための間奏曲-") is a sequel, not the full name.
+    const longer = adds.filter(t => baseKey(t).includes(k) && !/[-－―～〜:：〈《]/.test(notionSplitHo(t)[0].normalize("NFKC")));
     // A series name without an HO ("TRASH") gives way to its episodes ("TRASH1", "TRASH2").
     if (longer.length > 1 && !notionSplitHo(out[i])[1]) { out[i] = ""; continue; }
     if (longer.length !== 1 || used.has(longer[0])) continue;
