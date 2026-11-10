@@ -1,74 +1,16 @@
 #!/usr/bin/env node
 // Fills the Notion database 「通過記録」 (one page per character and scenario) from the
 // シナリオ lines of the character sheet book, linking each page to its sheet and, when it can
-// tell which ones, to the 卓報告 pages of that scenario.
+// tell which ones, to the 卓報告 pages of that scenario. The rules live in extension/runs.js,
+// which the extension also uses for the sheets it sends.
 //
-//   NOTION_TOKEN=... node tools/sync-runs.js [--write]
+//   NOTION_TOKEN=... node tools/sync-runs.js [--write] [--prune] [--only=<name>]
 //
 // Without --write it only prints what it would add. A character and scenario (and HO) already
 // in 通過記録 is left alone, so it can be run again after the sheets are fixed.
 
-const { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionDbId, notionRequest, notionSleep, notionSplitHo, notionScenarioKey, notionSameScenario } = require("../extension/notion.js");
-
-const RUNS_DB = "ad4ce7ad957d4f28ab6a94f427beec56";
-const TAKU_DB = "1351b663c48f803db061e20fee803137";
-
-const text = rich => (rich || []).map(t => t.plain_text ?? t.text?.content ?? "").join("");
-function prop(p) {
-  if (!p) return null;
-  switch (p.type) {
-    case "title": return text(p.title);
-    case "rich_text": return text(p.rich_text);
-    case "select": return p.select?.name ?? null;
-    case "relation": return p.relation.map(r => r.id.replace(/-/g, ""));
-    case "date": return p.date?.start ?? null;
-    default: return null;
-  }
-}
-async function allPages(token, db) {
-  const pages = [];
-  let cursor;
-  do {
-    const r = await notionRequest(token, `/databases/${db}/query`, { page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) });
-    pages.push(...r.results);
-    cursor = r.has_more ? r.next_cursor : null;
-    await notionSleep(NOTION_GAP_MS);
-  } while (cursor);
-  return pages;
-}
-const bare = id => String(id).replace(/-/g, "");
-
-// The sheet's system as 卓報告 names it.
-const SYSTEM = {
-  "クトゥルフ神話TRPG 6版": "CoC", "クトゥルフ神話TRPG 7版": "CoC", "エモクロアTRPG": "emoklore", "Kutulu": "Kutulu",
-  "ガイアケアTRPG": "gaiacare", "ダブルクロス The 3rd Edition": "dx3rd", "キズナバレット": "キズナバレット",
-  "フタリソウサ": "フタリソウサ", "トーキョーN◎VA THE AXLERATION": "トーキョーNOVA",
-};
-const RUN_SYSTEMS = new Set(["CoC", "emoklore", "Kutulu", "gaiacare", "dx3rd", "フタリソウサ", "キズナバレット", "トーキョーNOVA", "ケダモノオペラ", "マダミス", "シノビガミ", "他システム"]);
-// A sheet and a run whose systems differ but go together: ガイアケア and エモクロア share one character
-// sheet, and a 「他システム」 session can be played with any sheet (both confirmed 2026-11-10).
-const SAME_SHEET = [["gaiacare", "emoklore"]];
-const systemsAgree = (sheetSys, runSys) => !sheetSys || !runSys || sheetSys === runSys || runSys === "他システム"
-  || SAME_SHEET.some(g => g.includes(sheetSys) && g.includes(runSys));
-// The same person across sheets (a CoC sheet and its エモクロア conversion).
-const personKey = name => String(name || "").normalize("NFKC").replace(/[(（][^()（）]*[)）]\s*$/, "").replace(/[\s　・]+/g, "").toLowerCase();
-// 卓報告's PL/GM for each 立場: a PC played as a PL, or the KP's own character.
-const ROLE_OF = { PL: ["PL"], KPC: ["KP", "DL", "GM", "SKP"] };
-
-// Scenario names the user confirmed (2026-11-10) where the sheet is right and only part matches 卓報告:
-// 卓報告's session under a fuller name (TRASH1 of TRASH1 / TRASH2; 探索者：Uの証言), which keeps
-// the sheet's name and still links to 卓報告. Scenarios of their own, not part of a 卓報告 name, go in OWN_SCENARIO.
-const OWN_SCENARIO = new Set([].map(notionScenarioKey));
-const KEEP_NAME = new Set(["TRASH1", "探索者：Uの証言"].map(notionScenarioKey));
-
-// "シナリオ名HO2" / "シナリオ名KPC" / "シナリオ名NPC" -> { base, ho, role }
-function parseLine(line) {
-  let t = String(line).trim(), role = "PL";
-  if (/KPC$/i.test(t)) { role = "KPC"; t = t.replace(/\s*KPC$/i, ""); }
-  else if (/NPC$/.test(t)) { role = "NPC"; t = t.replace(/\s*NPC$/, ""); }
-  const [base, ho] = notionSplitHo(t);
-  return { base: base.trim(), ho: ho.trim(), role };
-}
+const { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionDbId, notionRequest, notionSleep, notionScenarioKey } = require("../extension/notion.js");
+const { RUNS_SYSTEM: SYSTEM, runsSystemsAgree: systemsAgree, runsLoad, runsIndex, runsLabel, runsCreate } = require("../extension/runs.js");
 
 async function main() {
   const token = process.env.NOTION_TOKEN;
@@ -78,91 +20,25 @@ async function main() {
   const only = (process.argv.find(a => a.startsWith("--only=")) || "").slice(7).trim();
   const sheetDb = notionDbId(process.env.NOTION_DATABASE_ID || NOTION_DEFAULT_DB);
 
-  const sheets = (await allPages(token, sheetDb)).map(pg => ({
-    id: bare(pg.id), name: prop(pg.properties["名前"]) || "", system: prop(pg.properties["システム"]) || "",
-    site: prop(pg.properties["サイト"]) || "",
-    lines: String(prop(pg.properties["シナリオ"]) || "").split("\n").map(s => s.trim()).filter(Boolean),
-  }));
-  const taku = (await allPages(token, TAKU_DB)).map(pg => ({
-    id: bare(pg.id), name: prop(pg.properties["シナリオ"]) || "", system: prop(pg.properties["システム"]) || "",
-    date: prop(pg.properties["日付"]) || "", role: prop(pg.properties["PL/GM"]) || "",
-  })).filter(r => r.name);
-  const rows = (await allPages(token, RUNS_DB)).map(pg => {
-    const p = pg.properties;
-    return { id: bare(pg.id), chars: prop(p["キャラ"]) || [], title: prop(p["シナリオ"]) || "", ho: prop(p["HO"]) || "",
-      system: prop(p["システム"]) || "", taku: prop(p["卓報告"]) || [], role: prop(p["立場"]) || "" };
-  });
-  const existing = new Set(rows.map(r => `${r.chars[0]}|${notionScenarioKey(r.title)}|${notionScenarioKey(r.ho)}`));
+  const { sheets, taku, rows } = await runsLoad(token, sheetDb);
+  const idx = runsIndex({ sheets, taku, rows });
+  const { runs, takuOfName, existing } = idx;
   console.log(`シート ${sheets.length} 枚、卓報告 ${taku.length} 件、通過記録 ${existing.size} 件`);
-
-  // Who has each scenario (and 立場): only a scenario one person played can be tied to its 卓報告 pages.
-  const runs = [];
-  for (const s of sheets) for (const line of s.lines) runs.push({ sheet: s, ...parseLine(line) });
-  // A sheet line that only partly matches a 卓報告 name takes that name: "Paranormal Crime Episode 1：…"
-  // and "TRASH1" are 卓報告's "Paranormal Crime" and "TRASH", "公演型まれびとこぞりて" is "まれびとこぞりて",
-  // and "ヤドリギあやかし探偵社" is its episodes when only one of them fits. The rest after
-  // the 卓報告 name becomes the HO when it is one ("トナリ美術館の5つの問PC3" -> PC3).
-  const takuOf = r => {
-    const same = taku.filter(t => notionSameScenario(t.name, r.base));
-    if (same.length) return same;
-    const k = notionScenarioKey(r.base);
-    if (OWN_SCENARIO.has(k)) return [];
-    const part = taku.filter(t => { const tk = notionScenarioKey(t.name); return tk.length >= 4 && (k.includes(tk) || tk.includes(k) && k.length >= 4); });
-    const names = [...new Set(part.map(t => notionScenarioKey(t.name)))];
-    if (names.length !== 1) return [];
-    const rest = r.base.normalize("NFKC").slice(r.base.normalize("NFKC").indexOf(part[0].name.normalize("NFKC").trim()) + part[0].name.normalize("NFKC").trim().length).trim();
-    if (!r.ho && /^(PC|HO)\S{1,8}$/i.test(rest)) r.ho = rest;
-    return part;
-  };
-  // The sheet-side names a 通過記録 title can stand for (itself, or the sheet lines that took this 卓報告 name).
-  const basesOf = new Map();   // 卓報告 name key -> the sheet names that took it
-  for (const base of new Set(runs.map(r => r.base))) {
-    const t = takuOf({ base, ho: "" });
-    if (!t.length) continue;
-    const k = notionScenarioKey(t[0].name);
-    if (!basesOf.has(k)) basesOf.set(k, []);
-    basesOf.get(k).push(base);
-  }
-  const takuOfName = title => basesOf.get(notionScenarioKey(title)) || [];
-  const playersOf = new Map();
-  for (const r of runs) {
-    const k = r.role + "|" + notionScenarioKey(r.base);
-    if (!playersOf.has(k)) playersOf.set(k, new Set());
-    playersOf.get(k).add(personKey(r.sheet.name));
-  }
 
   const report = { added: 0, linked: 0, noTaku: [], shared: [], crossSystem: [] };
   for (const r of runs) {
-    const all = takuOf(r);
-    const title = all.length && !KEEP_NAME.has(notionScenarioKey(r.base)) ? all[0].name : r.base;
-    const key = `${r.sheet.id}|${notionScenarioKey(title)}|${notionScenarioKey(r.ho)}`;
-    if (existing.has(key)) continue;
+    const p = idx.plan(r);
+    if (existing.has(p.key)) continue;
     if (only && !r.sheet.name.includes(only)) continue;
-    existing.add(key);
-    const mine = all.filter(t => !ROLE_OF[r.role] || ROLE_OF[r.role].includes(t.role));
-    const alone = playersOf.get(r.role + "|" + notionScenarioKey(r.base)).size === 1;
-    const links = alone ? mine : [];
-    const system = links[0]?.system || all[0]?.system || SYSTEM[r.sheet.system] || "";
-    if (!all.length) report.noTaku.push(`${r.sheet.name}：${r.base}`);
-    else if (!links.length && mine.length) report.shared.push(`${r.sheet.name}：${title}`);
-    // A line whose 卓報告 is in another system (an エモクロア session copied onto the CoC original) is
-    // only reported: the run belongs on the sheet of the system it was played in.
-    if (all.length && !systemsAgree(SYSTEM[r.sheet.system], system)) { report.crossSystem.push(`${r.sheet.name}（${r.sheet.system}）：${title}（${system}）`); continue; }
-    report.added++; if (links.length) report.linked++;
+    existing.add(p.key);
+    if (!p.all.length) report.noTaku.push(`${r.sheet.name}：${r.base}`);
+    else if (!p.links.length && p.mine.length) report.shared.push(`${r.sheet.name}：${p.title}`);
+    if (p.crossSystem) { report.crossSystem.push(`${r.sheet.name}（${r.sheet.system}）：${p.title}（${p.system}）`); continue; }
+    report.added++; if (p.links.length) report.linked++;
     report.list = report.list || [];
-    report.list.push(`${r.sheet.name}（${r.sheet.system}）：${title}${r.ho ? " " + r.ho : ""}${r.role !== "PL" ? " " + r.role : ""}${links.length ? "" : "（卓報告なし）"}`);
+    report.list.push(runsLabel(p) + (p.links.length ? "" : "（卓報告なし）"));
     if (!write) continue;
-    await notionRequest(token, "/pages", {
-      parent: { database_id: RUNS_DB },
-      properties: {
-        "シナリオ": { title: [{ text: { content: title } }] },
-        "キャラ": { relation: [{ id: r.sheet.id }] },
-        "卓報告": { relation: links.slice(0, 100).map(t => ({ id: t.id })) },
-        ...(RUN_SYSTEMS.has(system) ? { "システム": { select: { name: system } } } : {}),
-        "HO": { rich_text: r.ho ? [{ text: { content: r.ho } }] : [] },
-        "立場": { select: { name: r.role } },
-      },
-    });
+    await runsCreate(token, p);
     await notionSleep(NOTION_GAP_MS);
   }
 

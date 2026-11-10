@@ -85,7 +85,21 @@ async function send(list) {
       r.skipped - r.updated > 0 ? `追加済みの${r.skipped - r.updated}人はそのままです` : "", r.failed.length ? `${r.failed.length}人は失敗しました: ${r.failed.map(f => f.name).join("、")}` : "", r.stopped || ""];
     setMsg(parts.filter(Boolean).join("\n"), !!(r.stopped || r.failed.length));
     showAllCount.cache = null;
+    if (!r.stopped) await sendRuns(list, parts.filter(Boolean).join("\n"));
   } catch (e) { setMsg(e.message, true); }
+}
+
+// After the sheet book: the 通過記録 pages of the sheets just sent (only those tied to 卓報告).
+async function sendRuns(list, before) {
+  setMsg(before + "\n通過記録を確かめています…");
+  try {
+    const r = await runsAddForSheets(notion.token, notion.db, list.map(i => i.url));
+    const lines = [before, r.added.length ? `通過記録に${r.added.length}件追加しました:\n` + r.added.join("\n") : "通過記録は変わりません",
+      r.unlinked.length ? `卓報告とつなげられないので通過記録に入れなかったもの ${r.unlinked.length}件:\n` + r.unlinked.join("\n") : ""];
+    setMsg(lines.filter(Boolean).join("\n"));
+  } catch (e) {
+    setMsg(before + "\n通過記録に反映できませんでした: " + (e.status === 404 ? "Notionの連携が「通過記録」か「卓報告」につながっていません" : e.message), true);
+  }
 }
 
 // Sites whose whole character list the extension can read with the visitor's login.
