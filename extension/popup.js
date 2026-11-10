@@ -13,6 +13,8 @@ const $ = id => document.getElementById(id);
 let items = [];      // the single sheet this popup can add
 let iaAll = null;    // every sheet on the site, when the visitor is logged in
 let bulkSite = "";   // the site iaAll was read from ("キャラッシュ")
+// One button: on a sheet page it sends that sheet, on any other page of the site (the list) every sheet.
+let bulkMode = false;
 let notion = { token: "", db: NOTION_DEFAULT_DB };
 
 // Runs inside the sheet page: collects the URL, title, and any CCFolia piece data shown on the page.
@@ -62,7 +64,7 @@ async function showAllCount() {
   if (!notion.token || (!iaAll && !items[0]?.url)) return;
   try {
     const existing = showAllCount.cache ||= await notionExistingUrls(notion.token, notion.db);
-    if (iaAll) {
+    if (bulkMode) {
       const fresh = iaAll.filter(i => !existing.has(i.url)).length;
       // Sheets already added still get their missing scenarios, so the button stays usable.
       // Says where (Notionのシート帳), whom (the site's characters) and what (add / the シナリオ欄).
@@ -72,8 +74,8 @@ async function showAllCount() {
       $("sendAll").disabled = false;
       setMsg(`全${iaAll.length}人（新規 ${fresh}人・追加済み ${iaAll.length - fresh}人）`);
     }
-    if (items[0]?.url && existing.has(items[0].url)) { $("send").textContent = `「${oneName()}」だけ、シート帳のシナリオ欄に追記`; $("send").disabled = false; }
-    else if (!iaAll) { $("send").textContent = `「${oneName()}」をシート帳に追加`; $("send").disabled = false; }
+    if (items[0]?.url && existing.has(items[0].url)) { $("send").textContent = `「${oneName()}」のシナリオ欄をシート帳に追記`; $("send").disabled = false; }
+    else if (!bulkMode) { $("send").textContent = `「${oneName()}」をシート帳に追加`; $("send").disabled = false; }
   } catch (e) { setMsg(e.message, true); }
 }
 
@@ -144,8 +146,6 @@ async function initBulk(tab, site) {
   if (r?.sheets?.length) {
     iaAll = r.sheets.filter(site.ok).map(site.convert);
     bulkSite = site.name;
-    $("sendAll").textContent = `${site.name}の新規だけシート帳に追加`;
-    $("allBox").hidden = false;
   }
 
   let one = m && iaAll?.find(i => i.url.split("/").includes(m[1]));
@@ -159,7 +159,10 @@ async function initBulk(tab, site) {
   if (one) {
     showOne(one);
   } else if (iaAll) {
-    setStatus("ok", `下のボタンで、${site.name}の自分のキャラのうち新規だけを追加できます。1人だけ追加するときはそのシートを開いてください。`);
+    bulkMode = true;
+    $("sendAll").textContent = `${site.name}の新規だけシート帳に追加`;
+    $("allBox").hidden = false;
+    setStatus("ok", `${site.name}の自分のキャラ全員をシート帳に送ります。1人だけ送るときはそのシートを開いてください。`);
   } else {
     setStatus("warn", site.errors?.[r?.error] ? site.errors[r.error] : r?.error === "not-logged-in"
       ? `${site.name}にログインしていません。ログインしてから、もう一度この画面を開いてください。`
