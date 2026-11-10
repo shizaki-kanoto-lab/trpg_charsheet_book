@@ -4,13 +4,16 @@
 // tell which ones, to the 卓報告 pages of that scenario. The rules live in extension/runs.js,
 // which the extension also uses for the sheets it sends.
 //
-//   NOTION_TOKEN=... node tools/sync-runs.js [--write] [--prune] [--only=<name>]
+//   NOTION_TOKEN=... node tools/sync-runs.js [--write] [--prune] [--pl] [--only=<name>]
+//
+// --pl fills PL人数 on pages where it is empty, from the PL欄 of their 卓報告 (with --write);
+// it then adds no rows.
 //
 // Without --write it only prints what it would add. A character and scenario (and HO) already
 // in 通過記録 is left alone, so it can be run again after the sheets are fixed.
 
 const { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionDbId, notionRequest, notionSleep, notionScenarioKey } = require("../extension/notion.js");
-const { RUNS_SYSTEM: SYSTEM, runsSystemsAgree: systemsAgree, runsLoad, runsIndex, runsLabel, runsCreate } = require("../extension/runs.js");
+const { RUNS_SYSTEM: SYSTEM, runsSystemsAgree: systemsAgree, runsPlOf, runsLoad, runsIndex, runsLabel, runsCreate } = require("../extension/runs.js");
 
 async function main() {
   const token = process.env.NOTION_TOKEN;
@@ -37,7 +40,8 @@ async function main() {
     report.added++; if (p.links.length) report.linked++;
     report.list = report.list || [];
     report.list.push(runsLabel(p) + (p.links.length ? "" : "（卓報告なし）"));
-    if (!write) continue;
+    // --pl only fills PL人数; it adds no rows even with --write.
+    if (!write || process.argv.includes("--pl")) continue;
     await runsCreate(token, p);
     await notionSleep(NOTION_GAP_MS);
   }
@@ -69,6 +73,28 @@ async function main() {
       await notionSleep(NOTION_GAP_MS);
     }
     console.log(`\nゴミ箱へ移した行 ${prune.length} 件\n` + prune.map(label).join("\n"));
+  }
+  // --pl: PL人数 from 卓報告's PL欄, only where it is empty (a value set by hand is kept).
+  if (process.argv.includes("--pl")) {
+    const fill = [], differs = [];
+    for (const r of rows) {
+      if (r.pl || !r.taku.length) continue;
+      const { label: pl, differs: d } = runsPlOf(r.taku.map(id => takuById.get(id)));
+      if (!pl) continue;
+      fill.push({ r, pl });
+      if (d) differs.push(`${label(r)} → ${pl}（${r.taku.map(id => takuById.get(id)).filter(Boolean).map(t => `${t.date} ${t.pls}人`).join("・")}）`);
+    }
+    const by = {};
+    for (const f of fill) by[f.pl] = (by[f.pl] || 0) + 1;
+    console.log(`\nPL人数を${write ? "入れた" : "入れる予定の"}行 ${fill.length} 件（${Object.entries(by).sort().map(([k, n]) => `${k} ${n}`).join("・")}）`);
+    console.log(`卓報告によって人数が違う行（いちばん新しい卓の人数にする）${differs.length} 件\n` + differs.join("\n"));
+    if (process.argv.includes("--pl-list")) console.log(fill.map(f => `${label(f.r)} → ${f.pl}`).join("\n"));
+    if (write) for (const f of fill) {
+      await notionRequest(token, `/pages/${f.r.id}`, { properties: { "PL人数": { select: { name: f.pl } } } }, "PATCH");
+      await notionSleep(NOTION_GAP_MS);
+    }
+    const noTakuPl = rows.filter(r => !r.pl && !r.taku.length).length;
+    console.log(`卓報告がなくてPL人数を入れられない行 ${noTakuPl} 件`);
   }
   console.log(`\n=== 通過記録 ${rows.length} 件の点検 ===`);
   console.log(`\n■ キャラが空の行 ${noChar.length} 件\n` + noChar.join("\n"));

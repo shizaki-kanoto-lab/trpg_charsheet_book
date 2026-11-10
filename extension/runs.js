@@ -59,6 +59,17 @@ async function runsAllPages(token, db) {
   } while (cursor);
   return pages;
 }
+// 卓報告's PL欄 lists the players' names split by 「、」 ("ずし、しざき" = 2).
+const runsPlCount = text => String(text || "").split(/[、，,]/).map(s => s.trim()).filter(Boolean).length;
+const runsPlLabel = n => n >= 5 ? "5PL以上" : n >= 1 ? `${n}PL` : "";
+// The PL人数 of a 通過記録 page from its 卓報告 pages: the latest session's count (an earlier table
+// of the same scenario may have stopped part way, as 台風の目 did). differs: the sessions disagree.
+function runsPlOf(takuPages) {
+  const ps = takuPages.filter(t => t && t.pls);
+  if (!ps.length) return { label: "", differs: false };
+  const latest = [...ps].sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+  return { label: runsPlLabel(latest.pls), differs: new Set(ps.map(t => runsPlLabel(t.pls))).size > 1 };
+}
 const runsBare = id => String(id).replace(/-/g, "");
 
 // "シナリオ名HO2" / "シナリオ名KPC" / "シナリオ名NPC" -> { base, ho, role }
@@ -80,11 +91,13 @@ async function runsLoad(token, sheetDb) {
   const taku = (await runsAllPages(token, TAKU_DB)).map(pg => ({
     id: runsBare(pg.id), name: runsProp(pg.properties["シナリオ"]) || "", system: runsProp(pg.properties["システム"]) || "",
     date: runsProp(pg.properties["日付"]) || "", role: runsProp(pg.properties["PL/GM"]) || "",
+    pls: runsPlCount(runsProp(pg.properties["PL"])),
   })).filter(r => r.name);
   const rows = (await runsAllPages(token, RUNS_DB)).map(pg => {
     const p = pg.properties;
     return { id: runsBare(pg.id), chars: runsProp(p["キャラ"]) || [], title: runsProp(p["シナリオ"]) || "", ho: runsProp(p["HO"]) || "",
-      system: runsProp(p["システム"]) || "", taku: runsProp(p["卓報告"]) || [], role: runsProp(p["立場"]) || "" };
+      system: runsProp(p["システム"]) || "", taku: runsProp(p["卓報告"]) || [], role: runsProp(p["立場"]) || "",
+      pl: runsProp(p["PL人数"]) || "" };
   });
   return { sheets, taku, rows };
 }
@@ -155,6 +168,7 @@ async function runsCreate(token, p) {
       ...(RUN_SYSTEMS.has(p.system) ? { "システム": { select: { name: p.system } } } : {}),
       "HO": { rich_text: p.ho ? [{ text: { content: p.ho } }] : [] },
       "立場": { select: { name: p.role } },
+      ...(runsPlOf(p.links).label ? { "PL人数": { select: { name: runsPlOf(p.links).label } } } : {}),
     },
   });
 }
@@ -181,5 +195,5 @@ async function runsAddForSheets(token, sheetDb, urls) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { RUNS_DB, TAKU_DB, RUNS_SYSTEM, RUN_SYSTEMS, runsSystemsAgree, runsLoad, runsIndex, runsLabel, runsCreate, runsAddForSheets };
+  module.exports = { RUNS_DB, TAKU_DB, RUNS_SYSTEM, RUN_SYSTEMS, runsSystemsAgree, runsPlOf, runsLoad, runsIndex, runsLabel, runsCreate, runsAddForSheets };
 }
