@@ -142,7 +142,9 @@ async function main() {
     const system = links[0]?.system || all[0]?.system || SYSTEM[r.sheet.system] || "";
     if (!all.length) report.noTaku.push(`${r.sheet.name}：${r.base}`);
     else if (!links.length && mine.length) report.shared.push(`${r.sheet.name}：${title}`);
-    if (all.length && !systemsAgree(SYSTEM[r.sheet.system], system)) report.crossSystem.push(`${r.sheet.name}（${r.sheet.system}）：${title}（${system}）`);
+    // A line whose 卓報告 is in another system (an エモクロア session copied onto the CoC original) is
+    // only reported: the run belongs on the sheet of the system it was played in.
+    if (all.length && !systemsAgree(SYSTEM[r.sheet.system], system)) { report.crossSystem.push(`${r.sheet.name}（${r.sheet.system}）：${title}（${system}）`); continue; }
     report.added++; if (links.length) report.linked++;
     report.list = report.list || [];
     report.list.push(`${r.sheet.name}（${r.sheet.system}）：${title}${r.ho ? " " + r.ho : ""}${r.role !== "PL" ? " " + r.role : ""}${links.length ? "" : "（卓報告なし）"}`);
