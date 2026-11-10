@@ -250,7 +250,13 @@ function buildPeople(){
   people.sort((a,b) => b.played - a.played || (a.ruby||a.name).localeCompare(b.ruby||b.name, "ja"));
   S.people = people;
 }
-const visible = () => S.people.filter(p => (S.lost || !p.lost) && (!S.sys || p.systems.includes(S.sys)));
+// With a system tab chosen, most scenarios played in that system first; すべて keeps the all-system order.
+const visible = () => {
+  const list = S.people.filter(p => (S.lost || !p.lost) && (!S.sys || p.systems.includes(S.sys)));
+  if (!S.sys) return list;
+  const n = new Map(list.map(p => [p, scenOf(p).played]));
+  return list.sort((a,b) => n.get(b) - n.get(a) || b.played - a.played || (a.ruby||a.name).localeCompare(b.ruby||b.name, "ja"));
+};
 
 /* The scenarios a tile shows: with a system tab chosen, only that system's sheets count. */
 function scenOf(p){
