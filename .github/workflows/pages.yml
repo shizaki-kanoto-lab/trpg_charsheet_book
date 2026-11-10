@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["web/**", "tools/build-site.js", "extension/notion.js", "extension/gsheet.js", ".github/workflows/pages.yml"]
+    paths: ["web/**", "tools/build-site.js", "extension/notion.js", "extension/gsheet.js", "extension/runs.js", ".github/workflows/pages.yml"]
 
 permissions:
   contents: read

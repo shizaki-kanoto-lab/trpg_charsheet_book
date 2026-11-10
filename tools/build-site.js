@@ -11,7 +11,8 @@
 const fs = require("fs");
 const path = require("path");
 const { gsImageFor } = require("../extension/gsheet.js");
-const { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionDbId, notionRequest, notionSleep } = require("../extension/notion.js");
+const { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionDbId, notionRequest, notionSleep, notionSplitHo, notionScenarioKey, notionSameScenario } = require("../extension/notion.js");
+const { RUNS_DB } = require("../extension/runs.js");
 
 const ROOT = path.join(__dirname, "..");
 const OUT = path.join(ROOT, "site");
@@ -27,6 +28,8 @@ function prop(p) {
     case "multi_select": return p.multi_select.map(o => o.name);
     case "url": return p.url;
     case "last_edited_time": return p.last_edited_time;
+    case "relation": return p.relation.map(r => r.id.replace(/-/g, ""));
+    case "date": return p.date?.start ?? null;
     default: return null;
   }
 }
@@ -207,6 +210,36 @@ async function kedamonoChars(token) {
   return out;
 }
 
+// When each character played each scenario: 通過記録 rows and the dates of their 卓報告 (the
+// earliest session). Map of sheet page id -> [{title, date}]. Empty when they can't be read.
+async function runDates(token) {
+  const out = new Map();
+  try {
+    const taku = new Map((await allPages(token, TAKU_DB)).map(pg => [pg.id.replace(/-/g, ""), prop(pg.properties["日付"])]));
+    for (const pg of await allPages(token, RUNS_DB)) {
+      const dates = (prop(pg.properties["卓報告"]) || []).map(id => taku.get(id)).filter(Boolean).sort();
+      if (!dates.length) continue;
+      const title = prop(pg.properties["シナリオ"]) || "";
+      for (const id of prop(pg.properties["キャラ"]) || []) {
+        if (!out.has(id)) out.set(id, []);
+        out.get(id).push({ title, date: dates[0] });
+      }
+    }
+  } catch (e) { console.log(`通過記録・卓報告を読めませんでした (${e.message})。ギャラリーの最初のシナリオはシートの順になります。`); }
+  return out;
+}
+// The date of each of a sheet's シナリオ lines, from its 通過記録 rows ({line: "YYYY-MM-DD"}).
+function linesDated(page, runs) {
+  const out = {};
+  for (const line of String(prop(page.properties["シナリオ"]) || "").split("\n").map(s => s.trim()).filter(Boolean)) {
+    const base = notionSplitHo(line.replace(/\s*(?:KPC|NPC)$/i, ""))[0].trim(), k = notionScenarioKey(base);
+    const hit = runs.filter(r => { const t = notionScenarioKey(r.title); return notionSameScenario(r.title, base) || t.length >= 4 && k.length >= 4 && (k.includes(t) || t.includes(k)); })
+      .map(r => r.date).sort()[0];
+    if (hit) out[line] = hit;
+  }
+  return out;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const prevAt = args.indexOf("--previous");
@@ -216,6 +249,7 @@ async function main() {
 
   const prev = await previousBuild(prevAt >= 0 ? args[prevAt + 1] : "");
   const pages = await allPages(token, db);
+  const runs = await runDates(token);
   const chars = [];
   let reused = 0;
   for (const page of pages) {
@@ -223,7 +257,10 @@ async function main() {
     const same = old && old.updatedAt === (Date.parse(page.last_edited_time) || 0);
     const body = same ? { notes: old.notes, palette: old.palette, piece: old.piece } : await pageBody(token, page.id);
     if (same) reused++;
-    chars.push(toChar(page, body));
+    const c = toChar(page, body);
+    const dated = linesDated(page, runs.get(page.id.replace(/-/g, "")) || []);
+    if (Object.keys(dated).length) c.dates = dated;
+    chars.push(c);
   }
 
   fs.mkdirSync(OUT, { recursive: true });

@@ -202,7 +202,8 @@ function scenariosOf(c){
   for (const t of (c.tags||[]).filter(t => !META_TAG.test(t))){
     if (ROLE_ONLY.test(t)){ const last = out[out.length-1]; if (last && !last.role) last.role = t; else pending = t; continue; }
     const m = t.match(ROLE_SUFFIX);
-    out.push(m ? {name:m[1].trim(), role:m[2]} : {name:t, role:pending});
+    const date = (c.dates || {})[t] || "";   // the 卓報告 date of this line (from 通過記録), when known
+    out.push(m ? {name:m[1].trim(), role:m[2], date} : {name:t, role:pending, date});
     pending = "";
   }
   return out;
@@ -242,8 +243,11 @@ function buildPeople(){
     // The profile's sheet tabs, in the list's system order.
     p.tabs = [...p.sheets].sort((a,b) => bySystem(a.system, b.system));
     // Scenarios across all of the person's sheets; one played under two systems counts once.
-    // The first scenario on the sheet listed first by system (CoC6th, CoC7th, emoklore, …).
-    p.first = ([...p.sheets].sort((a,b) => bySystem(a.system, b.system)).flatMap(scenariosOf)[0] || {}).name || "";
+    // すべて: the scenario played first in time, whatever the system (by its 卓報告 date). Without
+    // dates, the first scenario on the sheet listed first by system (CoC6th, CoC7th, emoklore, …).
+    const inOrder = [...p.sheets].sort((a,b) => bySystem(a.system, b.system)).flatMap(scenariosOf);
+    const dated = inOrder.filter(x => x.date).sort((a,b) => a.date.localeCompare(b.date));
+    p.first = ((dated[0] || inOrder[0]) || {}).name || "";
     p.played = new Set(p.sheets.flatMap(c => scenariosOf(c).map(x => x.name.normalize("NFKC").replace(/\s+/g, "")))).size;
   }
   // Most scenarios played first, whatever the system.
