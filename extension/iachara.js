@@ -141,11 +141,19 @@ function iacharaToItem(sheet) {
   ].filter(Boolean);
   const notes = [profileLines.join("\n"), d.memo || ""].filter(Boolean).join("\n\n");
   // 通過シナリオ: [{ name, memo }]
-  const passed = (Array.isArray(d.passedScenarios) ? d.passedScenarios : []).map(s => notionScenarioWithHo(s?.name, s?.memo)).filter(Boolean);
+  let passed = (Array.isArray(d.passedScenarios) ? d.passedScenarios : []).map(s => notionScenarioWithHo(s?.name, s?.memo)).filter(Boolean);
   // A sheet that lists its 通過シナリオ takes its scenarios from there only: a tag then just names the
   // HO of a passed scenario it matches ("彼方からの君に捧ぐHO3"), and other tags (「船上の生命線NPC改変」,
   // tags copied from the 6版 sheet) add nothing. A sheet with no 通過シナリオ keeps its tags as scenarios.
   const tagNames = iaSplitTags(sheet.tag, (d.passedScenarios || []).map(s => s?.name));
+  // A series tag with an HO ("Paranormal Crime HO5", "ヤドリギあやかし探偵社 HO蜘蛛") gives that HO to each
+  // passed episode whose name starts with the series name and has no HO of its own.
+  const series = notionJoinHo(tagNames).map(t => notionSplitHo(t)).filter(([b, h]) => h && notionScenarioKey(b).length >= 4 && !passed.some(x => notionSameScenario(x, b)));
+  passed = passed.map(x => {
+    if (notionSplitHo(x)[1]) return x;
+    const hit = series.find(([b]) => notionScenarioKey(x).startsWith(notionScenarioKey(b)));
+    return hit ? x + hit[1] : x;
+  });
   const tags = [six ? "6版" : "7版", ...(passed.length ? tagNames.filter(t => passed.some(x => notionSameScenario(x, t) || notionSameScenario(x, t.replace(/\s*(?:KPC|NPC|PC\d+)$/i, "")))) : tagNames), p.isLost ? "ロスト" : ""].filter(Boolean);
 
   return {
