@@ -73,9 +73,11 @@ function notionSplitHo(line) {
   const m = t.match(NOTION_HO);
   return m ? [t.slice(0, m.index).trim(), t.slice(m.index)] : [t.trim(), ""];
 }
-// Compared without spaces, punctuation, brackets, readings in parentheses and kana/width differences.
+// Compared without spaces, punctuation, brackets, readings in parentheses and kana/width differences;
+// ヴィ and ビ count as one sound (「ハイビジョン」 is 卓報告's 「ハイヴィジョン」).
 const notionScenarioKey = t => String(t).normalize("NFKC").toLowerCase()
   .replace(/[(（][^()（）]*[)）]/g, "")
+  .replace(/ヴ[ァィェォ]?/g, m => ({ ヴァ: "バ", ヴィ: "ビ", ヴェ: "ベ", ヴォ: "ボ" })[m] || "ブ")
   .replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60))
   .replace(/[\s「」『』【】\[\]"'“”・:：;；\-－―~〜、。,.!！?？…‥♪☆★]+/g, "");
 function notionEditDistance(a, b) {

@@ -7,6 +7,10 @@ on:
         description: "Notionに書き込む（オフなら追加予定の一覧だけ出す）"
         type: boolean
         default: false
+      only:
+        description: "このキャラ名を含むシートの行だけ追加する（空なら全員）"
+        type: string
+        default: ""
       prune:
         description: "いあきゃら・キャラッシュ・エモクロアのシートからなくなった行をゴミ箱へ移す"
         type: boolean
@@ -27,4 +31,5 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ vars.NOTION_DATABASE_ID }}
-        run: node tools/sync-runs.js ${{ inputs.write && '--write' || '' }} ${{ inputs.prune && '--prune' || '' }}
+          ONLY: ${{ inputs.only }}
+        run: node tools/sync-runs.js ${{ inputs.write && '--write' || '' }} ${{ inputs.prune && '--prune' || '' }} "--only=$ONLY"

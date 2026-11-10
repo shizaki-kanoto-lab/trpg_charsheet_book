@@ -74,6 +74,8 @@ async function main() {
   const token = process.env.NOTION_TOKEN;
   if (!token) throw new Error("NOTION_TOKEN がありません");
   const write = process.argv.includes("--write");
+  // --only=<name>: add rows only for sheets whose character name contains it (one sheet just sent).
+  const only = (process.argv.find(a => a.startsWith("--only=")) || "").slice(7).trim();
   const sheetDb = notionDbId(process.env.NOTION_DATABASE_ID || NOTION_DEFAULT_DB);
 
   const sheets = (await allPages(token, sheetDb)).map(pg => ({
@@ -135,6 +137,7 @@ async function main() {
     const title = all.length && !KEEP_NAME.has(notionScenarioKey(r.base)) ? all[0].name : r.base;
     const key = `${r.sheet.id}|${notionScenarioKey(title)}|${notionScenarioKey(r.ho)}`;
     if (existing.has(key)) continue;
+    if (only && !r.sheet.name.includes(only)) continue;
     existing.add(key);
     const mine = all.filter(t => !ROLE_OF[r.role] || ROLE_OF[r.role].includes(t.role));
     const alone = playersOf.get(r.role + "|" + notionScenarioKey(r.base)).size === 1;
