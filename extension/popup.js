@@ -62,11 +62,11 @@ async function showAllCount() {
     if (iaAll) {
       const fresh = iaAll.filter(i => !existing.has(i.url)).length;
       // Sheets already added still get their missing scenarios, so the button stays usable.
-      $("sendAll").textContent = fresh ? `新規 ${fresh}人をNotionに追加` : "追加済みのシナリオを更新";
+      $("sendAll").textContent = fresh ? `全${iaAll.length}人：新規 ${fresh}人を追加＋シナリオを追記` : `全${iaAll.length}人：シナリオを追記`;
       $("sendAll").disabled = false;
       setMsg(`全${iaAll.length}人（新規 ${fresh}人・追加済み ${iaAll.length - fresh}人）`);
     }
-    if (items[0]?.url && existing.has(items[0].url)) { $("send").textContent = "追加済み：シナリオを更新"; $("send").disabled = false; }
+    if (items[0]?.url && existing.has(items[0].url)) { $("send").textContent = "このシートだけ：シナリオを追記"; $("send").disabled = false; }
     else if (!iaAll) { $("send").textContent = "このシートをNotionに追加"; $("send").disabled = false; }
   } catch (e) { setMsg(e.message, true); }
 }
