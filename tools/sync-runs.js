@@ -45,6 +45,11 @@ const SYSTEM = {
   "フタリソウサ": "フタリソウサ", "トーキョーN◎VA THE AXLERATION": "トーキョーNOVA",
 };
 const RUN_SYSTEMS = new Set(["CoC", "emoklore", "Kutulu", "gaiacare", "dx3rd", "フタリソウサ", "キズナバレット", "トーキョーNOVA", "ケダモノオペラ", "マダミス", "シノビガミ", "他システム"]);
+// A sheet and a run whose systems differ but go together: ガイアケア and エモクロア share one character
+// sheet, and a 「他システム」 session can be played with any sheet (both confirmed 2026-11-10).
+const SAME_SHEET = [["gaiacare", "emoklore"]];
+const systemsAgree = (sheetSys, runSys) => !sheetSys || !runSys || sheetSys === runSys || runSys === "他システム"
+  || SAME_SHEET.some(g => g.includes(sheetSys) && g.includes(runSys));
 // The same person across sheets (a CoC sheet and its エモクロア conversion).
 const personKey = name => String(name || "").normalize("NFKC").replace(/[(（][^()（）]*[)）]\s*$/, "").replace(/[\s　・]+/g, "").toLowerCase();
 // 卓報告's PL/GM for each 立場: a PC played as a PL, or the KP's own character.
@@ -137,7 +142,7 @@ async function main() {
     const system = links[0]?.system || all[0]?.system || SYSTEM[r.sheet.system] || "";
     if (!all.length) report.noTaku.push(`${r.sheet.name}：${r.base}`);
     else if (!links.length && mine.length) report.shared.push(`${r.sheet.name}：${title}`);
-    if (all.length && SYSTEM[r.sheet.system] && system && SYSTEM[r.sheet.system] !== system) report.crossSystem.push(`${r.sheet.name}（${r.sheet.system}）：${title}（${system}）`);
+    if (all.length && !systemsAgree(SYSTEM[r.sheet.system], system)) report.crossSystem.push(`${r.sheet.name}（${r.sheet.system}）：${title}（${system}）`);
     report.added++; if (links.length) report.linked++;
     report.list = report.list || [];
     report.list.push(`${r.sheet.name}（${r.sheet.system}）：${title}${r.ho ? " " + r.ho : ""}${r.role !== "PL" ? " " + r.role : ""}${links.length ? "" : "（卓報告なし）"}`);
@@ -164,7 +169,7 @@ async function main() {
   const label = r => `${r.chars.map(id => sheetById.get(id)?.name || "?").join("・") || "（キャラなし）"}：${r.title}${r.ho ? " " + r.ho : ""}`;
   const noChar = rows.filter(r => !r.chars.length).map(label);
   const noLink = rows.filter(r => r.chars.length && !r.taku.length).map(label);
-  const wrongSys = rows.filter(r => r.chars.some(id => { const sys = SYSTEM[sheetById.get(id)?.system]; return sys && r.system && sys !== r.system; }))
+  const wrongSys = rows.filter(r => r.chars.some(id => { return !systemsAgree(SYSTEM[sheetById.get(id)?.system], r.system); }))
     .map(r => `${label(r)}（通過記録 ${r.system} / シート ${r.chars.map(id => sheetById.get(id)?.system).join("・")}）`);
   const takuSys = rows.filter(r => r.system && r.taku.some(id => takuById.get(id) && takuById.get(id).system !== r.system))
     .map(r => `${label(r)}（通過記録 ${r.system} / 卓報告 ${[...new Set(r.taku.map(id => takuById.get(id)?.system))].join("・")}）`);
