@@ -150,7 +150,12 @@ img{display:block}
 .scen li .no{font-family:var(--f-latin);font-style:italic;color:var(--accent);font-size:1rem;min-width:2ch}
 .scen li .t{font-family:var(--f-mincho);font-weight:500;overflow-wrap:anywhere}
 .scen li .r{font-size:.75rem;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);padding:0 8px;white-space:nowrap}
-.foot{text-align:center;color:var(--muted);font-family:var(--f-latin);letter-spacing:.2em;font-size:.85rem;padding:20px 0 40px}
+.foot{text-align:center;color:var(--muted);font-family:var(--f-latin);letter-spacing:.2em;font-size:.85rem;padding:20px 16px 40px}
+.foot .crowla{display:block;width:min(240px,64vw);height:auto;margin:0 auto 14px}
+.foot .crowla.d{display:none}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .foot .crowla.l{display:none}:root:not([data-theme="light"]) .foot .crowla.d{display:block}}
+:root[data-theme="dark"] .foot .crowla.l{display:none}
+:root[data-theme="dark"] .foot .crowla.d{display:block}
 
 @media (max-width:760px){
   .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
@@ -302,7 +307,7 @@ function renderIndex(){
     </div>
     ${list.length ? `<ul class="grid">${list.map(tileHTML).join("")}</ul>` : `<p class="empty">該当するキャラクターはいません。</p>`}
   </main>
-  <footer class="foot">© Shizaki Kanoto</footer>`;
+  ${FOOT}`;
   document.title = "シザキカノトのTRPGキャラクター一覧";
 }
 
@@ -370,7 +375,7 @@ function profileHTML(p){
       </article>
     </div>
   </main>
-  <footer class="foot">© Shizaki Kanoto</footer>`;
+  ${FOOT}`;
 }
 
 function renderProfile(p){
@@ -380,6 +385,7 @@ function renderProfile(p){
   if (more) more.onclick = () => { const c = shownSheet(p); $("story").textContent = splitNotes(c.notes).text; more.remove(); };
 }
 
+const FOOT = `<footer class="foot"><img class="crowla l" src="crowla-light.png" alt="隠れ家クロウラ CLAWLER THE HIDEOUT." width="761" height="158"><img class="crowla d" src="crowla-dark.png" alt="" width="761" height="158">© Shizaki Kanoto / 隠れ家クロウラ</footer>`;
 let lastIndexY = 0;
 function route(){
   if (!S.chars.length) return;

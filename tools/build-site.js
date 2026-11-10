@@ -269,7 +269,7 @@ async function main() {
   await copyBlockedImages(chars);
   chars.push(...await kedamonoChars(token));
   fs.writeFileSync(path.join(OUT, "data.json"), JSON.stringify({ generatedAt: new Date().toISOString(), chars }));
-  for (const f of ["favicon.svg", "banner.svg", "gallery.html"]) fs.copyFileSync(path.join(ROOT, "web", f), path.join(OUT, f));
+  for (const f of ["favicon.svg", "banner.svg", "gallery.html", "crowla-light.png", "crowla-dark.png"]) fs.copyFileSync(path.join(ROOT, "web", f), path.join(OUT, f));
   const page = fs.readFileSync(path.join(ROOT, "web", "index.html"), "utf8");
   fs.writeFileSync(path.join(OUT, "index.html"),
     `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow,noarchive,noimageindex"><link rel="icon" href="favicon.svg" type="image/svg+xml"></head><body>\n${page}\n</body></html>\n`);
