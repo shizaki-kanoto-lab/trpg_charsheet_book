@@ -210,15 +210,17 @@ async function kedamonoChars(token) {
   return out;
 }
 
-// When each character played each scenario: 通過記録 rows and the dates of their 卓報告 (the
-// earliest session). Map of sheet page id -> [{title, date}]. Empty when they can't be read.
+// When each character played each scenario: 通過記録 rows and the date of their 卓報告. Only a row
+// tied to one 卓報告 has a date: a row tied to several (すごろくしないと出られない部屋, played
+// five times with different characters) can't tell which session was this character's.
+// Map of sheet page id -> [{title, date}]. Empty when they can't be read.
 async function runDates(token) {
   const out = new Map();
   try {
     const taku = new Map((await allPages(token, TAKU_DB)).map(pg => [pg.id.replace(/-/g, ""), prop(pg.properties["日付"])]));
     for (const pg of await allPages(token, RUNS_DB)) {
-      const dates = (prop(pg.properties["卓報告"]) || []).map(id => taku.get(id)).filter(Boolean).sort();
-      if (!dates.length) continue;
+      const dates = (prop(pg.properties["卓報告"]) || []).map(id => taku.get(id));
+      if (dates.length !== 1 || !dates[0]) continue;
       const title = prop(pg.properties["シナリオ"]) || "";
       for (const id of prop(pg.properties["キャラ"]) || []) {
         if (!out.has(id)) out.set(id, []);
