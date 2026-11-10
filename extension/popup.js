@@ -12,6 +12,7 @@ const SITES = {
 const $ = id => document.getElementById(id);
 let items = [];      // the single sheet this popup can add
 let iaAll = null;    // every sheet on the site, when the visitor is logged in
+let bulkSite = "";   // the site iaAll was read from ("キャラッシュ")
 let notion = { token: "", db: NOTION_DEFAULT_DB };
 
 // Runs inside the sheet page: collects the URL, title, and any CCFolia piece data shown on the page.
@@ -55,6 +56,8 @@ async function loadSettings() {
 }
 
 // Shows how many of the sheets are new; the add button only ever adds those.
+const oneName = () => $("name").value.trim() || items[0]?.name || "このシート";
+
 async function showAllCount() {
   if (!notion.token || (!iaAll && !items[0]?.url)) return;
   try {
@@ -62,12 +65,15 @@ async function showAllCount() {
     if (iaAll) {
       const fresh = iaAll.filter(i => !existing.has(i.url)).length;
       // Sheets already added still get their missing scenarios, so the button stays usable.
-      $("sendAll").textContent = fresh ? `全${iaAll.length}人：新規 ${fresh}人を追加＋シナリオを追記` : `全${iaAll.length}人：シナリオを追記`;
+      // Says where (Notionのシート帳), whom (the site's characters) and what (add / the シナリオ欄).
+      $("sendAll").textContent = fresh
+        ? `${bulkSite}の新規${fresh}人をシート帳に追加し、全${iaAll.length}人のシナリオ欄に追記`
+        : `${bulkSite}の全${iaAll.length}人のシナリオ欄をシート帳に追記`;
       $("sendAll").disabled = false;
       setMsg(`全${iaAll.length}人（新規 ${fresh}人・追加済み ${iaAll.length - fresh}人）`);
     }
-    if (items[0]?.url && existing.has(items[0].url)) { $("send").textContent = "このシートだけ：シナリオを追記"; $("send").disabled = false; }
-    else if (!iaAll) { $("send").textContent = "このシートをNotionに追加"; $("send").disabled = false; }
+    if (items[0]?.url && existing.has(items[0].url)) { $("send").textContent = `「${oneName()}」だけ、シート帳のシナリオ欄に追記`; $("send").disabled = false; }
+    else if (!iaAll) { $("send").textContent = `「${oneName()}」をシート帳に追加`; $("send").disabled = false; }
   } catch (e) { setMsg(e.message, true); }
 }
 
@@ -137,7 +143,8 @@ async function initBulk(tab, site) {
 
   if (r?.sheets?.length) {
     iaAll = r.sheets.filter(site.ok).map(site.convert);
-    $("sendAll").textContent = `${site.name}の新規だけNotionに追加`;
+    bulkSite = site.name;
+    $("sendAll").textContent = `${site.name}の新規だけシート帳に追加`;
     $("allBox").hidden = false;
   }
 
