@@ -239,6 +239,8 @@ function buildPeople(){
     p.ruby = p.sheets.map(rubyOf).find(Boolean) || "";
     p.lost = p.sheets.every(isLost);
     p.systems = [...new Set(p.sheets.map(c => c.system).filter(Boolean))].sort(bySystem);
+    // The profile's sheet tabs, in the list's system order.
+    p.tabs = [...p.sheets].sort((a,b) => bySystem(a.system, b.system));
     // Scenarios across all of the person's sheets; one played under two systems counts once.
     // The first scenario on the sheet listed first by system (CoC6th, CoC7th, emoklore, …).
     p.first = ([...p.sheets].sort((a,b) => bySystem(a.system, b.system)).flatMap(scenariosOf)[0] || {}).name || "";
@@ -296,10 +298,10 @@ function renderIndex(){
 const shownRes = c => (c.resources||[]).filter(r => r.label !== "共鳴");
 
 /* The sheet a profile opens on: the one picked with the sheet buttons, else the sheet of the
-   system tab the list was showing, else the first sheet. */
+   system tab the list was showing, else the first tab. */
 function shownSheet(p){
   return p.sheets.find(x => x.id === S.sheet[p.key])
-    || (S.sys && p.sheets.find(x => x.system === S.sys)) || p.sheets[0];
+    || (S.sys && p.tabs.find(x => x.system === S.sys)) || p.tabs[0];
 }
 
 function profileHTML(p){
@@ -335,7 +337,7 @@ function profileHTML(p){
         <h1 class="pname">${esc(p.name)}</h1>
         ${p.ruby ? `<p class="pruby">${esc(p.ruby)}</p>` : ""}
         ${c.summary ? `<p class="prole">${esc(c.summary)}</p>` : ""}
-        ${p.sheets.length > 1 ? `<div class="sheets" role="group" aria-label="シートを切り替える">${p.sheets.map(x => `<button type="button" data-sheet="${esc(x.id)}" aria-current="${x.id===c.id}">${esc(sysJa(x.system))}${isLost(x) ? "（ロスト）" : ""}</button>`).join("")}</div>` : ""}
+        ${p.sheets.length > 1 ? `<div class="sheets" role="group" aria-label="シートを切り替える">${p.tabs.map(x => `<button type="button" data-sheet="${esc(x.id)}" aria-current="${x.id===c.id}">${esc(sysJa(x.system))}${isLost(x) ? "（ロスト）" : ""}</button>`).join("")}</div>` : ""}
 
         ${profile.length ? `<section class="sec"><h2><span class="en">Profile</span>プロフィール</h2>
           <dl class="dl">${profile.map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></section>` : ""}
