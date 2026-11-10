@@ -391,6 +391,9 @@ async function loadStatic(refresh){
     data = await r.json();
   } catch { return false; }
   if (!Array.isArray(data?.chars)) return false;
+  // Tell an open gallery tab (same data.json) to read it again.
+  if (refresh && data.generatedAt !== S.generatedAt) try { const ch = new BroadcastChannel("charsheet-data"); ch.postMessage(data.generatedAt); ch.close(); } catch {}
+  S.generatedAt = data.generatedAt;
   S.static = true; S.error = null; S.ready = true;
   S.chars = data.chars.filter(c => c.id);
   S.details = {};

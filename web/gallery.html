@@ -390,19 +390,35 @@ document.addEventListener("change", e => {
   if (e.target.id === "lostsw"){ S.lost = e.target.checked; store.set("gLost", S.lost ? "1" : "0"); renderIndex(); }
 });
 
-(async () => {
+/* data.json, read again when the sheet book (index.html) updates it or this tab comes back into view,
+   so a gallery left open shows the latest sheets. */
+let generatedAt = null;
+async function load(again){
+  let data;
   try {
     const r = await fetch("data.json", {cache: "no-cache"});
     if (!r.ok) throw new Error(r.status);
-    S.chars = (await r.json()).chars || [];
+    data = await r.json();
   } catch {
-    $("root").innerHTML = `<p class="empty">キャラクターを読み込めませんでした。</p>`;
+    if (!again) $("root").innerHTML = `<p class="empty">キャラクターを読み込めませんでした。</p>`;
     return;
   }
+  if (again && data.generatedAt === generatedAt) return;
+  generatedAt = data.generatedAt;
+  S.chars = data.chars || [];
   buildPeople();
   if (S.sys && !S.people.some(p => p.systems.includes(S.sys))) S.sys = "";
-  route();
-})();
+  if (!again) return route();
+  // Keep the place: redraw the page that is open without scrolling.
+  const m = location.hash.match(/^#\/(.+)$/);
+  const p = m && S.people.find(x => x.key === decodeURIComponent(m[1]));
+  const y = window.scrollY;
+  if (p) renderProfile(p); else renderIndex();
+  window.scrollTo(0, y);
+}
+try { new BroadcastChannel("charsheet-data").onmessage = () => load(true); } catch {}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(true); });
+load(false);
 </script>
 </body>
 </html>
