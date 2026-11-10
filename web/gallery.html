@@ -221,7 +221,7 @@ function splitNotes(notes){
 
 const S = {chars:[], people:[], sys: store.get("gSys") || "", lost: store.get("gLost") === "1", sheet:{}};
 
-/* One entry per person; the face is the newest sheet that has an image. */
+/* One entry per person; the face is the picture of the sheet with the most scenarios. */
 function buildPeople(){
   const map = new Map();
   for (const c of S.chars){
@@ -235,7 +235,9 @@ function buildPeople(){
   const people = [...map.values()].filter(p => p.sheets.some(c => scenariosOf(c).length || NO_SCENARIOS.has(c.system)));
   for (const p of people){
     p.sheets.sort((a,b) => (isLost(a)-isLost(b)) || (b.updatedAt||0)-(a.updatedAt||0));
-    p.face = p.sheets.find(c => okImg(c.image)) || p.sheets[0];
+    // The face: the picture of the sheet with the most scenarios played (the newest when tied).
+    p.face = [...p.sheets].sort((a,b) => (isLost(a)-isLost(b)) || scenariosOf(b).length - scenariosOf(a).length || (b.updatedAt||0)-(a.updatedAt||0))
+      .find(c => okImg(c.image)) || p.sheets[0];
     p.name = shortName(p.sheets[0].name);
     p.ruby = p.sheets.map(rubyOf).find(Boolean) || "";
     p.lost = p.sheets.every(isLost);
