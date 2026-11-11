@@ -705,7 +705,7 @@ function renderMain(){
         <h2 class="name">${esc(c.name||"名無し")}${lostMark(c)}</h2>
         <div class="meta">
           ${c.system ? `<span class="pill">${esc(c.system)}</span>` : ""}
-          ${c.tags.filter(t=>t!=="ロスト").map(t=>{ const sc = scenariosOf({tags:[t]})[0]; return sc ? `<button class="tag" type="button" data-scen="${esc(sc.name)}" title="シナリオ「${esc(sc.name)}」の一覧へ">${esc(t)}</button>` : `<span class="tag">${esc(t)}</span>`; }).join("")}
+          ${c.tags.filter(t=>t!=="ロスト" && !(c.system && /^[67]版$/.test(t))).map(t=>{   /* 6版/7版 says the same as the system pill */ const sc = scenariosOf({tags:[t]})[0]; return sc ? `<button class="tag" type="button" data-scen="${esc(sc.name)}" title="シナリオ「${esc(sc.name)}」の一覧へ">${esc(t)}</button>` : `<span class="tag">${esc(t)}</span>`; }).join("")}
         </div>
         ${c.summary ? `<p class="summary">${esc(c.summary)}</p>` : ""}
         <p style="margin:10px 0 0;display:flex;gap:16px;flex-wrap:wrap">
