@@ -172,8 +172,28 @@ img{display:block}
   .layout{grid-template-columns:1fr}
   .figure{position:static;max-width:420px;width:100%;margin:0 auto}
 }
+/* Back to the top: a button at the bottom right while scrolled down, and a pull past the bottom. */
+.totop{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:20;
+  width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--paper) 88%,transparent);
+  color:var(--ink);display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.14);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s,transform .25s}
+.totop.on{opacity:1;transform:none;pointer-events:auto}
+.totop:hover{border-color:var(--accent);color:var(--accent)}
+.totop:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.totop svg{width:20px;height:20px}
+.pull{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));z-index:19;transform:translate(-50%,var(--y,40px));
+  display:flex;align-items:center;gap:10px;padding:8px 16px 8px 10px;border-radius:999px;background:var(--band);color:var(--band-ink);
+  font-size:.82rem;letter-spacing:.08em;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;white-space:nowrap}
+.pull.on{opacity:1}
+.pull .ring{--p:0;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(var(--accent) calc(var(--p)*1turn),color-mix(in srgb,var(--band-ink) 22%,transparent) 0)}
+.pull .ring::before{content:"";grid-area:1/1;width:20px;height:20px;border-radius:50%;background:var(--band)}
+.pull .ring svg{grid-area:1/1;width:13px;height:13px;transition:transform .2s}
+.pull.ready .ring svg{transform:translateY(-2px)}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
+  .totop,.pull,.pull .ring svg{transition:none}
   .tile{animation:none;opacity:1;transform:none}
   .tile img,.tile .over,.tile .over .ot{transition:none}
 }
@@ -182,6 +202,8 @@ img{display:block}
 <body>
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PMZQ73GV" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div id="root"></div>
+<button class="totop" id="totop" type="button" aria-label="ページの先頭へ戻る" title="ページの先頭へ戻る" tabindex="-1"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16V4M4.5 9.5 10 4l5.5 5.5"/></svg></button>
+<div class="pull" id="pull" aria-hidden="true"><span class="ring"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16V4M4.5 9.5 10 4l5.5 5.5"/></svg></span><span class="txt">引っぱって先頭へ</span></div>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -445,6 +467,60 @@ async function load(again){
 try { new BroadcastChannel("charsheet-data").onmessage = () => load(true); } catch {}
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(true); });
 load(false);
+
+/* ---------- back to the top ----------
+   The button shows once the page is scrolled past the first screen. At the very bottom, pulling
+   further (a touch drag upward, or more wheel / trackpad scrolling after a pause) fills the ring;
+   when it is full, letting go (touch) or the next scroll (wheel) goes back to the top. */
+const smooth = () => matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+function toTop(){ window.scrollTo({top:0, behavior:smooth()}); }
+const topBtn = $("totop"), pull = $("pull");
+topBtn.addEventListener("click", toTop);
+function syncTopBtn(){
+  const on = window.scrollY > Math.max(400, innerHeight * 0.8);
+  topBtn.classList.toggle("on", on); topBtn.tabIndex = on ? 0 : -1;
+}
+addEventListener("scroll", syncTopBtn, {passive:true});
+addEventListener("hashchange", () => setTimeout(syncTopBtn, 0));
+syncTopBtn();
+
+const atBottom = () => innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+const PULL_TOUCH = 110, PULL_WHEEL = 420;   // px of pull needed
+function showPull(p){
+  p = Math.max(0, Math.min(1, p));
+  pull.classList.toggle("on", p > 0.08);
+  pull.classList.toggle("ready", p >= 1);
+  pull.querySelector(".ring").style.setProperty("--p", p);
+  pull.style.setProperty("--y", `${Math.round((1 - p) * 24)}px`);
+  pull.querySelector(".txt").textContent = p >= 1 ? "離すと先頭へ" : "引っぱって先頭へ";
+}
+function hidePull(){ pull.classList.remove("on", "ready"); pull.style.setProperty("--y", "40px"); }
+// Touch: a drag that starts at the bottom and keeps going up.
+let touchY = null, touchP = 0;
+addEventListener("touchstart", e => { touchY = e.touches.length === 1 && atBottom() && window.scrollY > 0 ? e.touches[0].clientY : null; touchP = 0; }, {passive:true});
+addEventListener("touchmove", e => {
+  if (touchY == null) return;
+  if (!atBottom()){ touchY = null; hidePull(); return; }
+  touchP = (touchY - e.touches[0].clientY) / PULL_TOUCH;
+  showPull(touchP);
+}, {passive:true});
+addEventListener("touchend", () => { if (touchY != null && touchP >= 1) toTop(); touchY = null; touchP = 0; hidePull(); }, {passive:true});
+addEventListener("touchcancel", () => { touchY = null; hidePull(); }, {passive:true});
+// Wheel / trackpad: only a new gesture started at the bottom counts, so the scroll that just
+// reached the bottom (with its momentum) does not jump back up by itself.
+let wheelSum = 0, wheelAt = 0, wheelArmed = false, wheelHide = 0;
+addEventListener("wheel", e => {
+  const now = Date.now(), fresh = now - wheelAt > 250;
+  wheelAt = now;
+  if (e.deltaY <= 0 || !atBottom() || window.scrollY <= 0){ wheelSum = 0; wheelArmed = false; hidePull(); return; }
+  if (fresh) wheelArmed = true;
+  if (!wheelArmed) return;
+  wheelSum += e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY;
+  showPull(wheelSum / PULL_WHEEL);
+  clearTimeout(wheelHide);
+  if (wheelSum >= PULL_WHEEL){ wheelSum = 0; wheelArmed = false; setTimeout(() => { hidePull(); toTop(); }, 180); return; }
+  wheelHide = setTimeout(() => { wheelSum = 0; hidePull(); }, 700);
+}, {passive:true});
 </script>
 </body>
 </html>
