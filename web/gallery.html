@@ -484,33 +484,37 @@ addEventListener("scroll", syncTopBtn, {passive:true});
 addEventListener("hashchange", () => setTimeout(syncTopBtn, 0));
 syncTopBtn();
 
-const atBottom = () => innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
-const PULL_TOUCH = 110, PULL_WHEEL = 420;   // px of pull needed
+// A little slack: phone toolbars change innerHeight while scrolling.
+const atBottom = () => innerHeight + window.scrollY >= document.documentElement.scrollHeight - 8;
+const PULL_TOUCH = 60, PULL_WHEEL = 180;   // px of pull needed
 function showPull(p){
   p = Math.max(0, Math.min(1, p));
-  pull.classList.toggle("on", p > 0.08);
+  pull.classList.toggle("on", p > 0);
   pull.classList.toggle("ready", p >= 1);
   pull.querySelector(".ring").style.setProperty("--p", p);
-  pull.style.setProperty("--y", `${Math.round((1 - p) * 24)}px`);
+  pull.style.setProperty("--y", `${Math.round((1 - p) * 10)}px`);
   pull.querySelector(".txt").textContent = p >= 1 ? "離すと先頭へ" : "引っぱって先頭へ";
 }
 function hidePull(){ pull.classList.remove("on", "ready"); pull.style.setProperty("--y", "40px"); }
-// Touch: a drag that starts at the bottom and keeps going up.
-let touchY = null, touchP = 0;
-addEventListener("touchstart", e => { touchY = e.touches.length === 1 && atBottom() && window.scrollY > 0 ? e.touches[0].clientY : null; touchP = 0; }, {passive:true});
+// Touch: a drag upward once the page is at the bottom (it may reach the bottom during the drag).
+let touchY = null, touchP = 0, touching = false;
+addEventListener("touchstart", e => { touching = e.touches.length === 1; touchY = touching && atBottom() && window.scrollY > 0 ? e.touches[0].clientY : null; touchP = 0; }, {passive:true});
 addEventListener("touchmove", e => {
-  if (touchY == null) return;
-  if (!atBottom()){ touchY = null; hidePull(); return; }
-  touchP = (touchY - e.touches[0].clientY) / PULL_TOUCH;
+  if (!touching) return;
+  const y = e.touches[0].clientY;
+  if (!atBottom() || window.scrollY <= 0){ touchY = null; touchP = 0; hidePull(); return; }
+  if (touchY == null) touchY = y;          // reached the bottom while dragging: count from here
+  touchP = (touchY - y) / PULL_TOUCH;
+  if (touchP < 0){ touchY = y; touchP = 0; }
   showPull(touchP);
 }, {passive:true});
-addEventListener("touchend", () => { if (touchY != null && touchP >= 1) toTop(); touchY = null; touchP = 0; hidePull(); }, {passive:true});
-addEventListener("touchcancel", () => { touchY = null; hidePull(); }, {passive:true});
+addEventListener("touchend", () => { if (touchY != null && touchP >= 1) toTop(); touching = false; touchY = null; touchP = 0; hidePull(); }, {passive:true});
+addEventListener("touchcancel", () => { touching = false; touchY = null; hidePull(); }, {passive:true});
 // Wheel / trackpad: only a new gesture started at the bottom counts, so the scroll that just
 // reached the bottom (with its momentum) does not jump back up by itself.
 let wheelSum = 0, wheelAt = 0, wheelArmed = false, wheelHide = 0;
 addEventListener("wheel", e => {
-  const now = Date.now(), fresh = now - wheelAt > 250;
+  const now = Date.now(), fresh = now - wheelAt > 150;
   wheelAt = now;
   if (e.deltaY <= 0 || !atBottom() || window.scrollY <= 0){ wheelSum = 0; wheelArmed = false; hidePull(); return; }
   if (fresh) wheelArmed = true;
