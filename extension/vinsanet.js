@@ -46,7 +46,9 @@ function vinsanetToItem(sheet) {
     ["ルール", rule], ["肩書き", d.title], ["年齢", d.age], ["性別", d.gender], ["職業", d.profession],
     ["出身", d.home], ["階級", d.rank], ["家庭", d.family],
   ].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`);
-  const remarks = (d.remarks || []).filter(r => r.body).map(r => (r.title ? `【${r.title}】\n` : "") + r.body);
+  // メモ欄: only the first one, about the character. The rest are usually the scenarios' recruiting
+  // posts (trailers, play time and the like), not the character.
+  const remarks = (d.remarks || []).filter(r => r.body).slice(0, 1).map(r => (r.title ? `【${r.title}】\n` : "") + r.body);
   const base = (d.skills || []).map(s => ({ label: String(s.name), value: String(Number(s.value) || 0) }));
   const specialities = (d.specialities || []).filter(s => Number(s.value) > 0)
     .map(s => ({ label: String(s.name), value: String(Number(s.value)) }));
@@ -69,3 +71,5 @@ function vinsanetToItem(sheet) {
     },
   };
 }
+
+if (typeof module !== "undefined") module.exports = { vinsanetToItem };

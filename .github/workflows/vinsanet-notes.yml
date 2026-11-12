@@ -1,0 +1,26 @@
+name: vinsanetのメモを最初の1つにする
+
+on:
+  workflow_dispatch:
+    inputs:
+      write:
+        description: "Notionに書き込む（オフなら直す予定の一覧だけ出す）"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: vinsanetのシートを読み直してメモを直す
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ vars.NOTION_DATABASE_ID }}
+        run: node tools/fix-vinsanet-notes.js ${{ inputs.write && '--write' || '' }}
