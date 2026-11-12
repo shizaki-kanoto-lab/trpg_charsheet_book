@@ -58,8 +58,8 @@ function as2s(d) {
     .map(l => AS_CLEAN(l.replace(/^[▼▽]\s*/, ""))).filter(Boolean);
   const quirks = Object.entries(d.abnormal || {}).filter(([k, v]) => /^text\d$/.test(k) && AS_CLEAN(v))
     .sort().map(([k, v], i) => ({ label: `癖${i + 1}`, value: AS_CLEAN(v) }));
-  // ゲスト: NPCs met in the scenarios. names only (the rest would spoil scenarios). Only the 助手 shows them.
-  const guests = (d.guests || []).map(g => AS_CLEAN(g?.name)).filter(Boolean).map(n => `・${n}`);
+  // ゲスト: NPCs met in the scenarios. 名前（技能） only (関係 and メモ would spoil scenarios). Only the 助手 shows them.
+  const guests = (d.guests || []).filter(g => AS_CLEAN(g?.name)).map(g => `・${AS_CLEAN(g.name)}${AS_CLEAN(g.skill) ? `（${AS_CLEAN(g.skill)}）` : ""}`);
   return { params: quirks, skills: [], summary: [b.role, b.roleclass, b.background].map(AS_CLEAN).filter(Boolean).join("・"), stats: [], scenarios,
     notes: [quirks.length && "＜異常な癖＞\n" + quirks.map((q, i) => `${i + 1}：${q.value}`).join("\n"),
       guests.length && AS_CLEAN(b.role) !== "探偵" && "＜ゲスト＞\n" + guests.join("\n")].filter(Boolean).join("\n\n") };

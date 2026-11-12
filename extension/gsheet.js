@@ -83,12 +83,12 @@ function gsSides(rows) {
     const gcol = rows[gh].findIndex(c => c.trim() === "ゲスト");
     const labels = rows[gh + 1] || [];
     const at = name => labels.findIndex((c, i) => i >= gcol && c.trim() === name);
-    const n = at("名前");
-    // Names only: 技能 / 関係 / メモ would spoil scenarios.
+    const [n, sk] = [at("名前"), at("技能")];
+    // 名前（技能） only: 関係 / メモ would spoil scenarios.
     for (const r of rows.slice(gh + 2)) {
       if (!/^[0-9０-９]+$/.test((r[gcol] || "").trim())) break;
-      const name = n >= 0 ? (r[n] || "").trim() : "";
-      if (name) guests.push(`・${name}`);
+      const cell = i => (i >= 0 ? (r[i] || "").trim() : "");
+      if (cell(n)) guests.push(`・${cell(n)}${cell(sk) ? `（${cell(sk)}）` : ""}`);
     }
   }
   return { sides, scenarios, guests };
