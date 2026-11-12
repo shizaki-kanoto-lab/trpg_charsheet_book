@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "17 */3 * * *"   # 3時間ごと
   workflow_dispatch:
+    inputs:
+      fresh:
+        description: "前回の本文を使い回さず、全ページの本文（メモ・チャットパレット）を読み直す"
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: ["web/**", "tools/build-site.js", "extension/notion.js", "extension/gsheet.js", "extension/runs.js", ".github/workflows/pages.yml"]
@@ -31,7 +36,7 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ vars.NOTION_DATABASE_ID }}
-        run: node tools/build-site.js --previous "${{ steps.pages.outputs.base_url }}/data.json"
+        run: node tools/build-site.js ${{ inputs.fresh != true && format('--previous "{0}/data.json"', steps.pages.outputs.base_url) || '' }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
