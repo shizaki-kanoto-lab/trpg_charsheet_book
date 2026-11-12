@@ -12,7 +12,8 @@ const { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionDbId, notionRequest, notionSleep
 const { vinsanetToItem } = require("../extension/vinsanet.js");
 
 const text = rich => (rich || []).map(t => t.plain_text ?? t.text?.content ?? "").join("");
-const paras = s => String(s || "").split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+// The 「ルール:」 line was added to the profile later; older pages don't have it, which is not a hand edit.
+const paras = s => String(s || "").split(/\n{2,}/).map(p => p.trim().replace(/^ルール: .*\n/, "")).filter(Boolean);
 
 async function children(token, id) {
   const out = [];
