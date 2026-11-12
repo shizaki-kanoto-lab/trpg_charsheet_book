@@ -400,7 +400,7 @@ function profileHTML(p){
 
         ${(c.stats||[]).length ? `<section class="sec"><h2><span class="en">Status</span>能力値</h2>
           <div class="stats">${c.stats.filter(s => s.label !== "共鳴").map(s => `<div class="stat"><div class="k">${esc(s.label)}</div><div class="v">${esc(s.value)}</div></div>`).join("")}</div>
-          ${shownRes(c).length ? `<div class="res">${shownRes(c).map(r => `<span>${esc(r.label)}<b>${esc(r.max ?? r.cur)}</b></span>`).join("")}</div>` : ""}</section>` : ""}
+          ${shownRes(c).length ? `<div class="res">${shownRes(c).map(r => `<span>${esc(r.label)}<b>${esc(r.label === "SAN" ? (r.cur ?? r.max) : (r.max ?? r.cur))}</b></span>`).join("")}</div>` : ""}</section>` : ""}
 
         ${skills.length ? `<section class="sec"><h2><span class="en">Skills</span>技能</h2>
           <ul class="skills">${skills.map(s => `<li style="--p:${Math.max(0, Math.min(100, num(s.value)))}"><span class="l">${esc(s.label)}</span><span class="v">${esc(s.value)}</span></li>`).join("")}</ul></section>` : ""}

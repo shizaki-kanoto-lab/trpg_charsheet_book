@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Rewrites the 「パートナー: …」 line in the メモ of フタリソウサ sheets so it carries the partner's
-// 役割, クラス and 背景, as extension/gsheet.js and extension/appspot.js now write it. Each sheet is
-// read again from its source (the Google Sheets template, or キャラクターシート倉庫).
+// Brings the メモ of フタリソウサ sheets in line with their source sheet (the Google Sheets template, or
+// キャラクターシート倉庫), read again: the 「パートナー: …」 line (役割・クラス・背景), and the ＜異常な癖＞
+// and ＜ゲスト＞ paragraphs, which change between scenarios (癖の洗い替え, ゲストの増減).
 //
-//   NOTION_TOKEN=... node tools/fix-futari-partner.js [--write]
+//   NOTION_TOKEN=... node tools/fix-futari-notes.js [--write]
 //
-// Only that one line of the memo paragraph changes.
+// Other paragraphs of the memo are left alone.
 
 const { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionDbId, notionRequest, notionSleep } = require("../extension/notion.js");
 const { gsheetToItems } = require("../extension/gsheet.js");
@@ -43,21 +43,41 @@ async function main() {
   const r = await notionRequest(token, `/databases/${db}/query`, { page_size: 100, filter: { property: "システム", select: { equals: "フタリソウサ" } } });
   console.log(`フタリソウサのシート ${r.results.length} 枚`);
   const report = { changed: [], same: [], skipped: [] };
+  const para = content => ({ object: "block", type: "paragraph", paragraph: { rich_text: [{ type: "text", text: { content } }] } });
   for (const page of r.results) {
     const name = text(page.properties["名前"]?.title) || page.id;
     try {
       const item = await sourceItem(page.properties["元シート"]?.url || "");
-      const want = (String(item?.notes || "").match(/^パートナー: .*$/m) || [])[0];
-      if (!want) { report.skipped.push(`${name}: 元シートにパートナーがいません`); continue; }
+      if (!item) { report.skipped.push(`${name}: 元シートにこのキャラがいません`); continue; }
       const blocks = (await notionRequest(token, `/blocks/${page.id}/children?page_size=100`)).results;
       await notionSleep(NOTION_GAP_MS);
-      const b = blocks.find(b => b.type === "paragraph" && /^パートナー: /m.test(text(b.paragraph.rich_text)));
-      if (!b) { report.skipped.push(`${name}: メモにパートナーの行がありません`); continue; }
-      const cur = text(b.paragraph.rich_text);
-      const next = cur.replace(/^パートナー: .*$/m, want);
-      if (next === cur) { report.same.push(name); continue; }
-      report.changed.push(`${name}\n  前: ${cur.match(/^パートナー: .*$/m)[0]}\n  後: ${want}`);
-      if (write) await notionRequest(token, `/blocks/${b.id}`, { paragraph: { rich_text: [{ type: "text", text: { content: next } }] } }, "PATCH");
+      // The メモ paragraphs: after the "メモ" heading, up to the next heading.
+      const h = blocks.findIndex(b => b.type === "heading_2" && text(b.heading_2.rich_text) === "メモ");
+      const memo = [];
+      for (const b of blocks.slice(h + 1)) { if (b.type.startsWith("heading")) break; if (b.type === "paragraph") memo.push(b); }
+      if (h < 0 || !memo.length) { report.skipped.push(`${name}: メモがありません`); continue; }
+      const ops = [], lines = [];
+      // 1. The パートナー line of the profile paragraph.
+      const want = (String(item.notes || "").match(/^パートナー: .*$/m) || [])[0];
+      const pb = memo.find(b => /^パートナー: /m.test(text(b.paragraph.rich_text)));
+      if (want && pb) {
+        const cur = text(pb.paragraph.rich_text), next = cur.replace(/^パートナー: .*$/m, want);
+        if (next !== cur) { lines.push(`  前: ${cur.match(/^パートナー: .*$/m)[0]}\n  後: ${want}`); ops.push(["PATCH", `/blocks/${pb.id}`, { paragraph: para(next).paragraph }]); }
+      }
+      // 2. The ＜異常な癖＞ and ＜ゲスト＞ paragraphs, as the sheet has them now.
+      let anchor = memo[memo.length - 1].id;
+      for (const head of ["＜異常な癖＞", "＜ゲスト＞"]) {
+        const wantP = String(item.notes || "").split(/\n{2,}/).find(p => p.trim().startsWith(head))?.trim();
+        const cb = memo.find(b => text(b.paragraph.rich_text).trim().startsWith(head));
+        const cur = cb && text(cb.paragraph.rich_text).trim();
+        if (wantP && cb && cur !== wantP) { lines.push(`  ${head} 前:\n${cur.replace(/^/gm, "    ")}\n  ${head} 後:\n${wantP.replace(/^/gm, "    ")}`); ops.push(["PATCH", `/blocks/${cb.id}`, { paragraph: para(wantP).paragraph }]); }
+        if (wantP && !cb) { lines.push(`  ${head} 足す:\n${wantP.replace(/^/gm, "    ")}`); ops.push(["PATCH", `/blocks/${page.id}/children`, { children: [para(wantP)], after: anchor }]); }
+        if (!wantP && cb) { lines.push(`  ${head} 消す（元シートが空）:\n${cur.replace(/^/gm, "    ")}`); ops.push(["DELETE", `/blocks/${cb.id}`]); }
+        if (cb) anchor = cb.id;
+      }
+      if (!ops.length) { report.same.push(name); continue; }
+      report.changed.push(`${name}\n` + lines.join("\n"));
+      if (write) for (const [method, path, body] of ops) { await notionRequest(token, path, body, method); await notionSleep(NOTION_GAP_MS); }
     } catch (e) { report.skipped.push(`${name}: ${e.message}`); }
     await notionSleep(NOTION_GAP_MS);
   }

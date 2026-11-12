@@ -8,7 +8,7 @@ on:
         type: choice
         options:
           - vinsanetのメモを最初の1つにする
-          - フタリソウサのパートナーに役割・クラス・背景を書く
+          - フタリソウサのパートナー・異常な癖・ゲストを元シートに合わせる
       write:
         description: "Notionに書き込む（オフなら直す予定の一覧だけ出す）"
         type: boolean
@@ -33,7 +33,7 @@ jobs:
         run: |
           case "$TASK" in
             vinsanet*) script=tools/fix-vinsanet-notes.js ;;
-            フタリソウサ*) script=tools/fix-futari-partner.js ;;
+            フタリソウサ*) script=tools/fix-futari-notes.js ;;
             *) echo "不明な内容: $TASK"; exit 1 ;;
           esac
           node "$script" ${{ inputs.write && '--write' || '' }}

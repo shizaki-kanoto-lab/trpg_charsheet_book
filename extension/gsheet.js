@@ -76,7 +76,23 @@ function gsSides(rows) {
       if (s && s !== "-" && !scenarios.includes(s)) scenarios.push(s);
     }
   }
-  return { sides, scenarios };
+  // ゲスト (shared by the pair): "No. / 名前 / 技能 / 関係 / メモ" rows next to the 異常な癖.
+  const guests = [];
+  const gh = rows.findIndex(r => r.some(c => c.trim() === "ゲスト"));
+  if (gh >= 0) {
+    const gcol = rows[gh].findIndex(c => c.trim() === "ゲスト");
+    const labels = rows[gh + 1] || [];
+    const at = name => labels.findIndex((c, i) => i >= gcol && c.trim() === name);
+    const [n, sk, rel, memo] = ["名前", "技能", "関係", "メモ"].map(at);
+    for (const r of rows.slice(gh + 2)) {
+      if (!/^[0-9０-９]+$/.test((r[gcol] || "").trim())) break;
+      const cell = i => (i >= 0 ? (r[i] || "").trim() : "");
+      if (!cell(n)) continue;
+      const rest = [cell(rel), cell(memo)].filter(Boolean).join("／");
+      guests.push(`・${cell(n)}${cell(sk) ? `（${cell(sk)}）` : ""}${rest}`);
+    }
+  }
+  return { sides, scenarios, guests };
 }
 
 // "ココフォリアコピペ用": the piece JSON is split over the rows of one column per side.
@@ -149,7 +165,7 @@ function gsName(s) {
 }
 
 function gsheetToItems(sheet) {
-  const { sides, scenarios } = gsSides(gsCsv(sheet.main || ""));
+  const { sides, scenarios, guests } = gsSides(gsCsv(sheet.main || ""));
   const pieces = gsPieces(gsCsv(sheet.ccf || ""));
   const images = gsImages(sheet.html);
   const sheetUrl = `https://docs.google.com/spreadsheets/d/${sheet.id}/edit`;
@@ -167,7 +183,7 @@ function gsheetToItems(sheet) {
       ["身長", s["身長"]], ["体重", s["体重"]], ["ファッション", s["ファッション特徴"]], ["好きなもの", s["好きなもの"]], ["嫌いなもの", s["嫌いなもの"]],
       ["パートナー", other["PC名"] && (() => { const r = [other.role, gsClass(other["クラス"]), other["背景"]].filter(Boolean).join("・"); return other["PC名"] + (r ? `（${r}）` : ""); })()],
     ].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`);
-    const notes = [profile.join("\n"), s["設定"] || "", memo.replace(/^【PC】.*\n(【呼び】.*\n)?\n?/, "")].map(t => t.trim()).filter(Boolean).join("\n\n");
+    const notes = [profile.join("\n"), s["設定"] || "", memo.replace(/^【PC】.*\n(【呼び】.*\n)?\n?/, ""), guests.length ? "＜ゲスト＞\n" + guests.join("\n") : ""].map(t => t.trim()).filter(Boolean).join("\n\n");
     const cls = gsClass(s["クラス"]);
     return {
       url, site: "Googleスプレッドシート", plName: s["PL名"] || "", role: s.role,
