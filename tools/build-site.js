@@ -174,17 +174,18 @@ async function kedamonoBody(token, pageId) {
 //   PC：真砂 宙継（まさご そらつぐ） / PL：…
 //   【キャラ背景】 学年：２年生 / 特徴：… / …   -> the profile
 //   【人間関係】 …                               -> the notes (any other 【…】 section too)
-//   a picture                                    -> the face (copied under img/, the URL expires)
+//   pictures: the first is not the 立ち絵 and is skipped; a second one is the face (copied under
+//   img/, the URL expires)
 // The scenarios are the 卓報告 pages linked from the body; with none linked, a database of one PC
 // takes every ほうかご探報 session in 卓報告 (who else could have played them).
 const HOUKAGO_DB = "2d91b663c48f8023bc3af3ce0b9e5b1c";
 async function houkagoBody(token, pageId) {
-  const paras = [], ids = [];
-  let picture = "", cursor;
+  const paras = [], ids = [], pictures = [];
+  let cursor;
   do {
     const r = await notionRequest(token, `/blocks/${pageId}/children?page_size=100${cursor ? "&start_cursor=" + cursor : ""}`);
     for (const b of r.results) {
-      if (!picture && b.type === "image") picture = b.image.type === "external" ? b.image.external.url : b.image.file?.url || "";
+      if (b.type === "image") pictures.push(b.image.type === "external" ? b.image.external.url : b.image.file?.url || "");
       if (b.type === "link_to_page" && b.link_to_page.page_id) ids.push(b.link_to_page.page_id);
       const rich = b[b.type]?.rich_text || [];
       for (const t of rich) if (t.type === "mention" && t.mention?.type === "page") ids.push(t.mention.page.id);
@@ -194,7 +195,7 @@ async function houkagoBody(token, pageId) {
     cursor = r.has_more ? r.next_cursor : null;
     await notionSleep(NOTION_GAP_MS);
   } while (cursor);
-  return { paras, ids: [...new Set(ids)], picture };
+  return { paras, ids: [...new Set(ids)], picture: pictures[1] || "" };   // the first picture is not the 立ち絵
 }
 async function houkagoChars(token) {
   const db = notionDbId(process.env.NOTION_HOUKAGO_DB_ID) || HOUKAGO_DB;
