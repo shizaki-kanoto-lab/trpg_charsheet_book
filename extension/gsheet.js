@@ -76,7 +76,7 @@ function gsSides(rows) {
       if (s && s !== "-" && !scenarios.includes(s)) scenarios.push(s);
     }
   }
-  // ゲスト (shared by the pair): "No. / 名前 / 技能 / 関係 / メモ" rows next to the 異常な癖.
+  // ゲスト (shared by the pair; only the 助手 shows them): "No. / 名前 / 技能 / 関係 / メモ" rows next to the 異常な癖.
   const guests = [];
   const gh = rows.findIndex(r => r.some(c => c.trim() === "ゲスト"));
   if (gh >= 0) {
@@ -183,7 +183,7 @@ function gsheetToItems(sheet) {
       ["身長", s["身長"]], ["体重", s["体重"]], ["ファッション", s["ファッション特徴"]], ["好きなもの", s["好きなもの"]], ["嫌いなもの", s["嫌いなもの"]],
       ["パートナー", other["PC名"] && (() => { const r = [other.role, gsClass(other["クラス"]), other["背景"]].filter(Boolean).join("・"); return other["PC名"] + (r ? `（${r}）` : ""); })()],
     ].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`);
-    const notes = [profile.join("\n"), s["設定"] || "", memo.replace(/^【PC】.*\n(【呼び】.*\n)?\n?/, ""), guests.length ? "＜ゲスト＞\n" + guests.join("\n") : ""].map(t => t.trim()).filter(Boolean).join("\n\n");
+    const notes = [profile.join("\n"), s["設定"] || "", memo.replace(/^【PC】.*\n(【呼び】.*\n)?\n?/, ""), guests.length && s.role !== "探偵" ? "＜ゲスト＞\n" + guests.join("\n") : ""].map(t => t.trim()).filter(Boolean).join("\n\n");
     const cls = gsClass(s["クラス"]);
     return {
       url, site: "Googleスプレッドシート", plName: s["PL名"] || "", role: s.role,

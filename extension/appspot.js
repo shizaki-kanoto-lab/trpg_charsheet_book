@@ -58,14 +58,14 @@ function as2s(d) {
     .map(l => AS_CLEAN(l.replace(/^[▼▽]\s*/, ""))).filter(Boolean);
   const quirks = Object.entries(d.abnormal || {}).filter(([k, v]) => /^text\d$/.test(k) && AS_CLEAN(v))
     .sort().map(([k, v], i) => ({ label: `癖${i + 1}`, value: AS_CLEAN(v) }));
-  // ゲスト: NPCs met in the scenarios. "・名前（技能）関係／メモ"
+  // ゲスト: NPCs met in the scenarios. "・名前（技能）関係／メモ". Only the 助手 shows them.
   const guests = (d.guests || []).filter(g => AS_CLEAN(g?.name)).map(g => {
     const rest = [g.relationship, g.memo].map(AS_CLEAN).filter(Boolean).join("／");
     return `・${AS_CLEAN(g.name)}${AS_CLEAN(g.skill) ? `（${AS_CLEAN(g.skill)}）` : ""}${rest}`;
   });
   return { params: quirks, skills: [], summary: [b.role, b.roleclass, b.background].map(AS_CLEAN).filter(Boolean).join("・"), stats: [], scenarios,
     notes: [quirks.length && "＜異常な癖＞\n" + quirks.map((q, i) => `${i + 1}：${q.value}`).join("\n"),
-      guests.length && "＜ゲスト＞\n" + guests.join("\n")].filter(Boolean).join("\n\n") };
+      guests.length && AS_CLEAN(b.role) !== "探偵" && "＜ゲスト＞\n" + guests.join("\n")].filter(Boolean).join("\n\n") };
 }
 
 function appspotToItem(sheet) {
