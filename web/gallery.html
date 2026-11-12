@@ -243,13 +243,18 @@ function scenariosOf(c){
   }
   return out;
 }
-/* Notes start with "職業: …" lines (written by the importer); the rest is the character's text. */
-const PROFILE_KEYS = ["職業","年齢","性別","身長","体重","出身"];
+/* Notes start with "職業: …" lines (written by the importer); the rest is the character's text.
+   The known keys (and フタリソウサ's パートナー) go to the profile, the PL line is dropped, and other
+   "key: value" lines at the top (役割, 外見, …) stay in the text. */
+const PROFILE_KEYS = ["職業","年齢","性別","身長","体重","出身","パートナー"];
 function splitNotes(notes){
   const profile = [], rest = [];
+  let top = true;
   for (const line of String(notes||"").split("\n")){
-    const m = line.match(/^(職業|年齢|性別|身長|体重|出身)\s*[:：]\s*(.+)$/);
-    if (m && !rest.some(l => l.trim())) profile.push([m[1], m[2].trim()]); else rest.push(line);
+    const m = top && line.match(/^([^\s:：]{1,10})\s*[:：]\s*(.+)$/);
+    if (!m){ if (line.trim()) top = false; rest.push(line); continue; }
+    if (PROFILE_KEYS.includes(m[1])) profile.push([m[1], m[2].trim()]);
+    else if (m[1] !== "PL") rest.push(line);
   }
   return {profile, text: rest.join("\n").replace(/^\s+|\s+$/g, "")};
 }

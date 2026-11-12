@@ -51,11 +51,14 @@ function asTnx(d) {
 }
 
 // フタリソウサ: the sheet also holds the partner (d.partner); only the owner's character (d.base) is read.
+// The scenarios played are the 捜査メモ lines that start with ▼ ("▼ここに堕天は完成される").
 function as2s(d) {
   const b = d.base || {};
+  const scenarios = String(d.investigation?.memo || "").split("\n").map(l => l.trim()).filter(l => /^[▼▽]/.test(l))
+    .map(l => AS_CLEAN(l.replace(/^[▼▽]\s*/, ""))).filter(Boolean);
   const quirks = Object.entries(d.abnormal || {}).filter(([k, v]) => /^text\d$/.test(k) && AS_CLEAN(v))
     .sort().map(([k, v], i) => ({ label: `癖${i + 1}`, value: AS_CLEAN(v) }));
-  return { params: quirks, skills: [], summary: [b.role, b.roleclass, b.background].map(AS_CLEAN).filter(Boolean).join("・"), stats: [],
+  return { params: quirks, skills: [], summary: [b.role, b.roleclass, b.background].map(AS_CLEAN).filter(Boolean).join("・"), stats: [], scenarios,
     notes: quirks.length ? "＜異常な癖＞\n" + quirks.map((q, i) => `${i + 1}：${q.value}`).join("\n") : "" };
 }
 
@@ -80,7 +83,7 @@ function appspotToItem(sheet) {
     name, ruby: unquote(b.nameKana),
     system: sheet.systemName || sheet.system,
     summary: [alias && `“${alias}”`, extra.summary || AS_CLEAN(d.outline)].filter(Boolean).join(" "),
-    tags: [], notes, skills: extra.skills, image: sheet.image || "", ...(extra.stats ? { stats: extra.stats } : {}),
+    tags: extra.scenarios || [], notes, skills: extra.skills, image: sheet.image || "", ...(extra.stats ? { stats: extra.stats } : {}),
     ccfolia: {
       kind: "character",
       data: { name, memo: "", initiative: 0, externalUrl: url, status: [], params: extra.params, commands: "" },
