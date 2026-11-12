@@ -169,6 +169,100 @@ async function kedamonoBody(token, pageId) {
   return { scenarios: names, picture };
 }
 
+// ほうかご探報 characters live in their own Notion database ("ほうかご探報"): one page per PC,
+// with only 名前 as a property. The body is written by hand:
+//   PC：真砂 宙継（まさご そらつぐ） / PL：…
+//   【キャラ背景】 学年：２年生 / 特徴：… / …   -> the profile
+//   【人間関係】 …                               -> the notes (any other 【…】 section too)
+//   a picture                                    -> the face (copied under img/, the URL expires)
+// The scenarios are the 卓報告 pages linked from the body; with none linked, a database of one PC
+// takes every ほうかご探報 session in 卓報告 (who else could have played them).
+const HOUKAGO_DB = "2d91b663c48f8023bc3af3ce0b9e5b1c";
+async function houkagoBody(token, pageId) {
+  const paras = [], ids = [];
+  let picture = "", cursor;
+  do {
+    const r = await notionRequest(token, `/blocks/${pageId}/children?page_size=100${cursor ? "&start_cursor=" + cursor : ""}`);
+    for (const b of r.results) {
+      if (!picture && b.type === "image") picture = b.image.type === "external" ? b.image.external.url : b.image.file?.url || "";
+      if (b.type === "link_to_page" && b.link_to_page.page_id) ids.push(b.link_to_page.page_id);
+      const rich = b[b.type]?.rich_text || [];
+      for (const t of rich) if (t.type === "mention" && t.mention?.type === "page") ids.push(t.mention.page.id);
+      const t = text(rich).trim();
+      if (t && ["paragraph", "quote", "callout", "bulleted_list_item", "numbered_list_item"].includes(b.type)) paras.push(t);
+    }
+    cursor = r.has_more ? r.next_cursor : null;
+    await notionSleep(NOTION_GAP_MS);
+  } while (cursor);
+  return { paras, ids: [...new Set(ids)], picture };
+}
+async function houkagoChars(token) {
+  const db = notionDbId(process.env.NOTION_HOUKAGO_DB_ID) || HOUKAGO_DB;
+  let pages;
+  try { pages = await allPages(token, db); }
+  catch (e) { console.log(`ほうかご探報を読めませんでした (${e.message})。インテグレーションをこのデータベースにつないでください。`); return []; }
+  // Every ほうかご探報 session in 卓報告, for a body that links none.
+  let sessions = [];
+  try {
+    const r = await notionRequest(token, `/databases/${TAKU_DB}/query`, { page_size: 100, filter: { property: "システム", select: { equals: "ほうかご探報" } } });
+    sessions = r.results.map(pg => ({ id: bare(pg.id), name: text(Object.values(pg.properties).find(p => p.type === "title")?.title).trim(), date: prop(pg.properties["日付"]) || "", role: prop(pg.properties["PL/GM"]) || "" }))
+      .filter(t => t.name && t.role === "PL");
+    await notionSleep(NOTION_GAP_MS);
+  } catch (e) { console.log(`卓報告のほうかご探報を読めませんでした (${e.message})`); }
+  const out = [];
+  for (const page of pages) {
+    const name = text(Object.values(page.properties).find(p => p.type === "title")?.title).trim();
+    if (!name) continue;
+    const body = await houkagoBody(token, page.id);
+    let ruby = "", summary = "";
+    const profile = [], notes = [];
+    for (const para of body.paras) {
+      const lines = para.split("\n").map(l => l.trim()).filter(Boolean);
+      const pc = lines.find(l => /^PC[：:]/.test(l));
+      if (pc) { ruby = (pc.match(/[（(]([^（）()]+)[）)]\s*$/) || [])[1] || ruby; continue; }
+      const head = (lines[0].match(/^【([^】]+)】$/) || [])[1];
+      if (head === "キャラ背景") {
+        for (const l of lines.slice(1)) {
+          const m = l.match(/^([^：:]{1,12})[：:]\s*(.+)$/);
+          if (m) profile.push({ label: m[1].trim(), value: m[2].trim() });
+        }
+        continue;
+      }
+      if (lines.every(l => /^P[CL][：:]/.test(l))) continue;
+      notes.push(lines.join("\n"));
+    }
+    summary = profile.find(x => x.label === "学年")?.value || "";
+    // Scenarios: the linked 卓報告 pages, else (one PC) all ほうかご探報 sessions.
+    const linked = [];
+    for (const id of body.ids) {
+      try {
+        const pg = await notionRequest(token, `/pages/${id}`);
+        await notionSleep(NOTION_GAP_MS);
+        if (bare(pg.parent?.database_id) !== TAKU_DB && bare(pg.parent?.data_source_id) !== TAKU_DS) continue;
+        linked.push({ name: text(Object.values(pg.properties).find(p => p.type === "title")?.title).trim(), date: prop(pg.properties["日付"]) || "" });
+      } catch (e) { console.log(`リンク先の卓報告を読めませんでした: ${id} (${e.message})`); }
+    }
+    const played = (linked.length ? linked : pages.length === 1 ? sessions : []).filter(t => t.name)
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const tags = [...new Set(played.map(t => t.name))];
+    const dates = {};
+    for (const t of played) if (t.date && !dates[t.name]) dates[t.name] = t.date;
+    let image = "";
+    if (body.picture) {
+      try { image = await copyNotionImage(body.picture, page.id); }
+      catch (e) { console.log(`立ち絵をコピーできませんでした: ${name} (${e.message})`); }
+    }
+    out.push({
+      id: page.url, name, ruby, system: "ほうかご探報", sourceSite: "Notion", sourceUrl: "",
+      image, summary, tags, ...(Object.keys(dates).length ? { dates } : {}), resources: [], stats: [], skills: [], profile,
+      updatedAt: Date.parse(page.last_edited_time) || 0, galleryHidden: false,
+      notes: notes.join("\n\n"), palette: "", piece: null,
+    });
+  }
+  console.log(`ほうかご探報 ${out.length}人を読みました`);
+  return out;
+}
+
 async function copyNotionImage(url, key) {
   const r = await fetch(url);
   const type = r.headers.get("content-type") || "";
@@ -268,6 +362,7 @@ async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   await copyBlockedImages(chars);
   chars.push(...await kedamonoChars(token));
+  chars.push(...await houkagoChars(token));
   fs.writeFileSync(path.join(OUT, "data.json"), JSON.stringify({ generatedAt: new Date().toISOString(), chars }));
   for (const f of ["favicon.svg", "banner.svg", "gallery.html", "crowla-light.png", "crowla-dark.png"]) fs.copyFileSync(path.join(ROOT, "web", f), path.join(OUT, f));
   const page = fs.readFileSync(path.join(ROOT, "web", "index.html"), "utf8");
