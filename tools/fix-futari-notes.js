@@ -72,7 +72,7 @@ async function main() {
         const cur = cb && text(cb.paragraph.rich_text).trim();
         if (wantP && cb && cur !== wantP) { lines.push(`  ${head} 前:\n${cur.replace(/^/gm, "    ")}\n  ${head} 後:\n${wantP.replace(/^/gm, "    ")}`); ops.push(["PATCH", `/blocks/${cb.id}`, { paragraph: para(wantP).paragraph }]); }
         if (wantP && !cb) { lines.push(`  ${head} 足す:\n${wantP.replace(/^/gm, "    ")}`); ops.push(["PATCH", `/blocks/${page.id}/children`, { children: [para(wantP)], after: anchor }]); }
-        if (!wantP && cb) { lines.push(`  ${head} 消す（元シートが空）:\n${cur.replace(/^/gm, "    ")}`); ops.push(["DELETE", `/blocks/${cb.id}`]); }
+        if (!wantP && cb) { lines.push(`  ${head} 消す:\n${cur.replace(/^/gm, "    ")}`); ops.push(["DELETE", `/blocks/${cb.id}`]); }
         if (cb) anchor = cb.id;
       }
       if (!ops.length) { report.same.push(name); continue; }
