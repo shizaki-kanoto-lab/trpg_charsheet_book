@@ -165,7 +165,7 @@ function gsheetToItems(sheet) {
     const profile = [
       ["PL", s["PL名"]], ["役割", s.role], ["呼び名", s["呼び名"]], ["職業", s["職業"]], ["性別", s["性別"]], ["年齢", s["年齢"]],
       ["身長", s["身長"]], ["体重", s["体重"]], ["ファッション", s["ファッション特徴"]], ["好きなもの", s["好きなもの"]], ["嫌いなもの", s["嫌いなもの"]],
-      ["パートナー", other["PC名"] && `${other["PC名"]}（${[other.role, gsClass(other["クラス"]), other["背景"]].filter(Boolean).join("・")}・PL ${other["PL名"] || "?"}）`],
+      ["パートナー", other["PC名"] && (() => { const r = [other.role, gsClass(other["クラス"]), other["背景"]].filter(Boolean).join("・"); return other["PC名"] + (r ? `（${r}）` : ""); })()],
     ].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`);
     const notes = [profile.join("\n"), s["設定"] || "", memo.replace(/^【PC】.*\n(【呼び】.*\n)?\n?/, "")].map(t => t.trim()).filter(Boolean).join("\n\n");
     const cls = gsClass(s["クラス"]);
