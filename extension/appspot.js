@@ -75,7 +75,7 @@ function appspotToItem(sheet) {
     ["PL", b.player], ["年齢", b.age], ["性別", b.sex], ["誕生日", b.birthday], ["出身", b.birth],
     ["身長", b.height], ["体重", b.weight], ["髪", b.hair], ["瞳", b.eyes], ["肌", b.skin],
     ["職業", b.job], ["雰囲気", b.atmosphere], ["好きなもの", b.like], ["嫌いなもの", b.dislike],
-    ["パートナー", d.partner?.name && [AS_CLEAN(d.partner.name), AS_CLEAN(d.partner.role)].filter(Boolean).join("・")],
+    ["パートナー", d.partner?.name && (() => { const r = [d.partner.role, d.partner.roleclass, d.partner.background].map(AS_CLEAN).filter(Boolean).join("・"); return AS_CLEAN(d.partner.name) + (r ? `（${r}）` : ""); })()],
   ].filter(([, v]) => AS_CLEAN(v)).map(([k, v]) => `${k}: ${AS_CLEAN(v)}`);
   const notes = [profile.join("\n"), String(b.memoir || "").trim(), String(b.memo || "").trim(), extra.notes || ""].filter(Boolean).join("\n\n");
   return {

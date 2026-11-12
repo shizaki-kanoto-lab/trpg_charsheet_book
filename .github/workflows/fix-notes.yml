@@ -1,0 +1,39 @@
+name: シート帳のメモを直す
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "直す内容"
+        type: choice
+        options:
+          - vinsanetのメモを最初の1つにする
+          - フタリソウサのパートナーに役割・クラス・背景を書く
+      write:
+        description: "Notionに書き込む（オフなら直す予定の一覧だけ出す）"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 元のシートを読み直してメモを直す
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ vars.NOTION_DATABASE_ID }}
+          TASK: ${{ inputs.task }}
+        run: |
+          case "$TASK" in
+            vinsanet*) script=tools/fix-vinsanet-notes.js ;;
+            フタリソウサ*) script=tools/fix-futari-partner.js ;;
+            *) echo "不明な内容: $TASK"; exit 1 ;;
+          esac
+          node "$script" ${{ inputs.write && '--write' || '' }}

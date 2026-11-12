@@ -139,6 +139,9 @@ async function gsImageFor(sourceUrl) {
   return gsImages(await get(`${base}/htmlview/sheet?headers=true&gid=${tabs["キャラシ"] ?? "0"}`))[role] || "";
 }
 
+// "🔍変わり者刑事 (p.42)" -> "変わり者刑事"
+const gsClass = c => String(c || "").replace(/[\s　]*[（(]p\.[^）)]*[）)]\s*$/, "").replace(/^\p{Extended_Pictographic}️?/u, "").trim();
+
 // "四藤傑（しどう すぐる）" -> name and reading.
 function gsName(s) {
   const m = String(s || "").match(/^(.*?)[（(]([^）)]+)[）)]\s*$/);
@@ -162,10 +165,10 @@ function gsheetToItems(sheet) {
     const profile = [
       ["PL", s["PL名"]], ["役割", s.role], ["呼び名", s["呼び名"]], ["職業", s["職業"]], ["性別", s["性別"]], ["年齢", s["年齢"]],
       ["身長", s["身長"]], ["体重", s["体重"]], ["ファッション", s["ファッション特徴"]], ["好きなもの", s["好きなもの"]], ["嫌いなもの", s["嫌いなもの"]],
-      ["パートナー", other["PC名"] && `${other["PC名"]}（${other.role}・PL ${other["PL名"] || "?"}）`],
+      ["パートナー", other["PC名"] && `${other["PC名"]}（${[other.role, gsClass(other["クラス"]), other["背景"]].filter(Boolean).join("・")}・PL ${other["PL名"] || "?"}）`],
     ].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`);
     const notes = [profile.join("\n"), s["設定"] || "", memo.replace(/^【PC】.*\n(【呼び】.*\n)?\n?/, "")].map(t => t.trim()).filter(Boolean).join("\n\n");
-    const cls = String(s["クラス"] || "").replace(/[\s　]*[（(]p\.[^）)]*[）)]\s*$/, "").replace(/^\p{Extended_Pictographic}️?/u, "").trim();
+    const cls = gsClass(s["クラス"]);
     return {
       url, site: "Googleスプレッドシート", plName: s["PL名"] || "", role: s.role,
       name, ruby,
