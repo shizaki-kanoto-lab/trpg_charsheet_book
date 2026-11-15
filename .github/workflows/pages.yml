@@ -44,11 +44,26 @@ jobs:
           shopt -s nullglob
           files=(site/img/*)
           if [ ${#files[@]} -eq 0 ]; then exit 0; fi
-          if command -v mogrify >/dev/null; then tool=mogrify; elif command -v magick >/dev/null; then tool="magick mogrify"; else echo "ImageMagick がないので縮めません"; exit 0; fi
-          before=$(du -ck "${files[@]}" | tail -1 | cut -f1)
-          $tool -resize '1200x1200>' -strip "${files[@]}"
-          after=$(du -ck "${files[@]}" | tail -1 | cut -f1)
-          echo "立ち絵 ${#files[@]}枚: ${before}KB → ${after}KB"
+          npm install --no-save --no-package-lock --silent sharp@0.33.5
+          node -e '
+            const sharp = require("sharp"), fs = require("fs");
+            (async () => {
+              let before = 0, after = 0;
+              for (const f of process.argv.slice(1)) {
+                const buf = fs.readFileSync(f); before += buf.length;
+                try {
+                  const img = sharp(buf, { animated: true }), m = await img.metadata();
+                  if (Math.max(m.width || 0, m.pageHeight || m.height || 0) > 1200 || buf.length > 400000) {
+                    let out = img.resize(1200, 1200, { fit: "inside", withoutEnlargement: true });
+                    out = m.format === "png" ? out.png({ compressionLevel: 9, palette: buf.length > 400000 }) : out;
+                    const small = await out.toBuffer();
+                    if (small.length < buf.length) { fs.writeFileSync(f, small); after += small.length; continue; }
+                  }
+                } catch (e) { console.log(`縮められませんでした: ${f} (${e.message})`); }
+                after += buf.length;
+              }
+              console.log(`立ち絵 ${process.argv.length - 1}枚: ${Math.round(before / 1024)}KB → ${Math.round(after / 1024)}KB`);
+            })();' "${files[@]}"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
