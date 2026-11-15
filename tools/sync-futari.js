@@ -134,10 +134,12 @@ async function main() {
     const title = want["名前"];
     if (row) {
       const have = shown(Object.fromEntries(Object.keys(props).map(k => [k, row.properties[k]?.relation ? { relation: row.properties[k].relation } : row.properties[k] || {}])));
-      const diff = Object.keys(want).filter(k => want[k] !== (have[k] ?? ""));
+      // What the sheet leaves empty (no たまり場 on キャラクターシート倉庫, say) may be filled in by hand in
+      // Notion: never clear it.
+      const diff = Object.keys(want).filter(k => want[k] !== (have[k] ?? "") && (want[k] || !have[k]));
       if (!diff.length) { report.same.push(title); continue; }
-      report.update.push(`${title}（${diff.join("・")}）`);
-      if (write) { await notionRequest(token, `/pages/${row.id}`, { properties: props }, "PATCH"); await notionSleep(NOTION_GAP_MS); }
+      report.update.push(`${title}\n` + diff.map(k => `  ${k}: ${(have[k] || "（空）").replace(/\n/g, " / ")} → ${want[k].replace(/\n/g, " / ")}`).join("\n"));
+      if (write) { await notionRequest(token, `/pages/${row.id}`, { properties: Object.fromEntries(diff.map(k => [k, props[k]])) }, "PATCH"); await notionSleep(NOTION_GAP_MS); }
     } else {
       report.add.push([title, ...Object.entries(want).filter(([k, v]) => k !== "名前" && v).map(([k, v]) =>
         `  ${k}: ${k === "シート帳" || k === "通過シナリオ" ? `${v.split(",").length}件` : v.replace(/\n/g, " / ")}`)].join("\n"));
