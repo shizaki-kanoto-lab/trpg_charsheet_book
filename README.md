@@ -1,15 +1,19 @@
 # キャラクターシート帳
 
-シートはNotionのデータベースで管理しています: https://app.notion.com/p/b47dc79665f54fdeb8df5e2afdb134a5
+シートはNotionのデータベースで管理しています。
+
+紹介ページ: https://shizaki-kanoto.is-a.dev/works/trpg_charsheet_book/
+
+閲覧ページには立ち絵が並ぶため、著作権に配慮して URL は公開していません。
 
 - `extension/` — Chrome 拡張機能「シート帳へ送る」。各サイトのシートをNotionへ直接追加します。インストール方法は `extension/README.md` を参照してください。
 - `tools/migrate-to-notion.js` — 旧シート帳の書き出しデータをNotionへコピーしたスクリプト（移行済み）。
-- `web/index.html` — Notionのシート帳を見るための閲覧ページ。Claude の Artifact として公開しています: https://claude.ai/artifact/HvFLARgaM8KXybS1poceCN
+- `web/index.html` — Notionのシート帳を見るための閲覧ページ。Claude の Artifact として使っています。
   - 見る人のNotionコネクタでデータベースを読みます（読み取りのみ）。HPやメモの編集はNotionで行います。
 
 ## GitHub Pages で公開する
 
-`.github/workflows/pages.yml` が3時間ごと（と手動実行・mainへのpush時）にNotionを読み、`tools/build-site.js` で `site/index.html` と `site/data.json` を作ってGitHub Pagesに置きます。公開ページはURLを知っていれば誰でも見られます（検索エンジンには noindex を指定）。
+`.github/workflows/pages.yml` が3時間ごと（と手動実行・mainへのpush時）にNotionを読み、`tools/build-site.js` で `site/index.html` と `site/data.json` を作ってGitHub Pagesに置きます。ページはURLを知っていれば誰でも見られるので、URLは公開していません（検索エンジンには noindex を指定）。
 
 1. リポジトリの Settings → Secrets and variables → Actions に `NOTION_TOKEN`（拡張機能と同じNotionの連携トークン）を登録する
 2. Settings → Pages の Source を「GitHub Actions」にする
@@ -18,8 +22,6 @@
 公開ページの「Notionから更新」ボタンでも、このワークフローを実行できます。最初に押したときに GitHub のトークンを聞かれるので、公開リポジトリだけを対象に「Actions: Read and write」の権限を付けた fine-grained トークンを作って貼り付けてください。トークンはそのブラウザの localStorage にだけ保存されます（Shift を押しながらボタンを押すと設定画面が開き、消せます）。
 
 公開リポジトリ: https://github.com/shizaki-kanoto-lab/trpg_charsheet_book （このリポジトリ g16qa/charsheet-book は非公開。mainを両方にpushする）
-
-公開URL: https://shizaki-kanoto-lab.github.io/trpg_charsheet_book/
 
 ## Notion のデータベース
 
