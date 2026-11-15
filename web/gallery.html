@@ -260,6 +260,15 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
   apply(read());
 })();
 const $ = id => document.getElementById(id);
+/* A picture that fails to load (a slow phone line, or the site being replaced while it loads) is tried
+   again twice before it is given up; the site's own copies (img/…) get a fresh URL to skip a cached error. */
+function imgRetry(img){
+  const n = Number(img.dataset.retry || 0) + 1;
+  if (n > 2){ img.remove(); return; }
+  img.dataset.retry = n;
+  const src = img.getAttribute("src").replace(/[?&]r=\d+$/, "");
+  setTimeout(() => { if (img.isConnected) img.src = /^img\//.test(src) ? `${src}?r=${n}` : src; }, 1500 * n);
+}
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 const store = {get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} }};
@@ -389,7 +398,7 @@ function scenOf(p){
 
 function tileHTML(p, i){
   p = {...p, ...scenOf(p)};
-  const c = p.face, img = okImg(c.image) ? `<img src="${esc(c.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : "";
+  const c = p.face, img = okImg(c.image) ? `<img src="${esc(c.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="imgRetry(this)">` : "";
   const sys = S.sys ? sysShort(S.sys) : p.systems.map(sysShort).join(" / ");
   return `<li><a class="tile${p.lost ? " lost" : ""}" href="#/${encodeURIComponent(p.key)}" style="--h:${tint(p.name)};--d:${Math.min(i,24)*0.03}s"${p.first ? ` title="${esc(p.name)}『${esc(p.first)}』"` : ""}>
     <span class="ini" aria-hidden="true">${esc([...p.name][0]||"？")}</span>${img}
@@ -457,7 +466,7 @@ function profileHTML(p){
       <div class="figure">
         <div class="stage${lost ? " lost" : ""}" style="--h:${tint(p.name)}">
           <span class="ini" aria-hidden="true">${esc([...p.name][0]||"？")}</span>
-          ${okImg(face.image) ? `<img src="${esc(face.image)}" alt="${esc(p.name)}" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}
+          ${okImg(face.image) ? `<img src="${esc(face.image)}" alt="${esc(p.name)}" decoding="async" referrerpolicy="no-referrer" onerror="imgRetry(this)">` : ""}
           <span class="vert" aria-hidden="true">${esc(sysShort(c.system))}</span>
         </div>
         ${c.sourceUrl ? `<p class="cap"><a href="${esc(c.sourceUrl)}" target="_blank" rel="noopener noreferrer">キャラクターシート（${esc(c.sourceSite||"")}） ↗</a></p>` : ""}

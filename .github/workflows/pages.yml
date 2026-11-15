@@ -37,6 +37,18 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ vars.NOTION_DATABASE_ID }}
         run: node tools/build-site.js ${{ inputs.fresh != true && format('--previous "{0}/data.json"', steps.pages.outputs.base_url) || '' }}
+      # The copied pictures (ケダモノオペラ, ほうかご探報, Google Sheets) can be several MB; the gallery shows
+      # them at most ~600px wide, so they are cut down to 1200px on the long side.
+      - name: 立ち絵を軽くする
+        run: |
+          shopt -s nullglob
+          files=(site/img/*)
+          if [ ${#files[@]} -eq 0 ]; then exit 0; fi
+          if command -v mogrify >/dev/null; then tool=mogrify; elif command -v magick >/dev/null; then tool="magick mogrify"; else echo "ImageMagick がないので縮めません"; exit 0; fi
+          before=$(du -ck "${files[@]}" | tail -1 | cut -f1)
+          $tool -resize '1200x1200>' -strip "${files[@]}"
+          after=$(du -ck "${files[@]}" | tail -1 | cut -f1)
+          echo "立ち絵 ${#files[@]}枚: ${before}KB → ${after}KB"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
