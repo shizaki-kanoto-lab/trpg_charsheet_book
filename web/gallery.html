@@ -158,6 +158,24 @@ img{display:block}
 .skills li .l{overflow-wrap:anywhere;font-size:.92rem}
 .skills li .v{font-family:var(--f-latin);font-weight:600;font-size:1.1rem}
 .skills li::after{content:"";position:absolute;left:0;bottom:-1px;height:2px;width:calc(var(--p) * 1%);background:var(--accent);opacity:.55}
+.tl-open{margin-top:12px;background:none;border:0;padding:0;color:var(--accent);font-size:.85rem;letter-spacing:.1em;cursor:pointer;text-align:left}
+.tl-open:hover{text-decoration:underline;text-underline-offset:3px}
+dialog.tl{width:min(680px,calc(100vw - 32px));max-height:min(80vh,calc(100dvh - 32px));padding:0;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);box-shadow:0 18px 48px rgba(0,0,0,.28)}
+dialog.tl::backdrop{background:rgba(10,10,14,.55)}
+dialog.tl .hd{position:sticky;top:0;display:flex;align-items:baseline;gap:12px;padding:18px 20px 12px;background:var(--paper);border-bottom:1px solid var(--line)}
+dialog.tl .hd h2{margin:0;font-family:var(--f-mincho);font-weight:700;font-size:1.05rem;letter-spacing:.16em;flex:1}
+dialog.tl .hd small{display:block;font-family:var(--f-latin);font-style:italic;color:var(--accent);letter-spacing:.06em;font-size:1rem}
+dialog.tl .x{background:none;border:1px solid var(--line);border-radius:50%;width:34px;height:34px;color:var(--ink);cursor:pointer;font-size:1.1rem;line-height:1}
+dialog.tl .x:hover{border-color:var(--accent);color:var(--accent)}
+dialog.tl .bd{padding:4px 20px 20px}
+dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var(--muted)}
+.tline{list-style:none;margin:0;padding:0}
+.tline li{display:grid;grid-template-columns:5.6em minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;padding:10px 2px;border-bottom:1px solid var(--line)}
+.tline .d{font-family:var(--f-latin);font-variant-numeric:tabular-nums;color:var(--muted);font-size:.9rem;white-space:nowrap}
+.tline .t{font-family:var(--f-mincho);font-weight:500;overflow-wrap:anywhere}
+.tline .t .r{margin-left:8px;font-family:inherit;font-size:.75rem;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);padding:0 6px;white-space:nowrap}
+.tline .s{font-size:.72rem;letter-spacing:.08em;color:var(--accent);white-space:nowrap}
+@media (max-width:520px){.tline li{grid-template-columns:minmax(0,1fr) auto}.tline .d{grid-column:1/-1}}
 .scen{list-style:none;margin:0;padding:0;display:grid;gap:0}
 .scen li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:10px 4px;border-bottom:1px solid var(--line)}
 .scen li .no{font-family:var(--f-latin);font-style:italic;color:var(--accent);font-size:1rem;min-width:2ch}
@@ -278,6 +296,28 @@ function scenariosOf(c){
     pending = "";
   }
   return out;
+}
+/* Every scenario of the person, whatever the system, in the order played: lines with a 卓報告 date
+   (from 通過記録) by date, then the undated ones in sheet order. The same line on two sheets (a 6版 and
+   a 7版 sheet of one character) is listed once. */
+function timelineOf(p){
+  const seen = new Set(), all = [];
+  for (const c of [...p.sheets].sort((a,b) => bySystem(a.system, b.system))) for (const x of scenariosOf(c)){
+    const k = `${x.name.normalize("NFKC").replace(/\s+/g, "")}|${x.role}|${x.date}`;
+    if (seen.has(k)) continue;
+    seen.add(k); all.push({...x, system: c.system});
+  }
+  return {dated: all.filter(x => x.date).sort((a,b) => a.date.localeCompare(b.date)), undated: all.filter(x => !x.date)};
+}
+function timelineHTML(p){
+  const {dated, undated} = timelineOf(p);
+  const row = x => `<li><span class="d">${esc(x.date ? x.date.replace(/-/g, ".") : "")}</span><span class="t">${esc(x.name)}${x.role ? `<span class="r">${esc(x.role)}</span>` : ""}</span><span class="s">${esc(sysJa(x.system))}</span></li>`;
+  return `<dialog class="tl" id="tl" aria-labelledby="tlTitle">
+    <div class="hd"><h2 id="tlTitle"><small>All Scenarios</small>${esc(p.name)}の通過シナリオ（全システム・時系列）</h2><button class="x" type="button" data-tl="close" aria-label="閉じる">×</button></div>
+    <div class="bd">
+      ${dated.length ? `<ol class="tline">${dated.map(row).join("")}</ol>` : ""}
+      ${undated.length ? `<p class="grp">日付の分からないシナリオ（シートの順）</p><ol class="tline">${undated.map(row).join("")}</ol>` : ""}
+    </div></dialog>`;
 }
 /* Notes start with "職業: …" lines (written by the importer); the rest is the character's text.
    The known keys (and フタリソウサ's パートナー) go to the profile, the PL line is dropped, and other
@@ -403,6 +443,8 @@ function profileHTML(p){
   if ((c.profile||[]).length) profile.unshift(...c.profile.map(x => [x.label, x.value]));   // ケダモノオペラ: ケダモノ種, 権能, …; ほうかご探報: 学年, 特徴, …
   else if (c.summary && !profile.some(([k]) => k === "職業")) profile.unshift(["職業", c.summary]);
   const scen = scenariosOf(c);
+  // A person with sheets in more than one system also gets every scenario in one list, by date.
+  const multi = new Set(p.sheets.filter(x => scenariosOf(x).length).map(x => x.system)).size > 1;
   const skills = [...(c.skills||[])].sort((a,b) => num(b.value)-num(a.value));
   const long = text.length > 420;
   return `
@@ -441,10 +483,12 @@ function profileHTML(p){
         ${skills.length ? `<section class="sec"><h2><span class="en">Skills</span>技能</h2>
           <ul class="skills">${skills.map(s => `<li style="--p:${Math.max(0, Math.min(100, num(s.value)))}"><span class="l">${esc(s.label)}</span><span class="v">${esc(s.value)}</span></li>`).join("")}</ul></section>` : ""}
 
-        ${scen.length ? `<section class="sec"><h2><span class="en">Scenarios</span>通過シナリオ</h2>
-          <ol class="scen">${scen.map((s, n) => `<li><span class="no">${n+1}</span><span class="t">${esc(s.name)}</span>${s.role ? `<span class="r">${esc(s.role)}</span>` : "<span></span>"}</li>`).join("")}</ol></section>` : ""}
+        ${scen.length || multi ? `<section class="sec"><h2><span class="en">Scenarios</span>通過シナリオ</h2>
+          ${scen.length ? `<ol class="scen">${scen.map((s, n) => `<li><span class="no">${n+1}</span><span class="t">${esc(s.name)}</span>${s.role ? `<span class="r">${esc(s.role)}</span>` : "<span></span>"}</li>`).join("")}</ol>` : ""}
+          ${multi ? `<button class="tl-open" type="button" data-tl="open">全システムの通過シナリオを時系列で見る →</button>` : ""}</section>` : ""}
       </article>
     </div>
+    ${multi ? timelineHTML(p) : ""}
   </main>
   ${FOOT}`;
 }
@@ -468,6 +512,9 @@ function route(){
 }
 window.addEventListener("hashchange", () => route());
 document.addEventListener("click", e => {
+  const tl = e.target.closest("[data-tl]");
+  if (tl){ const d = $("tl"); if (d) tl.dataset.tl === "open" ? d.showModal() : d.close(); return; }
+  if (e.target.matches("dialog.tl")){ e.target.close(); return; }   // a click on the backdrop
   const t = e.target.closest("[data-sys]");
   if (t){ S.sys = t.dataset.sys; store.set("gSys", S.sys); renderIndex(); return; }
   const sh = e.target.closest("[data-sheet]");
