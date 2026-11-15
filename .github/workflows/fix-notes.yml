@@ -9,6 +9,7 @@ on:
         options:
           - vinsanetのメモを最初の1つにする
           - フタリソウサのパートナー・異常な癖・ゲストを元シートに合わせる
+          - フタリソウサのコンビ表（🕵️ フタリソウサ）を作る・更新する
       write:
         description: "Notionに書き込む（オフなら直す予定の一覧だけ出す）"
         type: boolean
@@ -33,6 +34,7 @@ jobs:
         run: |
           case "$TASK" in
             vinsanet*) script=tools/fix-vinsanet-notes.js ;;
+            フタリソウサのコンビ表*) script=tools/sync-futari.js ;;
             フタリソウサ*) script=tools/fix-futari-notes.js ;;
             *) echo "不明な内容: $TASK"; exit 1 ;;
           esac

@@ -203,4 +203,39 @@ function gsheetToItems(sheet) {
   });
 }
 
-if (typeof module !== "undefined") module.exports = { gsheetToItems, gsCsv, gsImages, gsImageFor };
+// The pair as a whole, for the フタリソウサ database (tools/sync-futari.js): both characters, the たまり場,
+// the current 異常な癖, the ゲスト (名前（技能）), and the 思い出の品 with the scenario each came from.
+function gsFutari(sheet) {
+  const rows = gsCsv(sheet.main || "");
+  const { sides, guests } = gsSides(rows);
+  const person = s => ({ name: s["PC名"] || "", cls: gsClass(s["クラス"]), bg: s["背景"] || "", pl: s["PL名"] || "" });
+  let base = "";
+  for (let r = 0; r < rows.length && !base; r++) {
+    const c = rows[r].findIndex(x => x.trim() === "たまり場の名前");
+    if (c >= 0) base = rows.slice(r + 1, r + 3).map(rr => (rr[c] || "").trim()).find(Boolean) || "";
+  }
+  const quirks = [];
+  const qh = rows.findIndex(r => r.some(c => c.trim().startsWith("異常な癖")));
+  if (qh >= 0) {
+    const qc = rows[qh].findIndex(c => c.trim().startsWith("異常な癖"));
+    const gc = rows[qh].findIndex(c => c.trim() === "ゲスト");
+    for (const r of rows.slice(qh + 1)) {
+      if (!/^[0-9０-９]+$/.test((r[qc] || "").trim())) break;
+      const t = r.slice(qc + 1, gc > qc ? gc : undefined).map(c => c.trim()).find(Boolean);
+      if (t) quirks.push(t);
+    }
+  }
+  const memories = [];
+  const mh = rows.findIndex(r => r.some(c => c.trim() === "アイテム名") && r.some(c => c.trim() === "シナリオ名"));
+  if (mh >= 0) {
+    const ic = rows[mh].findIndex(c => c.trim() === "アイテム名"), sc = rows[mh].findIndex(c => c.trim() === "シナリオ名");
+    for (const r of rows.slice(mh + 1)) {
+      if (!/^\d+$/.test((r[1] || "").trim())) break;
+      const item = (r[ic] || "").trim(), scen = (r[sc] || "").trim();
+      if (item) memories.push({ item, scenario: scen === "-" ? "" : scen });
+    }
+  }
+  return { base, detective: person(sides[0]), assistant: person(sides[1]), quirks, guests, memories };
+}
+
+if (typeof module !== "undefined") module.exports = { gsheetToItems, gsFutari, gsCsv, gsImages, gsImageFor };

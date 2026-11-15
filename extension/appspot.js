@@ -94,4 +94,24 @@ function appspotToItem(sheet) {
   };
 }
 
-if (typeof module !== "undefined") module.exports = { appspotToItem };
+// The pair as a whole, for the フタリソウサ database (tools/sync-futari.js). The partner's PL is not on
+// this sheet. The 思い出の品 are the 捜査メモ lines "思い出の品：…", under the ▼ scenario they follow.
+function asFutari(d) {
+  const b = d.base || {}, p = d.partner || {};
+  const person = (x, pl) => ({ name: AS_CLEAN(x.name), cls: AS_CLEAN(x.roleclass), bg: AS_CLEAN(x.background), pl: AS_CLEAN(pl), role: AS_CLEAN(x.role) });
+  const me = person(b, b.player), partner = { ...person(p, ""), url: AS_CLEAN(p.url) };
+  const memories = [];
+  let scen = "";
+  for (const line of String(d.investigation?.memo || "").split("\n")) {
+    const t = line.trim();
+    if (/^[▼▽]/.test(t)) scen = AS_CLEAN(t.replace(/^[▼▽]\s*/, ""));
+    const m = t.match(/^思い出の品\s*[：:]\s*(.+)$/);
+    if (m) memories.push({ item: AS_CLEAN(m[1]), scenario: scen });
+  }
+  const guests = (d.guests || []).filter(g => AS_CLEAN(g?.name)).map(g => `・${AS_CLEAN(g.name)}${AS_CLEAN(g.skill) ? `（${AS_CLEAN(g.skill)}）` : ""}`);
+  const helper = me.role === "助手";
+  return { base: "", detective: helper ? partner : me, assistant: helper ? me : partner, partnerUrl: partner.url,
+    quirks: as2s(d).params.map(q => q.value), guests, memories };
+}
+
+if (typeof module !== "undefined") module.exports = { appspotToItem, asFutari };
