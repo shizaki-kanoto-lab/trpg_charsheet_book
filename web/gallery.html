@@ -15,6 +15,11 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap">
+<script>
+/* Theme: "light" / "dark" chosen with the theme button, or follow the OS when nothing is saved.
+   Shared by the sheet book and the gallery (same localStorage key). Runs before paint. */
+(function(){ try { var t = localStorage.getItem("charsheet-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {} })();
+</script>
 <style>
 /* A character introduction page: a wall of portraits, and a profile page for each character.
    Reads the same data.json as the sheet book (index.html). */
@@ -173,6 +178,13 @@ img{display:block}
   .figure{position:static;max-width:420px;width:100%;margin:0 auto}
 }
 /* Back to the top: a button at the bottom right while scrolled down, and a pull past the bottom. */
+.themesw{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:20;
+  width:46px;height:46px;box-shadow:0 6px 18px rgba(0,0,0,.14);border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--paper) 88%,transparent);
+  color:var(--ink);display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.themesw:hover{border-color:var(--accent);color:var(--accent)}
+.themesw:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.themesw svg{width:18px;height:18px;display:none}
+.themesw[data-mode="auto"] .i-auto,.themesw[data-mode="light"] .i-light,.themesw[data-mode="dark"] .i-dark{display:block}
 .totop{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:20;
   width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--paper) 88%,transparent);
   color:var(--ink);display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.14);
@@ -202,9 +214,32 @@ img{display:block}
 <body>
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PMZQ73GV" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <div id="root"></div>
+<button class="themesw" type="button"><svg class="i-auto" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="M10 3.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg><svg class="i-light" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="3.6"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M4.3 15.7l1.4-1.4M14.3 5.7l1.4-1.4"/></svg><svg class="i-dark" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M15.5 12.6A6.5 6.5 0 0 1 7.4 4.5a6.5 6.5 0 1 0 8.1 8.1z"/></svg></button>
 <button class="totop" id="totop" type="button" aria-label="ページの先頭へ戻る" title="ページの先頭へ戻る" tabindex="-1"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16V4M4.5 9.5 10 4l5.5 5.5"/></svg></button>
 <div class="pull" id="pull" aria-hidden="true"><span class="ring"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16V4M4.5 9.5 10 4l5.5 5.5"/></svg></span><span class="txt">引っぱって先頭へ</span></div>
 <script>
+
+// Theme button: OS設定 → ライト → ダーク → OS設定 …
+(function(){
+  const KEY = "charsheet-theme", LABEL = { auto: "OSの設定に合わせる", light: "ライトモード", dark: "ダークモード" }, NEXT = { auto: "light", light: "dark", dark: "auto" };
+  const read = () => { try { const t = localStorage.getItem(KEY); return t === "light" || t === "dark" ? t : "auto"; } catch { return "auto"; } };
+  const apply = mode => {
+    if (mode === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = mode;
+    for (const b of document.querySelectorAll(".themesw")) {
+      b.dataset.mode = mode;
+      const t = `表示：${LABEL[mode]}（押すと${LABEL[NEXT[mode]]}）`;
+      b.title = t; b.setAttribute("aria-label", t);
+    }
+  };
+  document.addEventListener("click", e => {
+    const b = e.target.closest(".themesw"); if (!b) return;
+    const mode = NEXT[read()];
+    try { mode === "auto" ? localStorage.removeItem(KEY) : localStorage.setItem(KEY, mode); } catch {}
+    apply(mode);
+  });
+  addEventListener("storage", e => { if (e.key === KEY) apply(read()); });
+  apply(read());
+})();
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num = v => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
