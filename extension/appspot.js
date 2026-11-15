@@ -30,6 +30,8 @@ async function appspotFetchSheets(onlyKey) {
 }
 
 const AS_CLEAN = s => String(s ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/[\s　]+/g, " ").trim();
+// A ゲスト's 技能 as written on the sheet ("《噂話》\n《流行》") -> "噂話・流行"
+const AS_SKILL = s => AS_CLEAN(String(s ?? "").replace(/[《》〈〉]/g, " ")).split(" ").filter(Boolean).join("・");
 
 // トーキョーN◎VA THE AXLERATION: 能力値 / 制御値 for the four abilities, then 一般技能 and 特技 with levels.
 function asTnx(d) {
@@ -59,7 +61,7 @@ function as2s(d) {
   const quirks = Object.entries(d.abnormal || {}).filter(([k, v]) => /^text\d$/.test(k) && AS_CLEAN(v))
     .sort().map(([k, v], i) => ({ label: `癖${i + 1}`, value: AS_CLEAN(v) }));
   // ゲスト: NPCs met in the scenarios. 名前（技能） only (関係 and メモ would spoil scenarios). Only the 助手 shows them.
-  const guests = (d.guests || []).filter(g => AS_CLEAN(g?.name)).map(g => `・${AS_CLEAN(g.name)}${AS_CLEAN(g.skill) ? `（${AS_CLEAN(g.skill)}）` : ""}`);
+  const guests = (d.guests || []).filter(g => AS_CLEAN(g?.name)).map(g => `・${AS_CLEAN(g.name)}${AS_SKILL(g.skill) ? `（${AS_SKILL(g.skill)}）` : ""}`);
   return { params: quirks, skills: [], summary: [b.role, b.roleclass, b.background].map(AS_CLEAN).filter(Boolean).join("・"), stats: [], scenarios,
     notes: [quirks.length && "＜異常な癖＞\n" + quirks.map((q, i) => `${i + 1}：${q.value}`).join("\n"),
       guests.length && AS_CLEAN(b.role) !== "探偵" && "＜ゲスト＞\n" + guests.join("\n")].filter(Boolean).join("\n\n") };
@@ -108,10 +110,10 @@ function asFutari(d) {
     const m = t.match(/^思い出の品\s*[：:]\s*(.+)$/);
     if (m) memories.push({ item: AS_CLEAN(m[1]), scenario: scen });
   }
-  const guests = (d.guests || []).filter(g => AS_CLEAN(g?.name)).map(g => `・${AS_CLEAN(g.name)}${AS_CLEAN(g.skill) ? `（${AS_CLEAN(g.skill)}）` : ""}`);
+  const guests = (d.guests || []).filter(g => AS_CLEAN(g?.name)).map(g => `・${AS_CLEAN(g.name)}${AS_SKILL(g.skill) ? `（${AS_SKILL(g.skill)}）` : ""}`);
   const helper = me.role === "助手";
   return { base: "", detective: helper ? partner : me, assistant: helper ? me : partner, partnerUrl: partner.url,
     quirks: as2s(d).params.map(q => q.value), guests, memories };
 }
 
-if (typeof module !== "undefined") module.exports = { appspotToItem, asFutari };
+if (typeof module !== "undefined") module.exports = { appspotToItem, asFutari, AS_SKILL };

@@ -55,6 +55,11 @@ async function readPair(url) {
         const pd = JSON.parse(await get(`https://character-sheets.appspot.com/2s/display?ajax=1&key=${pk}`));
         const side = pair.detective.url ? pair.detective : pair.assistant;
         side.pl = String(pd.base?.player || "").trim();
+        // The ゲスト are kept on either sheet (or both): take the partner's too.
+        for (const g of asFutari(pd).guests) {
+          const name = g.replace(/（[^（）]*）$/, "");
+          if (!pair.guests.some(x => x.replace(/（[^（）]*）$/, "") === name)) pair.guests.push(g);
+        }
       } catch { /* the partner's sheet is not public */ }
     }
     // Both sheets of a pair give the same key.
