@@ -45,10 +45,10 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-sans);fo
 a{color:inherit}
 button{font:inherit;color:inherit;cursor:pointer}
 img{display:block}
-.wrap{max-width:1240px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
 
 /* ---------- hero ---------- */
-.hero{padding:clamp(40px,7vw,80px) 0 clamp(24px,4vw,40px);text-align:center;position:relative}
+.hero{padding-top:clamp(40px,7vw,80px);padding-bottom:clamp(24px,4vw,40px);text-align:center;position:relative}
 .hero .eyebrow{font-family:var(--f-latin);font-style:italic;font-size:clamp(1rem,2vw,1.25rem);letter-spacing:.32em;color:var(--accent);margin:0}
 .hero h1{font-family:var(--f-mincho);font-weight:800;font-size:clamp(2.6rem,9vw,5.6rem);letter-spacing:.18em;line-height:1.1;margin:.2em 0 .25em;padding-left:.18em}
 .hero .sub{font-family:var(--f-mincho);font-weight:500;line-height:1.6;letter-spacing:.24em;font-size:clamp(.95rem,2.2vw,1.15rem);margin:.9em 0 0;color:var(--muted);padding-left:.24em}
@@ -110,7 +110,8 @@ img{display:block}
 .empty{text-align:center;color:var(--muted);padding:60px 0}
 
 /* ---------- profile ---------- */
-.prof{padding:32px 0 90px}
+.hero .sub .nb{display:inline-block}
+.prof{padding-top:32px;padding-bottom:90px}
 .crumbs{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:26px;font-size:.88rem}
 .crumbs a{text-decoration:none;color:var(--muted);letter-spacing:.1em}
 .crumbs a:hover{color:var(--accent)}
@@ -364,7 +365,7 @@ function renderIndex(){
   $("root").innerHTML = `
   <header class="hero wrap">
     <p class="eyebrow">TRPG Character Archive</p>
-    <h1 class="sub">シザキカノトのTRPGキャラクター一覧</h1>
+    <h1 class="sub">シザキカノトの<span class="nb">TRPGキャラクター一覧</span></h1>
     <div class="rule" aria-hidden="true"><i></i></div>
   </header>
   <main class="wrap">
