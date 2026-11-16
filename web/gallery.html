@@ -615,14 +615,26 @@ function renderProfile(p){
    number right after HO or PC; "HO1兼HO2" counts under both. An HO with a name only (HO蜘蛛) has no number
    and is listed apart. Only lines with a 通過記録 row count (S.people already leaves out ギャラリー非表示). */
 const HO_MAX = 5;
-function hoNumbers(role){
+// The HO numbers at the start of the role, and how long that part is. A number that runs into a word
+// such as 代 or 時 ("HO310代後半の男性") is HO3 and a name "10代後半の男性". 兼任 only counts when it comes
+// right after the first number ("HO1兼HO2", "HO1・2"): a "、9時" later in the name is not one.
+const HO_UNIT = /^[代歳才時分秒年月日人回]/;
+function hoLead(role){
   const r = String(role||"").normalize("NFKC");
   const m = r.match(/^(?:HO|PC)[\s:：\-－]*(\d+)/i);
-  if (!m) return [];
-  const out = [Number(m[1])];
-  for (const x of r.slice(m[0].length).matchAll(/(?:兼|[・&/,、＆／])\s*(?:HO|PC)?[\s\-－]*(\d+)/gi)) if (!out.includes(Number(x[1]))) out.push(Number(x[1]));
-  return out;
+  if (!m) return {ns: [], len: 0};
+  const num = (d, after) => d.length > 1 && HO_UNIT.test(after) ? d[0] : d;
+  const first = num(m[1], r.slice(m[0].length));
+  let len = m[0].length - m[1].length + first.length;
+  const ns = [Number(first)];
+  if (first === m[1]) {
+    const more = /(?:兼|[・&/,、＆／])\s*(?:HO|PC)?[\s\-－]*(\d+)/iy;
+    for (let x; more.lastIndex = len, (x = more.exec(r)) && !HO_UNIT.test(r.slice(more.lastIndex)); len = more.lastIndex)
+      if (!ns.includes(Number(x[1]))) ns.push(Number(x[1]));
+  }
+  return {ns, len};
 }
+const hoNumbers = role => hoLead(role).ns;
 const isHoRole = role => /^(?:HO|PC\d)/i.test(String(role||"").normalize("NFKC"));
 const HO_S = {sys: "", axis: "pl", pl: "", hoTab: "", noteOpen: false};
 // くわしく stays as it was when the page redraws (a chip or tab press rebuilds it). toggle doesn't bubble.
@@ -679,8 +691,7 @@ function renderHo(){
   // A row reads "❌ HO名 名前": ❌ for a lost character, and the HO without its number (the bar already
   // says it): "HO1" and "HO1兼HO2" show nothing, "HO1英国テーラー" shows 英国テーラー. The 番号なし list keeps the whole HO.
   const lostMark = c => isLost(c) ? `<span class="lostx" role="img" aria-label="ロスト${c.system ? `（${esc(sysShort(c.system))}）` : ""}" title="ロスト${c.system ? `（${esc(sysShort(c.system))}）` : ""}">❌</span>` : "";
-  const hoName = role => isNamed ? role : String(role).replace(/^(?:HO|PC)[\s:：\-－]*[0-9０-９]+/i, "")
-    .replace(/^(?:\s*(?:兼|[・&/,、＆／])\s*(?:HO|PC)?[\s\-－]*[0-9０-９]+)+/i, "").replace(/^[\s:：・\-－]+/, "");
+  const hoName = role => isNamed ? role : String(role).normalize("NFKC").slice(hoLead(role).len).replace(/^[\s:：・\-－]+/, "");
   const runLi = r => { const h = hoName(r.role); return `<li${isLost(r.c) ? ` class="is-lost"` : ""}><span class="t">${esc(r.name)}</span><span class="who">${lostMark(r.c)}${h ? `<span class="role">${esc(h)}</span>` : ""}<a href="#/${encodeURIComponent(r.p.key)}" title="${esc(r.role)}">${esc(r.p.name)}</a>${isNamed ? `<span class="plk">${esc(plOf(r))}</span>` : ""}</span></li>`; };
   $("root").innerHTML = `
   <header class="hero wrap">
