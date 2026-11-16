@@ -72,10 +72,11 @@ function runsPlOf(takuPages) {
 }
 const runsBare = id => String(id).replace(/-/g, "");
 
-// "シナリオ名HO2" / "シナリオ名KPC" / "シナリオ名NPC" -> { base, ho, role }
+// "シナリオ名HO2" / "シナリオ名KPC" / "シナリオ名NPC" / "シナリオ名KPレス" -> { base, ho, role }
 function runsParseLine(line) {
   let t = String(line).trim(), role = "PL";
-  if (/KPC$/i.test(t)) { role = "KPC"; t = t.replace(/\s*KPC$/i, ""); }
+  if (/(?:[KG]P|GM)レス$/i.test(t)) { role = "KPレス"; t = t.replace(/\s*(?:[KG]P|GM)レス$/i, ""); }
+  else if (/KPC$/i.test(t)) { role = "KPC"; t = t.replace(/\s*KPC$/i, ""); }
   else if (/NPC$/.test(t)) { role = "NPC"; t = t.replace(/\s*NPC$/, ""); }
   const [base, ho] = notionSplitHo(t);
   return { base: base.trim(), ho: ho.trim(), role };
@@ -105,7 +106,8 @@ async function runsLoad(token, sheetDb) {
 // Every sheet line with its 卓報告 pages, and the 通過記録 page it would make.
 function runsIndex({ sheets, taku, rows }) {
   const runs = [];
-  for (const s of sheets) for (const line of s.lines) runs.push({ sheet: s, ...runsParseLine(line) });
+  // KPレス lines (技能成長シナリオ) have no 卓報告: no 通過記録 page, and nothing to report.
+  for (const s of sheets) for (const line of s.lines) { const r = runsParseLine(line); if (r.role !== "KPレス") runs.push({ sheet: s, ...r }); }
   // A sheet line that only partly matches a 卓報告 name takes that name: "Paranormal Crime Episode 1：…"
   // and "TRASH1" are 卓報告's "Paranormal Crime" and "TRASH", "公演型まれびとこぞりて" is "まれびとこぞりて",
   // and "ヤドリギあやかし探偵社" is its episodes when only one of them fits. The rest after

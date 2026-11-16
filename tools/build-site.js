@@ -329,7 +329,7 @@ async function runDates(token) {
 function linesDated(page, runs) {
   const out = {};
   for (const line of String(prop(page.properties["シナリオ"]) || "").split("\n").map(s => s.trim()).filter(Boolean)) {
-    const base = notionSplitHo(line.replace(/\s*(?:KPC|NPC)$/i, ""))[0].trim(), k = notionScenarioKey(base);
+    const base = notionSplitHo(line.replace(/\s*(?:KPC|NPC|[KG]Pレス|GMレス)$/i, ""))[0].trim(), k = notionScenarioKey(base);
     const hit = runs.filter(r => { const t = notionScenarioKey(r.title); return notionSameScenario(r.title, base) || t.length >= 4 && k.length >= 4 && (k.includes(t) || t.includes(k)); })
       .map(r => r.date).sort()[0];
     if (hit) out[line] = hit;

@@ -141,8 +141,9 @@ function notionMergeScenarios(have, add = []) {
   // A written short name ("ループ橋") stands for the one passed scenario whose name contains it
   // ("ループ橋でなにかが…"): that full name takes its place, keeping the written HO.
   const baseKey = t => notionScenarioKey(notionSplitHo(t)[0]);
-  // "よむとてとKPC" is the same scenario run as the KPC, not a fuller name of "よむとてと".
-  const isKpcOf = (t, k) => baseKey(t) === k + "kpc";
+  // "よむとてとKPC" is the same scenario run as the KPC, not a fuller name of "よむとてと" (nor is "…KPレス").
+  const ROLE_KEYS = ["kpc", notionScenarioKey("KPレス")];
+  const isKpcOf = (t, k) => ROLE_KEYS.some(r => baseKey(t) === k + r);
   const used = new Set();
   for (let i = 0; i < written; i++) {
     const k = baseKey(out[i]);
@@ -168,10 +169,12 @@ function notionMergeScenarios(have, add = []) {
     if (at < 0) {
       // "XKPC" marks the written "X" (even spelled a little differently) as run by the KPC,
       // unless the list also has "X" as a session of its own.
-      const plain = /KPC$/i.test(t) ? t.replace(/\s*KPC$/i, "") : "";
+      // The same for "XKPレス".
+      const role = (t.match(/(KPC|KPレス)$/i) || [])[1] || "";
+      const plain = role ? t.slice(0, -role.length).trim() : "";
       const j = plain && !adds.some(a => baseKey(a) === baseKey(plain))
-        ? out.findIndex(o => !/KPC$/i.test(o) && !notionSplitHo(o)[1] && notionSameScenario(o, plain)) : -1;
-      if (j >= 0) out[j] += "KPC"; else out.push(t);
+        ? out.findIndex(o => !/(KPC|KPレス)$/i.test(o) && !notionSplitHo(o)[1] && notionSameScenario(o, plain)) : -1;
+      if (j >= 0) out[j] += role.toUpperCase(); else out.push(t);
       continue;
     }
     const [base, ho] = notionSplitHo(out[at]);
@@ -184,6 +187,15 @@ function notionMergeScenarios(have, add = []) {
 // mentions several HOs is not used.
 function notionScenarioWithHo(name, memo) {
   name = String(name || "").trim();
+  // 「KPレス」「GMレス」「技能成長シナリオ」 in the name or the memo: a scenario played without a KP
+  // (to grow skills, say), with no 卓報告 behind it -> "シナリオ名KPレス".
+  // In the name only at the end or in brackets (「KPレスの館」 is a title); in the memo anywhere.
+  const TAG = "(?:技能成長シナリオ|[KGＫＧ][PＰ]レス|[GＧ][MＭ]レス)";
+  const IN_NAME = new RegExp(`[\\s　]*(?:[（(【\\[]${TAG}[）)】\\]]|${TAG}$)[\\s　]*`, "i");
+  if (IN_NAME.test(name) || new RegExp(TAG, "i").test(String(memo || ""))) {
+    const base = name.replace(IN_NAME, " ").trim();
+    return base ? `${base}KPレス` : "";
+  }
   if (!name || NOTION_HO.test(name)) return name;
   // NFKC so a full-width "ＨＯ" counts too; "HO「三根春花（みつねはるか）について」" gives 三根春花.
   // A line that is only an HO followed by a sheet link ("HO2" then "https://iachara.com/view/…")

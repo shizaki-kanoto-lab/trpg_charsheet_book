@@ -293,9 +293,9 @@ const rubyOf = c => c.ruby || ((String(c.name||"").match(/[(（]([^()（）]*)[)
 /* Scenario tags, same rules as the sheet book: an HO is written after the name or is a tag of its own. */
 const META_TAG = /^(?:[67]版|ロスト|.*コンバート|CoC転生|要確認)$/;
 const HO_AT = "HO(?=[0-9０-９:：\\-－α-ωΑ-Ω\\u3040-\\u30ff\\u3400-\\u9fff\\uff10-\\uff19]|$)";
-const ROLE_ONLY = new RegExp(`^(?:${HO_AT}|PC\\d|KPC$|NPC$)`);
-// KPC / NPC only at the very end: 「…KPCを攻略なんて聞いてませんが！？」 is part of a scenario name.
-const ROLE_SUFFIX = new RegExp(`^(.+?)((?:${HO_AT}|PC\\d).*|KPC|NPC)$`);
+const ROLE_ONLY = new RegExp(`^(?:${HO_AT}|PC\\d|KPC$|NPC$|[KG]Pレス$|GMレス$)`);
+// KPC / NPC / KPレス・GMレス (技能成長シナリオ) only at the very end: 「…KPCを攻略なんて聞いてませんが！？」 is part of a scenario name.
+const ROLE_SUFFIX = new RegExp(`^(.+?)((?:${HO_AT}|PC\\d).*|KPC|NPC|[KG]Pレス|GMレス)$`);
 function scenariosOf(c){
   const out = []; let pending = "";
   for (const t of (c.tags||[]).filter(t => !META_TAG.test(t))){

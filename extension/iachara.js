@@ -154,7 +154,7 @@ function iacharaToItem(sheet) {
     const hit = series.find(([b]) => notionScenarioKey(x).startsWith(notionScenarioKey(b)));
     return hit ? x + hit[1] : x;
   });
-  const tags = [six ? "6版" : "7版", ...(passed.length ? tagNames.filter(t => passed.some(x => notionSameScenario(x, t) || notionSameScenario(x, t.replace(/\s*(?:KPC|NPC|PC\d+)$/i, "")))) : tagNames), p.isLost ? "ロスト" : ""].filter(Boolean);
+  const tags = [six ? "6版" : "7版", ...(passed.length ? tagNames.filter(t => passed.some(x => notionSameScenario(x, t) || notionSameScenario(x, t.replace(/\s*(?:KPC|NPC|[KG]Pレス|GMレス|PC\d+)$/i, "")))) : tagNames), p.isLost ? "ロスト" : ""].filter(Boolean);
 
   return {
     url: "https://iachara.com/view/" + sheet.id,
