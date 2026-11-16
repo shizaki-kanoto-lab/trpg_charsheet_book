@@ -181,35 +181,6 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .scen li .no{font-family:var(--f-latin);font-style:italic;color:var(--accent);font-size:1rem;min-width:2ch}
 .scen li .t{font-family:var(--f-mincho);font-weight:500;overflow-wrap:anywhere}
 .scen li .r{font-size:.75rem;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);padding:0 8px;white-space:nowrap}
-/* ---------- HO傾向 (#ho) ---------- */
-.ho-link{display:inline-block;margin-top:18px;font-size:.85rem;letter-spacing:.14em;color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:1px}
-.ho-link:hover{opacity:.8}
-.ho{padding-bottom:60px}
-.ho .lead{text-align:center;color:var(--muted);font-size:.88rem;margin:-14px 0 30px}
-.ho .total{text-align:center;margin:0 0 6px;font-family:var(--f-mincho);letter-spacing:.12em;color:var(--muted)}
-.ho .total b{font-family:var(--f-latin);font-size:2.6rem;font-weight:600;color:var(--ink);margin:0 6px;letter-spacing:0}
-.hochart{position:relative;max-width:640px;margin:20px auto 0;padding:0 0 0 2.4em}
-.hochart .plot{position:relative;height:260px;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;align-items:end;border-bottom:1px solid var(--muted)}
-.hochart .grid-l{position:absolute;left:0;right:0;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);pointer-events:none}
-.hochart .grid-l span{position:absolute;right:calc(100% + 8px);top:-.7em;font-family:var(--f-latin);font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.4}
-.hochart .col{position:relative;height:100%;display:flex;align-items:flex-end;justify-content:center;background:none;border:0;padding:0;cursor:pointer}
-.hochart .col i{display:block;width:min(56px,62%);height:var(--h);min-height:2px;background:var(--accent);border-radius:4px 4px 0 0;transition:opacity .15s}
-.hochart .col .v{position:absolute;bottom:calc(var(--h) + 4px);left:0;right:0;text-align:center;font-family:var(--f-latin);font-weight:600;font-size:1.05rem;font-variant-numeric:tabular-nums}
-.hochart .col:hover i,.hochart .col:focus-visible i{opacity:.8}
-.hochart .col[aria-pressed="true"] i{outline:2px solid var(--ink);outline-offset:2px}
-.hochart .col:focus-visible{outline:none}
-.hochart .xs{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;margin-top:6px}
-.hochart .xs span{text-align:center;font-family:var(--f-latin);font-weight:600;letter-spacing:.06em;color:var(--muted)}
-.hotip{position:absolute;z-index:5;pointer-events:none;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:.82rem;line-height:1.5;box-shadow:0 6px 20px rgb(0 0 0 / .12);white-space:nowrap;transform:translate(-50%,-100%)}
-.hotip b{font-family:var(--f-latin);font-size:1rem}
-.ho .note{max-width:640px;margin:22px auto 0;color:var(--muted);font-size:.82rem;line-height:1.7}
-.hotable{max-width:640px;margin:10px auto 0;width:100%;border-collapse:collapse;font-size:.9rem}
-.hotable th,.hotable td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:baseline}
-.hotable th{font-weight:500;font-size:.78rem;letter-spacing:.14em;color:var(--muted)}
-.hotable td.n{font-family:var(--f-latin);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
-.hotable td .t{font-family:var(--f-mincho);font-weight:500}
-.hotable td .who{display:block;font-size:.78rem;color:var(--muted)}
-.ho .back{display:block;width:max-content;margin:40px auto 0;font-size:.85rem;letter-spacing:.14em;color:var(--accent);text-decoration:none}
 .foot{text-align:center;color:var(--muted);font-family:var(--f-latin);letter-spacing:.2em;font-size:.85rem;padding:20px 16px 40px}
 .foot .crowla{display:block;width:min(240px,64vw);height:auto;margin:0 auto 14px}
 .foot .crowla.d{display:none}
@@ -446,7 +417,6 @@ function renderIndex(){
     <p class="eyebrow">TRPG Character Archive</p>
     <h1 class="sub">シザキカノトの<span class="nb">TRPGキャラクター一覧</span></h1>
     <div class="rule" aria-hidden="true"><i></i></div>
-    <a class="ho-link" href="#ho">HOの傾向を見る →</a>
   </header>
   <main class="wrap">
     <div class="bar">
@@ -540,95 +510,10 @@ function renderProfile(p){
   if (more) more.onclick = () => { const c = shownSheet(p); $("story").textContent = splitNotes(c.notes).text; more.remove(); };
 }
 
-/* ---------- HO傾向 (#ho): which HO numbers come up most. ----------
-   One count per person, scenario and HO number: the same scenario on a 6版 and a 7版 sheet of one
-   character counts once. "HO1なになに" / "HO-1" / "PC1" count as 1 (the number right after HO or PC);
-   an HO with a name only (HO蜘蛛) has no number and is counted apart. */
-const HO_MAX = 5;
-const hoNumber = role => { const m = String(role||"").normalize("NFKC").match(/^(?:HO|PC)[\s:：\-－]*(\d+)/i); return m ? Number(m[1]) : null; };
-const HO_S = {sys: "", pick: null};
-function hoRuns(){
-  const seen = new Set(), out = [];
-  for (const p of S.people) for (const c of p.sheets){
-    if (HO_S.sys && c.system !== HO_S.sys) continue;
-    for (const x of scenariosOf(c)){
-      if (!/^(?:HO|PC\d)/i.test(x.role.normalize("NFKC"))) continue;
-      const n = hoNumber(x.role);
-      const k = `${p.key}|${x.name.normalize("NFKC").replace(/\s+/g, "")}|${n ?? x.role}`;
-      if (seen.has(k)) continue;
-      seen.add(k); out.push({n, role: x.role, name: x.name, who: p.name, key: p.key, system: c.system});
-    }
-  }
-  return out;
-}
-function renderHo(){
-  const all = hoRuns();
-  const numbered = all.filter(r => r.n != null);
-  const over = numbered.some(r => r.n > HO_MAX);
-  const bins = [...Array(HO_MAX).keys()].map(i => ({label: `HO${i+1}`, test: n => n === i+1}));
-  if (over) bins.push({label: `HO${HO_MAX+1}〜`, test: n => n > HO_MAX});
-  for (const b of bins) b.runs = numbered.filter(r => b.test(r.n));
-  const max = Math.max(1, ...bins.map(b => b.runs.length));
-  const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.ceil(max / step) * step;
-  const named = all.filter(r => r.n == null);
-  const systems = new Map();
-  for (const p of S.people) for (const c of p.sheets) if (scenariosOf(c).some(x => /^(?:HO|PC\d)/i.test(x.role.normalize("NFKC")))) systems.set(c.system, 1);
-  const pick = bins.find(b => b.label === HO_S.pick);
-  const rows = pick ? pick.runs : [];
-  $("root").innerHTML = `
-  <header class="hero wrap">
-    <p class="eyebrow">HO Tendency</p>
-    <h1 class="sub">HOの傾向</h1>
-    <div class="rule" aria-hidden="true"><i></i></div>
-  </header>
-  <main class="wrap ho">
-    <div class="bar">
-      <nav class="tabs" aria-label="システムで絞り込む">
-        <button type="button" data-hsys="" aria-pressed="${!HO_S.sys}">すべて</button>
-        ${[...systems.keys()].sort(bySystem).map(s => `<button type="button" data-hsys="${esc(s)}" aria-pressed="${HO_S.sys===s}">${esc(sysJa(s))}</button>`).join("")}
-      </nav>
-    </div>
-    <p class="total">HO番号のある通過<b>${numbered.length}</b>件</p>
-    <div class="hochart" style="--n:${bins.length}">
-      <div class="plot" role="group" aria-label="HO番号ごとの通過数">
-        ${[...Array(top / step + 1).keys()].map(i => `<div class="grid-l" style="bottom:${i*step/top*100}%"><span>${i*step}</span></div>`).join("")}
-        ${bins.map(b => `<button type="button" class="col" data-ho="${b.label}" aria-pressed="${HO_S.pick===b.label}" style="--h:${b.runs.length/top*100}%"
-            aria-label="${b.label}：${b.runs.length}件（${numbered.length ? Math.round(b.runs.length/numbered.length*100) : 0}%）"><i></i><span class="v">${b.runs.length}</span></button>`).join("")}
-      </div>
-      <div class="xs">${bins.map(b => `<span>${b.label}</span>`).join("")}</div>
-    </div>
-    <p class="note">「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。棒を押すと、そのHOの通過シナリオが下に出ます。${named.length ? `<br>番号のない名前だけのHO（${[...new Set(named.map(r => r.role))].slice(0, 6).map(esc).join("、")}${new Set(named.map(r => r.role)).size > 6 ? " など" : ""}）${named.length}件は数えていません。` : ""}</p>
-    <table class="hotable">
-      <thead><tr><th>${pick ? `${esc(pick.label)} のシナリオ` : "HO"}</th><th style="text-align:right">${pick ? "" : "件数"}</th></tr></thead>
-      <tbody>${pick
-        ? rows.map(r => `<tr><td><span class="t">${esc(r.name)}</span><span class="who">${esc(r.who)}・${esc(sysJa(r.system))}${r.role !== pick.label ? `・${esc(r.role)}` : ""}</span></td><td class="n"></td></tr>`).join("") || `<tr><td colspan="2">ありません</td></tr>`
-        : bins.map(b => `<tr><td>${b.label}</td><td class="n">${b.runs.length}件・${numbered.length ? Math.round(b.runs.length/numbered.length*100) : 0}%</td></tr>`).join("")}</tbody>
-    </table>
-    <a class="back" href="#">← キャラクター一覧へ</a>
-  </main>
-  ${FOOT}`;
-  document.title = "HOの傾向 | シザキカノトのTRPGキャラクター一覧";
-  const chart = document.querySelector(".hochart");
-  let tip = null;
-  const show = col => {
-    const b = bins.find(x => x.label === col.dataset.ho);
-    if (!tip){ tip = document.createElement("div"); tip.className = "hotip"; chart.append(tip); }
-    tip.innerHTML = `${b.label}　<b>${b.runs.length}</b>件（${numbered.length ? Math.round(b.runs.length/numbered.length*100) : 0}%）`;
-    const r = col.getBoundingClientRect(), c = chart.getBoundingClientRect(), bar = col.querySelector("i").getBoundingClientRect();
-    tip.style.left = `${r.left - c.left + r.width/2}px`; tip.style.top = `${bar.top - c.top - 30}px`;
-  };
-  const hide = () => { tip?.remove(); tip = null; };
-  for (const col of chart.querySelectorAll(".col")){
-    col.addEventListener("pointerenter", () => show(col)); col.addEventListener("pointerleave", hide);
-    col.addEventListener("focus", () => show(col)); col.addEventListener("blur", hide);
-  }
-}
-
 const FOOT = `<footer class="foot"><img class="crowla l" src="crowla-light.png" alt="隠れ家クロウラ CLAWLER THE HIDEOUT." width="761" height="158"><img class="crowla d" src="crowla-dark.png" alt="" width="761" height="158">© Shizaki Kanoto / 隠れ家クロウラ</footer>`;
 let lastIndexY = 0;
 function route(){
   if (!S.chars.length) return;
-  if (location.hash === "#ho"){ renderHo(); window.scrollTo(0, 0); return; }
   const m = location.hash.match(/^#\/(.+)$/);
   const p = m && S.people.find(x => x.key === decodeURIComponent(m[1]));
   // Opening a profile starts again from the list's system; the sheet buttons then change it.
@@ -640,10 +525,6 @@ document.addEventListener("click", e => {
   const tl = e.target.closest("[data-tl]");
   if (tl){ const d = $("tl"); if (d) tl.dataset.tl === "open" ? d.showModal() : d.close(); return; }
   if (e.target.matches("dialog.tl")){ e.target.close(); return; }   // a click on the backdrop
-  const hs = e.target.closest("[data-hsys]");
-  if (hs){ HO_S.sys = hs.dataset.hsys; HO_S.pick = null; renderHo(); return; }
-  const ho = e.target.closest("[data-ho]");
-  if (ho){ HO_S.pick = HO_S.pick === ho.dataset.ho ? null : ho.dataset.ho; renderHo(); document.querySelector(`[data-ho="${HO_S.pick || ho.dataset.ho}"]`)?.focus(); return; }
   const t = e.target.closest("[data-sys]");
   if (t){ S.sys = t.dataset.sys; store.set("gSys", S.sys); renderIndex(); return; }
   const sh = e.target.closest("[data-sheet]");
@@ -678,7 +559,7 @@ async function load(again){
   const m = location.hash.match(/^#\/(.+)$/);
   const p = m && S.people.find(x => x.key === decodeURIComponent(m[1]));
   const y = window.scrollY;
-  if (location.hash === "#ho") renderHo(); else if (p) renderProfile(p); else renderIndex();
+  if (p) renderProfile(p); else renderIndex();
   window.scrollTo(0, y);
 }
 try { new BroadcastChannel("charsheet-data").onmessage = () => load(true); } catch {}
