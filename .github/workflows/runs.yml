@@ -23,6 +23,10 @@ on:
         description: "卓報告・通過記録のシナリオ名の前後の空白を消す（書き込みはwriteもオン）"
         type: boolean
         default: false
+      ho_sheet:
+        description: "通過記録のHO列を、シート帳のシナリオ欄に写す（書き込みはwriteもオン）"
+        type: boolean
+        default: false
       prune:
         description: "いあきゃら・キャラッシュ・エモクロアのシートからなくなった行をゴミ箱へ移す"
         type: boolean
@@ -44,4 +48,4 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ vars.NOTION_DATABASE_ID }}
           ONLY: ${{ inputs.only }}
-        run: node tools/sync-runs.js ${{ inputs.write && '--write' || '' }} ${{ inputs.prune && '--prune' || '' }} ${{ inputs.pl && '--pl --pl-list' || '' }} ${{ inputs.refresh && '--refresh' || '' }} ${{ inputs.trim && '--trim' || '' }} "--only=$ONLY"
+        run: node tools/sync-runs.js ${{ inputs.write && '--write' || '' }} ${{ inputs.prune && '--prune' || '' }} ${{ inputs.pl && '--pl --pl-list' || '' }} ${{ inputs.refresh && '--refresh' || '' }} ${{ inputs.trim && '--trim' || '' }} ${{ inputs.ho_sheet && '--ho-sheet' || '' }} "--only=$ONLY"

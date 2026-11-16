@@ -120,7 +120,7 @@ function runsIndex({ sheets, taku, rows }, soloOf = {}) {
   for (const s of sheets) for (const line of s.lines) {
     const r = runsParseLine(line);
     if (r.role === "PL" && (soloOf[s.url] || []).some(x => notionSameScenario(x, line))) r.role = "GMレス";
-    runs.push({ sheet: s, ...r });
+    runs.push({ sheet: s, line, ...r });
   }
   // A sheet line that only partly matches a 卓報告 name takes that name: "Paranormal Crime Episode 1：…"
   // and "TRASH1" are 卓報告's "Paranormal Crime" and "TRASH", "公演型まれびとこぞりて" is "まれびとこぞりて",

@@ -47,6 +47,38 @@ async function main() {
   }
   const idx = runsIndex({ sheets, taku, rows });
   const { runs, takuOfName, existing } = idx;
+  // --ho-sheet: the HO written in 通過記録 (by hand, say "HO2電脳") goes back onto the sheet book's
+  // シナリオ line of that character, which the site reads. Only when one 通過記録 page fits the line
+  // and its HO says more than the line does (a line's "HO2電脳" is not cut back to the page's "HO2").
+  if (process.argv.includes("--ho-sheet")) {
+    const bare = id => String(id || "").replace(/-/g, "");
+    const nk = h => String(h || "").normalize("NFKC").replace(/\s+/g, "");
+    const edits = new Map();   // sheet id -> { sheet, lines, what }
+    for (const r of runs) {
+      const p = idx.plan(r);
+      const mine = rows.filter(w => w.chars.some(c => bare(c.id || c) === r.sheet.id) && (w.role || "PL") === r.role
+        && notionScenarioKey(w.title) === notionScenarioKey(p.title));
+      const hos = [...new Set(mine.map(w => w.ho.trim()).filter(Boolean))];
+      if (hos.length !== 1) continue;
+      const ho = hos[0];
+      if (nk(ho) === nk(r.ho) || nk(r.ho).startsWith(nk(ho))) continue;
+      const e = edits.get(r.sheet.id) || { sheet: r.sheet, lines: [...r.sheet.lines], what: [] };
+      const i = e.lines.findIndex(l => l === r.line);
+      if (i < 0) continue;
+      const tail = (r.line.match(/\s*(?:(?:[KG]P|GM)レス|KPC|NPC)$/i) || [""])[0];
+      e.lines[i] = `${r.base}${ho}${tail}`;
+      e.what.push(`${r.line} → ${e.lines[i]}`);
+      edits.set(r.sheet.id, e);
+    }
+    console.log(`${write ? "直した" : "直す予定の"}シート ${edits.size} 枚\n` + [...edits.values()].map(e => `${e.sheet.name}（${e.sheet.system}）\n  ` + e.what.join("\n  ")).join("\n"));
+    if (write) for (const e of edits.values()) {
+      const text = e.lines.join("\n"), chunks = [];
+      for (let k = 0; k < text.length; k += 2000) chunks.push({ text: { content: text.slice(k, k + 2000) } });
+      await notionRequest(token, `/pages/${e.sheet.id}`, { properties: { "シナリオ": { rich_text: chunks } } }, "PATCH");
+      await notionSleep(NOTION_GAP_MS);
+    }
+    return;
+  }
   console.log(`シート ${sheets.length} 枚、卓報告 ${taku.length} 件、通過記録 ${existing.size} 件`);
 
   const report = { added: 0, linked: 0, noTaku: [], shared: [], crossSystem: [] };
