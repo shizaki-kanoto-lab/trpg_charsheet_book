@@ -206,7 +206,8 @@ async function runsAddForSheets(token, sheetDb, urls, soloOf = {}) {
 // 取り直し: look again at the 通過記録 pages already made for these sheets (urls; null = every
 // sheet) and bring them up to date with the sheet book and 卓報告 as they stand now. Only fills in or
 // moves forward, so what was set by hand stays:
-//   卓報告  the 卓報告 pages it ties to now, when it can tell (never cleared)
+//   卓報告  only when empty: the 卓報告 pages it ties to now, when it can tell (links narrowed or
+//          chosen by hand, one session of several, stay as they are)
 //   立場    KPC / NPC / GMレス when the sheet says so (a bare line says nothing: PL never replaces)
 //   PL人数  1PL for GMレス, else from the 卓報告 when those changed or it is empty
 //   HO・システム  only when empty
@@ -218,7 +219,6 @@ async function runsPlanRefresh(token, sheetDb, urls, soloOf = {}) {
   const takuById = new Map(data.taku.map(t => [t.id, t]));
   const rowOf = new Map(data.rows.map(r => [`${r.chars[0]}|${notionScenarioKey(r.title)}|${notionScenarioKey(r.ho)}`, r]));
   const out = [], seen = new Set();
-  const same = (a, b) => [...a].sort().join(",") === [...b].sort().join(",");
   for (const r of idx.runs) {
     if (want && !want.has(r.sheet.url)) continue;
     const p = idx.plan(r);
@@ -229,9 +229,9 @@ async function runsPlanRefresh(token, sheetDb, urls, soloOf = {}) {
     const name = id => { const t = takuById.get(id); return t ? `${t.date || "日付なし"}` : "?"; };
     let taku = row.taku;
     const links = p.links.slice(0, 100).map(t => t.id);
-    if (links.length && !same(links, row.taku)) {
+    if (links.length && !row.taku.length) {
       props["卓報告"] = { relation: links.map(id => ({ id })) };
-      what.push(`卓報告: ${row.taku.length ? row.taku.map(name).join("・") : "（空）"} → ${links.map(name).join("・")}`);
+      what.push(`卓報告: （空） → ${links.map(name).join("・")}`);
       taku = links;
     }
     if (p.role !== "PL" && p.role !== row.role) {
