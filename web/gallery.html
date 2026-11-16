@@ -645,7 +645,8 @@ function hoRuns(){
     const name = x.series || x.name, k = p.key + "|" + name.normalize("NFKC").replace(/\s+/g, "");
     const r = by.get(k);
     if (!r){ by.set(k, {p, c, name, role: x.role, pl: x.pl}); continue; }
-    if (!r.role) r.role = x.role;
+    // The 7版 copy of a sheet may say just "HO5" where the 6版 one says "HO5警察組織所属": keep the one with the name.
+    if (!r.role || (x.role && x.role.length > r.role.length && x.role.normalize("NFKC").startsWith(r.role.normalize("NFKC")))) r.role = x.role;
     if (!r.pl) r.pl = x.pl;
     if ((c.updatedAt||0) > (r.c.updatedAt||0)) r.c = c;
   }
