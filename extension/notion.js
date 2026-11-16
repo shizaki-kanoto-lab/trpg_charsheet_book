@@ -228,12 +228,30 @@ function notionScenarios(r) {
   return notionMergeScenarios(clean(r.tags), clean(r.passed));
 }
 
+// 名前 and ふりがな as the sheet book keeps them. A reading written after the name moves to ふりがな:
+// "目白 織辺（めじろ おりべ）" -> 目白 織辺 / めじろ おりべ. An English name written after the katakana one
+// becomes the name, and the katakana its ふりがな: "アーサー・L・エバンス（Arthur Lestrade Evans）" ->
+// Arthur Lestrade Evans / アーサー・L・エバンス. Other brackets ("アサギ（仮）") stay. Full-width spaces
+// become half-width ones. A ふりがな already filled in is kept.
+function notionNameRuby(name, ruby) {
+  const sp = s => String(s || "").replace(/\u3000/g, " ").replace(/\s+/g, " ").trim();
+  let n = sp(name), r = sp(ruby);
+  const m = n.match(/^(.+?)\s*[（(]([^()（）]+)[)）]$/);
+  if (m) {
+    const out = m[1].trim(), inner = m[2].trim();
+    if (/^[A-Za-z][A-Za-z\s.'’\-]*$/.test(inner)) { n = inner; r = r || out; }
+    else if (/^[\u3040-\u30ff\s・＝=]+$/.test(inner)) { n = out; r = r || inner; }
+  }
+  return { name: n, ruby: r };
+}
+
 // The extension's item format -> the record saved to Notion.
 function notionRecordFromItem(item) {
   const d = item.ccfolia?.data || {};
   const tags = item.tags || [];
+  const { name, ruby } = notionNameRuby(item.name || d.name || "", item.ruby || "");
   return {
-    name: item.name || d.name || "", ruby: item.ruby || "", system: item.system || "", site: item.site || "",
+    name, ruby, system: item.system || "", site: item.site || "",
     summary: item.summary || "", tags, passed: item.passed || [], lost: tags.includes("ロスト"), url: item.url || d.externalUrl || "",
     resources: (d.status || []).map(s => ({ label: s.label, cur: s.value, max: s.max })),
     image: item.image || d.iconUrl || "",
@@ -358,5 +376,5 @@ async function notionAddNew(token, db, records, onProgress = () => {}) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { NOTION_DEFAULT_DB, NOTION_GAP_MS, NOTION_META_TAG, notionCleanTag, notionRequest, notionSleep, notionDbId, notionExistingUrls, notionMergeScenarios, notionScenarios, notionScenarioWithHo, notionSoloSplit, notionScenarioKey, notionSplitHo, notionSameScenario, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
+  module.exports = { notionNameRuby, NOTION_DEFAULT_DB, NOTION_GAP_MS, NOTION_META_TAG, notionCleanTag, notionRequest, notionSleep, notionDbId, notionExistingUrls, notionMergeScenarios, notionScenarios, notionScenarioWithHo, notionSoloSplit, notionScenarioKey, notionSplitHo, notionSameScenario, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
 }
