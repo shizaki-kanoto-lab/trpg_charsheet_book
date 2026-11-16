@@ -227,7 +227,12 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 /* How the page counts: a boxed note with an info mark. */
 .honote{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent-2);border-radius:8px;padding:12px 16px;color:var(--muted);font-size:.84rem;line-height:1.7}
 .honote svg{width:18px;height:18px;margin-top:2px;color:var(--accent-2)}
-.honote p{margin:0;color:var(--ink)}
+/* The first line stays; the rest is folded under くわしく until opened (kept open across redraws). */
+.honote summary{cursor:pointer;list-style:none;color:var(--ink)}
+.honote summary::-webkit-details-marker{display:none}
+.honote .more{margin-left:.6em;color:var(--accent);white-space:nowrap;font-size:.8rem}
+.honote .more::after{content:" ▸"}
+.honote details[open] .more::after{content:" ▾"}
 .honote ul{margin:4px 0 0;padding-left:1.2em}
 .hochart .col.zero{cursor:default}
 .hoacc{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -287,8 +292,9 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
   .figure{position:static;max-width:420px;width:100%;margin:0 auto}
 }
 /* Back to the top: a button at the bottom right while scrolled down, and a pull past the bottom. */
-.themesw{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:20;
-  width:46px;height:46px;box-shadow:0 6px 18px rgba(0,0,0,.14);border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--paper) 88%,transparent);
+/* Theme button: fixed at the top right. */
+.themesw{position:fixed;right:max(16px,env(safe-area-inset-right));top:max(16px,env(safe-area-inset-top));z-index:20;
+  width:42px;height:42px;box-shadow:0 6px 18px rgba(0,0,0,.14);border-radius:50%;border:1px solid var(--line);background:color-mix(in srgb,var(--paper) 88%,transparent);
   color:var(--ink);display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .themesw:hover{border-color:var(--accent);color:var(--accent)}
 .themesw:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -618,7 +624,9 @@ function hoNumbers(role){
   return out;
 }
 const isHoRole = role => /^(?:HO|PC\d)/i.test(String(role||"").normalize("NFKC"));
-const HO_S = {sys: "", axis: "pl", pl: "", hoTab: ""};
+const HO_S = {sys: "", axis: "pl", pl: "", hoTab: "", noteOpen: false};
+// くわしく stays as it was when the page redraws (a chip or tab press rebuilds it). toggle doesn't bubble.
+document.addEventListener("toggle", e => { if (e.target.matches?.("[data-honote]")) HO_S.noteOpen = e.target.open; }, true);
 function hoRuns(){
   const by = new Map();
   for (const p of S.people) for (const c of p.sheets) for (const x of scenariosOf(c)){
@@ -683,15 +691,15 @@ function renderHo(){
   <main class="wrap ho"><section class="hopage">
     <aside class="honote" aria-label="このグラフについて">
       <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="6" r="1.1" fill="currentColor"/><path d="M10 9v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <div>
-        <p>どのHOでシナリオを遊んだか数えたグラフです。</p>
+      <details data-honote${HO_S.noteOpen ? " open" : ""}>
+        <summary>どのHOでシナリオを遊んだか数えたグラフです。<span class="more">くわしく</span></summary>
         <ul>
           <li>同じキャラが同じシナリオを複数のシートに持っているときは1回で数えます。</li>
           <li>キャンペーンで話数ごとに分かれたシナリオも1シリーズとして扱います。</li>
           <li>「HO1兼HO2」のような兼任は、HO1とHO2の両方に1件ずつ数えます（このためグラフの数と表の数が合わない場合があります）。</li>
           <li>番号のないHOは、グラフに入れず「番号なし」のタブに一覧で出します。</li>
         </ul>
-      </div>
+      </details>
     </aside>
     <div class="ho-chips" role="group" aria-label="システムで絞り込む">
       <button type="button" data-hsys="" aria-pressed="${!HO_S.sys}">すべて</button>
