@@ -263,7 +263,7 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .horuns .t{font-family:var(--f-display);font-weight:500;font-size:.95rem;overflow-wrap:anywhere}
 .horuns .who{white-space:nowrap}
 .horuns .who a{color:var(--ink)}
-.horuns .who .role{margin:0 0 0 8px}
+.horuns .t .role{margin:0 0 0 8px}
 .horuns .who .lostmark{margin:0 8px 0 0}
 .horuns li.is-lost .who a{color:var(--muted)}
 @media (max-width:520px){.horuns li{grid-template-columns:1fr}.horuns .who{white-space:normal}.hoitem .pc{display:none}}
@@ -690,11 +690,11 @@ function renderHo(){
   const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.max(Math.ceil(max * 1.15 / step), Math.floor(max / step) + 1) * step;
   const pct = n => total ? Math.round(n / total * 100) : 0;
   const isNamed = tabKey === NAMED;
-  // A row reads "❌ 名前 HO名": ❌ for a lost character, and the HO without its number (the bar already
+  // A row reads "シナリオ HO名 … ❌ 名前": ❌ for a lost character, and the HO without its number (the bar already
   // says it): "HO1" and "HO1兼HO2" show nothing, "HO1英国テーラー" shows 英国テーラー. The 番号なし list keeps the whole HO.
   const lostMark = c => isLost(c) ? `<span class="lostx" role="img" aria-label="ロスト${c.system ? `（${esc(sysShort(c.system))}）` : ""}" title="ロスト${c.system ? `（${esc(sysShort(c.system))}）` : ""}">❌</span>` : "";
   const hoName = role => isNamed ? role : String(role).normalize("NFKC").slice(hoLead(role).len).replace(/^[\s:：・\-－]+/, "");
-  const runLi = r => { const h = hoName(r.role); return `<li${isLost(r.c) ? ` class="is-lost"` : ""}><span class="t">${esc(r.name)}</span><span class="who">${lostMark(r.c)}<a href="#/${encodeURIComponent(r.p.key)}" title="${esc(r.role)}">${esc(r.p.name)}</a>${h ? `<span class="role">${esc(h)}</span>` : ""}${isNamed ? `<span class="plk">${esc(plOf(r))}</span>` : ""}</span></li>`; };
+  const runLi = r => { const h = hoName(r.role); return `<li${isLost(r.c) ? ` class="is-lost"` : ""}><span class="t">${esc(r.name)}${h ? `<span class="role">${esc(h)}</span>` : ""}</span><span class="who">${lostMark(r.c)}<a href="#/${encodeURIComponent(r.p.key)}" title="${esc(r.role)}">${esc(r.p.name)}</a>${isNamed ? `<span class="plk">${esc(plOf(r))}</span>` : ""}</span></li>`; };
   $("root").innerHTML = `
   <header class="hero wrap">
     <p class="eyebrow">HO Tendency</p>
