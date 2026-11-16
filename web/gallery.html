@@ -181,6 +181,88 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .scen li .no{font-family:var(--f-latin);font-style:italic;color:var(--accent);font-size:1rem;min-width:2ch}
 .scen li .t{font-family:var(--f-mincho);font-weight:500;overflow-wrap:anywhere}
 .scen li .r{font-size:.75rem;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);padding:0 8px;white-space:nowrap}
+/* ---------- HO傾向 (#ho) ----------
+   The same page the sheet book had, in the gallery's colors: its tokens are mapped below. */
+.ho-link{display:inline-block;margin-top:18px;font-size:.85rem;letter-spacing:.14em;color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:1px}
+.ho-link:hover{opacity:.8}
+.ho{--surface:var(--paper);--surface-2:var(--soft);--copper:var(--accent);--f-display:var(--f-mincho);--f-mono:var(--f-latin);--f-body:var(--f-sans);padding-bottom:60px}
+.ho .hopage{font-size:15px;font-variant-numeric:lining-nums tabular-nums}
+.ho .lostmark{font-size:.75rem;font-weight:700;white-space:nowrap;color:var(--accent);border:1px solid currentColor;border-radius:4px;padding:0 5px;margin-right:8px;vertical-align:1px}
+.ho .role{display:inline-block;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);border-radius:4px;padding:0 7px;font-weight:700;font-size:.8rem;margin-left:6px;vertical-align:1px}
+.ho .none{color:var(--muted);font-size:.9rem}
+.ho button{font:inherit;cursor:pointer}
+.ho .back{display:block;width:max-content;margin:40px auto 0;font-size:.85rem;letter-spacing:.14em;color:var(--accent);text-decoration:none}
+.hopage{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.ho-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ho-chips button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 12px;font-size:.84rem;color:var(--muted)}
+.ho-chips button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface);font-weight:700}
+.hocard{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px 20px 16px}
+.hocard h2{margin:0 0 4px;font-family:var(--f-display);font-weight:800;font-size:1.05rem;letter-spacing:.1em}
+.hocard .sub{margin:0 0 14px;color:var(--muted);font-size:.84rem}
+.hocard .sub b{font-family:var(--f-mono);color:var(--ink);font-size:1rem;margin:0 2px}
+.hochart{position:relative;padding-left:2.2em}
+.hochart .plot{position:relative;height:240px;margin-top:12px;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;align-items:end;border-bottom:1px solid var(--muted)}
+.hochart .gl{position:absolute;left:0;right:0;border-top:1px solid color-mix(in srgb,var(--line) 75%,transparent);pointer-events:none}
+.hochart .gl span{position:absolute;right:calc(100% + 8px);top:-.75em;font-family:var(--f-mono);font-size:.74rem;color:var(--muted);line-height:1.5}
+.hochart .col{position:relative;height:100%;display:flex;align-items:flex-end;justify-content:center;background:none;border:0;padding:0;cursor:pointer}
+.hochart .col i{display:block;width:min(56px,62%);height:var(--h);background:var(--accent);border-radius:4px 4px 0 0;transition:opacity .15s}
+.hochart .col .v{position:absolute;bottom:calc(var(--h) + 4px);left:0;right:0;text-align:center;font-family:var(--f-mono);font-weight:700;font-size:.9rem}
+.hochart .col:hover i{opacity:.8}
+.hochart .col[aria-pressed="true"] i{outline:2px solid var(--copper);outline-offset:2px}
+.hochart .col:focus-visible{outline:none}
+.hochart .col:focus-visible i{outline:2px solid var(--ink);outline-offset:2px}
+.hochart .xs{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;margin-top:6px}
+.hochart .xs span{text-align:center;font-family:var(--f-mono);font-size:.84rem;color:var(--muted)}
+.hotip{position:absolute;z-index:5;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:.8rem;box-shadow:0 6px 20px rgb(0 0 0 / .14);white-space:nowrap;transform:translate(-50%,-100%)}
+.hotip b{font-family:var(--f-mono)}
+.honote{color:var(--muted);font-size:.82rem;line-height:1.7}
+.honote summary{cursor:pointer;list-style:none}
+.honote summary::-webkit-details-marker{display:none}
+.honote .more{margin-left:.5em;color:var(--accent);white-space:nowrap}
+.honote .more::after{content:" ▸"}
+.honote[open] .more::after{content:" ▾"}
+.honote ul{margin:6px 0 0;padding-left:1.2em}
+.hochart .col.zero{cursor:default}
+.hoacc{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.hoitem{border-top:1px solid var(--line);interpolate-size:allow-keywords}
+.hoitem:first-child{border-top:0}
+.hoitem summary,.hoitem.zero{display:grid;grid-template-columns:minmax(0,1fr) auto 18px;gap:12px;align-items:center;padding:10px 14px;list-style:none}
+.hoitem summary{cursor:pointer}
+.hoitem summary::-webkit-details-marker{display:none}
+.hoitem summary:hover{background:var(--surface-2)}
+.hoitem .k{font-family:var(--f-display);font-weight:800;font-size:1.02rem}
+.hoitem .n{font-family:var(--f-mono);font-size:.9rem;white-space:nowrap}
+.hoitem.zero{color:var(--muted)}
+.hoitem.zero .k{font-weight:500}
+.hoitem .chev{width:8px;height:8px;border-right:1.6px solid var(--muted);border-bottom:1.6px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .25s}
+.hoitem[open] .chev{transform:rotate(225deg) translate(-2px,-2px)}
+.hoitem.zero .chev{visibility:hidden}
+/* びよっと: the body grows from 0 with a little overshoot (Chrome animates the details content; elsewhere it just opens). */
+.hoitem::details-content{block-size:0;overflow:hidden;transition:block-size .38s cubic-bezier(.34,1.45,.55,1),content-visibility .38s allow-discrete}
+.hoitem[open]::details-content{block-size:auto}
+.hoitem[open] .hobody{animation:hopop .38s cubic-bezier(.34,1.45,.55,1)}
+@keyframes hopop{from{opacity:0;transform:translateY(-6px) scaleY(.96)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.hoitem::details-content{transition:none}.hoitem[open] .hobody{animation:none}}
+.hobody{padding:2px 14px 12px;border-top:1px dashed var(--line);transform-origin:top}
+.horuns{list-style:none;margin:0;padding:0}
+.horuns li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;padding:7px 0;border-bottom:1px dotted var(--line)}
+.horuns li:last-child{border-bottom:0}
+.horuns .t{font-family:var(--f-display);font-weight:700;overflow-wrap:anywhere}
+.horuns .who{white-space:nowrap}
+.horuns .who a{color:var(--ink)}
+.horuns .who .lostmark{margin:0 8px 0 0}
+.horuns li.is-lost .who a{color:var(--muted)}
+@media (max-width:520px){.horuns li{grid-template-columns:1fr}.horuns .who{white-space:normal}.hoitem .pc{display:none}}
+.hoaxis{display:inline-grid;grid-template-columns:1fr 1fr;width:max-content;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.hoaxis button{border:0;background:var(--surface);padding:4px 14px;font-size:.86rem;color:var(--muted);white-space:nowrap}
+.hoaxis button+button{border-left:1px solid var(--line)}
+.hoaxis button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:700}
+.horuns .plk{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);margin-left:8px}
+.hotabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.hotabs button{flex:none;border:0;background:none;padding:6px 14px 8px;font-size:.92rem;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.hotabs button small{font-family:var(--f-mono);font-weight:400;font-size:.76rem;margin-left:6px;opacity:.85}
+.hotabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--copper)}
+.hotabs button:hover{color:var(--ink)}
 .foot{text-align:center;color:var(--muted);font-family:var(--f-latin);letter-spacing:.2em;font-size:.85rem;padding:20px 16px 40px}
 .foot .crowla{display:block;width:min(240px,64vw);height:auto;margin:0 auto 14px}
 .foot .crowla.d{display:none}
@@ -302,7 +384,9 @@ function scenariosOf(c){
     if (ROLE_ONLY.test(t)){ const last = out[out.length-1]; if (last && !last.role) last.role = t; else pending = t; continue; }
     const m = t.match(ROLE_SUFFIX);
     const date = (c.dates || {})[t] || "";   // the 卓報告 date of this line (from 通過記録), when known
-    out.push(m ? {name:m[1].trim(), role:m[2], date} : {name:t, role:pending, date});
+    const pl = (c.pls || {})[t] || "";       // its PL人数 from 通過記録 ("不明" when empty; "" = no 通過記録 row)
+    const series = (c.series || {})[t] || "";   // 通過記録's シリーズ: an episode of a scenario told in episodes
+    out.push(m ? {name:m[1].trim(), role:m[2], date, pl, series} : {name:t, role:pending, date, pl, series});
     pending = "";
   }
   return out;
@@ -417,6 +501,7 @@ function renderIndex(){
     <p class="eyebrow">TRPG Character Archive</p>
     <h1 class="sub">シザキカノトの<span class="nb">TRPGキャラクター一覧</span></h1>
     <div class="rule" aria-hidden="true"><i></i></div>
+    <a class="ho-link" href="#ho">HOの傾向を見る →</a>
   </header>
   <main class="wrap">
     <div class="bar">
@@ -510,11 +595,150 @@ function renderProfile(p){
   if (more) more.onclick = () => { const c = shownSheet(p); $("story").textContent = splitNotes(c.notes).text; more.remove(); };
 }
 
+/* ---------- HO傾向 (#ho): which HO numbers come up most ----------
+   One count per person and scenario: a scenario on a 6版 and a 7版 sheet of one character counts once,
+   and so do the episodes of a series (通過記録's シリーズ). "HO1なになに" / "HO-1" / "PC1" count as 1, the
+   number right after HO or PC; "HO1兼HO2" counts under both. An HO with a name only (HO蜘蛛) has no number
+   and is listed apart. Only lines with a 通過記録 row count (S.people already leaves out ギャラリー非表示). */
+const HO_MAX = 5;
+function hoNumbers(role){
+  const r = String(role||"").normalize("NFKC");
+  const m = r.match(/^(?:HO|PC)[\s:：\-－]*(\d+)/i);
+  if (!m) return [];
+  const out = [Number(m[1])];
+  for (const x of r.slice(m[0].length).matchAll(/(?:兼|[・&/,、＆／])\s*(?:HO|PC)?[\s\-－]*(\d+)/gi)) if (!out.includes(Number(x[1]))) out.push(Number(x[1]));
+  return out;
+}
+const isHoRole = role => /^(?:HO|PC\d)/i.test(String(role||"").normalize("NFKC"));
+const HO_S = {sys: "", axis: "pl", pl: "", hoTab: "", noteOpen: false};
+function hoRuns(){
+  const by = new Map();
+  for (const p of S.people) for (const c of p.sheets) for (const x of scenariosOf(c)){
+    const name = x.series || x.name, k = p.key + "|" + name.normalize("NFKC").replace(/\s+/g, "");
+    const r = by.get(k);
+    if (!r){ by.set(k, {p, c, name, role: x.role, pl: x.pl}); continue; }
+    if (!r.role) r.role = x.role;
+    if (!r.pl) r.pl = x.pl;
+    if ((c.updatedAt||0) > (r.c.updatedAt||0)) r.c = c;
+  }
+  return [...by.values()].filter(r => isHoRole(r.role) && r.pl).map((r, id) => ({...r, id, ns: hoNumbers(r.role)}));
+}
+function renderHo(){
+  const runs = hoRuns();
+  const systems = [...new Set(runs.map(r => r.c.system).filter(Boolean))].sort(bySystem);
+  if (HO_S.sys && !systems.includes(HO_S.sys)) HO_S.sys = "";
+  const inSys = runs.filter(r => !HO_S.sys || r.c.system === HO_S.sys);
+  // Two ways round: PL人数 tabs with a bar per HO (axis "pl"), or HO tabs with a bar per PL人数 (axis "ho").
+  const PLS = ["1PL", "2PL", "3PL", "4PL", "5PL以上"];
+  const plOf = r => PLS.includes(r.pl) ? r.pl : "不明";
+  const hoOf = r => r.n > HO_MAX ? `HO${HO_MAX+1}〜` : `HO${r.n}`;
+  // One entry per HO number: a 兼任 run is in two bars.
+  const allNum = inSys.flatMap(r => r.ns.map(n => ({...r, n})));
+  const distinct = list => new Set(list.map(r => r.id)).size;
+  const plKeys = [...PLS, ...(allNum.some(r => plOf(r) === "不明") ? ["不明"] : [])];
+  const hoKeys = [...[...Array(HO_MAX).keys()].map(i => `HO${i+1}`), ...(allNum.some(r => r.n > HO_MAX) ? [`HO${HO_MAX+1}〜`] : [])];
+  const byPl = HO_S.axis !== "ho";
+  const tabOf = byPl ? plOf : hoOf, binOf = byPl ? hoOf : plOf;
+  const NAMED = "番号なし", allNamed = inSys.filter(r => !r.ns.length);
+  const tabs = [...(byPl ? plKeys : hoKeys).map(k => ({k, n: distinct(allNum.filter(r => tabOf(r) === k))})), ...(allNamed.length ? [{k: NAMED, n: allNamed.length}] : [])];
+  const cur = byPl ? "pl" : "hoTab";
+  if (!tabs.some(t => t.k === HO_S[cur])) HO_S[cur] = (byPl ? tabs.find(t => t.k === "2PL" && t.n) : null)?.k || (tabs.find(t => t.n) || tabs[0]).k;
+  const tabKey = HO_S[cur];
+  const numbered = allNum.filter(r => tabOf(r) === tabKey), total = distinct(numbered);
+  const shared = numbered.filter(r => r.ns.length > 1).length > 0;
+  const bins = (byPl ? hoKeys : plKeys).map(label => ({label, runs: numbered.filter(r => binOf(r) === label)}));
+  // An HO past the table's PL人数 can't happen (HO4 at a 3PL table): its empty slot keeps its place but
+  // shows no name or number. (One that does have runs is a mistake in the data, so it stays visible.)
+  const plN = k => /^(\d)PL$/.test(k) ? Number(k[0]) : Infinity, hoN = k => /^HO(\d+)$/.test(k) ? Number(k.slice(2)) : Infinity;
+  for (const b of bins) b.void = !b.runs.length && (byPl ? hoN(b.label) > plN(tabKey) : hoN(tabKey) > plN(b.label));
+  const max = Math.max(1, ...bins.map(b => b.runs.length));
+  // The scale always goes past the tallest bar (at least 15% and one grid step), so its number stays inside the chart.
+  const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.max(Math.ceil(max * 1.15 / step), Math.floor(max / step) + 1) * step;
+  const pct = n => total ? Math.round(n / total * 100) : 0;
+  const isNamed = tabKey === NAMED;
+  const lostMark = c => isLost(c) ? `<span class="lostmark">ロスト${c.system ? `（${esc(sysShort(c.system))}）` : ""}</span>` : "";
+  const runLi = r => `<li${isLost(r.c) ? ` class="is-lost"` : ""}><span class="t">${esc(r.name)}</span><span class="who">${lostMark(r.c)}<a href="#/${encodeURIComponent(r.p.key)}">${esc(r.p.name)}</a><span class="role after">${esc(r.role)}</span>${isNamed ? `<span class="plk">${esc(plOf(r))}</span>` : ""}</span></li>`;
+  $("root").innerHTML = `
+  <header class="hero wrap">
+    <p class="eyebrow">HO Tendency</p>
+    <h1 class="sub">HOの傾向</h1>
+    <div class="rule" aria-hidden="true"><i></i></div>
+  </header>
+  <main class="wrap ho"><section class="hopage">
+    <details class="honote" data-honote${HO_S.noteOpen ? " open" : ""}><summary>HOの通過を数えたものです。PL人数は通過記録から取り、「HO1なになに」「HO-1」「PC1」はHO1として数えます。<span class="more">くわしく</span></summary>
+      <ul>
+        <li>同じキャラが同じシナリオを複数のシートに持っているときは1回です。話の分かれたシナリオ（シリーズ）も1回です。</li>
+        <li>「HO1兼HO2」のような兼任は、HO1とHO2の両方に1件ずつ数えます（棒の合計が通過の件数より多くなることがあります）。</li>
+        <li>通過記録のないシナリオ（遊んでいる途中のものなど）と、ギャラリーに出していないキャラは数えません。</li>
+        ${plKeys.includes("不明") ? "<li>PL人数の分からない通過は「不明」に入れます。</li>" : ""}
+        <li>「HO蜘蛛」のように番号のないHOは、グラフに入れず「番号なし」のタブに一覧で出します。</li>
+        <li>棒か内訳の行を押すと、そのシナリオが開きます。</li>
+      </ul>
+    </details>
+    <div class="ho-chips" role="group" aria-label="システムで絞り込む">
+      <button type="button" data-hsys="" aria-pressed="${!HO_S.sys}">すべて</button>
+      ${systems.map(s => `<button type="button" data-hsys="${esc(s)}" aria-pressed="${HO_S.sys===s}">${esc(sysJa(s))}</button>`).join("")}
+    </div>
+    <div class="hoaxis" role="group" aria-label="見かた">
+      <button type="button" data-haxis="pl" aria-pressed="${byPl}">PL人数で見る</button><button type="button" data-haxis="ho" aria-pressed="${!byPl}">HOで見る</button>
+    </div>
+    <div class="hotabs" role="tablist" aria-label="${byPl ? "PL人数" : "HO"}">
+      ${tabs.map(t => `<button type="button" role="tab" data-htab="${t.k}" aria-selected="${tabKey===t.k}">${t.k}<small>${t.n}</small></button>`).join("")}
+    </div>
+    ${isNamed ? `<div class="hocard" role="tabpanel">
+      <h2>番号のないHO</h2>
+      <p class="sub">通過 <b>${allNamed.length}</b>件${HO_S.sys ? `（${esc(sysJa(HO_S.sys))}）` : ""}・グラフには入れていません</p>
+      <ul class="horuns">${[...allNamed].sort((a, b) => a.role.localeCompare(b.role, "ja") || a.name.localeCompare(b.name, "ja")).map(runLi).join("")}</ul>
+    </div>` : `
+    <div class="hocard" role="tabpanel">
+      <h2>${byPl ? `${esc(tabKey)}の卓のHO` : `${esc(tabKey)}を担当した卓のPL人数`}</h2>
+      <p class="sub">HO番号のある通過 <b>${total}</b>件${HO_S.sys ? `（${esc(sysJa(HO_S.sys))}）` : ""}${shared ? "・兼任は両方に数えています" : ""}</p>
+      ${total ? `<div class="hochart" style="--n:${bins.length}">
+        <div class="plot" role="group" aria-label="${byPl ? `${esc(tabKey)}の卓のHO番号ごとの通過数` : `${esc(tabKey)}のPL人数ごとの通過数`}">
+          ${[...Array(top / step + 1).keys()].map(i => `<div class="gl" style="bottom:${i*step/top*100}%"><span>${i*step}</span></div>`).join("")}
+          ${bins.map(b => b.runs.length
+            ? `<button type="button" class="col" data-ho="${b.label}" style="--h:${b.runs.length/top*100}%" aria-label="${b.label}：${b.runs.length}件（${pct(b.runs.length)}%）。押すと内訳を開く"><i></i><span class="v">${b.runs.length}</span></button>`
+            : b.void ? `<div class="col zero" aria-hidden="true"></div>`
+            : `<div class="col zero" style="--h:0%" aria-label="${b.label}：0件"><i></i><span class="v">0</span></div>`).join("")}
+        </div>
+        <div class="xs">${bins.map(b => `<span>${b.void ? "" : b.label}</span>`).join("")}</div>
+      </div>` : `<p class="none">${byPl ? "この人数の卓でHO番号のある通過はありません。" : "このHOの通過はありません。"}</p>`}
+    </div>
+    ${total ? `<div class="hoacc">${bins.map(b => b.runs.length
+      ? `<details class="hoitem" data-hoitem="${b.label}"><summary><span class="k">${b.label}</span><span class="n">${b.runs.length}件<span class="pc">・${pct(b.runs.length)}%</span></span><span class="chev" aria-hidden="true"></span></summary>
+          <div class="hobody"><ul class="horuns">${b.runs.map(runLi).join("")}</ul></div></details>`
+      : "").join("")}</div>` : ""}
+    `}
+  </section>
+  <a class="back" href="#">← キャラクター一覧へ</a>
+  </main>
+  ${FOOT}`;
+  document.title = "HOの傾向 | シザキカノトのTRPGキャラクター一覧";
+  const chart = $("root").querySelector(".hochart");
+  if (!chart) return;
+  let tip = null;
+  const show = col => {
+    const b = bins.find(x => x.label === col.dataset.ho);
+    if (!tip){ tip = document.createElement("div"); tip.className = "hotip"; chart.append(tip); }
+    tip.innerHTML = `${esc(tabKey)}・${b.label}　<b>${b.runs.length}</b>件（${pct(b.runs.length)}%）`;
+    const r = col.getBoundingClientRect(), c = chart.getBoundingClientRect(), bar = col.querySelector("i").getBoundingClientRect();
+    tip.style.left = `${r.left - c.left + r.width/2}px`; tip.style.top = `${bar.top - c.top - 26}px`;
+  };
+  const hide = () => { tip?.remove(); tip = null; };
+  for (const col of chart.querySelectorAll(".col[data-ho]")){   // 0件 bars have no tooltip
+    col.addEventListener("pointerenter", () => show(col)); col.addEventListener("pointerleave", hide);
+    col.addEventListener("focus", () => show(col)); col.addEventListener("blur", hide);
+  }
+}
+// くわしく stays as it was when the page redraws (a chip or tab press rebuilds it). toggle doesn't bubble.
+document.addEventListener("toggle", e => { if (e.target.matches?.("[data-honote]")) HO_S.noteOpen = e.target.open; }, true);
+
 const FOOT = `<footer class="foot"><img class="crowla l" src="crowla-light.png" alt="隠れ家クロウラ CLAWLER THE HIDEOUT." width="761" height="158"><img class="crowla d" src="crowla-dark.png" alt="" width="761" height="158">© Shizaki Kanoto / 隠れ家クロウラ</footer>`;
 let lastIndexY = 0;
 function route(){
   if (!S.chars.length) return;
   const m = location.hash.match(/^#\/(.+)$/);
+  if (location.hash === "#ho"){ renderHo(); window.scrollTo(0, 0); return; }
   const p = m && S.people.find(x => x.key === decodeURIComponent(m[1]));
   // Opening a profile starts again from the list's system; the sheet buttons then change it.
   if (p){ delete S.sheet[p.key]; renderProfile(p); window.scrollTo(0, 0); }
@@ -525,6 +749,14 @@ document.addEventListener("click", e => {
   const tl = e.target.closest("[data-tl]");
   if (tl){ const d = $("tl"); if (d) tl.dataset.tl === "open" ? d.showModal() : d.close(); return; }
   if (e.target.matches("dialog.tl")){ e.target.close(); return; }   // a click on the backdrop
+  const hs = e.target.closest("[data-hsys]");
+  if (hs){ HO_S.sys = hs.dataset.hsys; renderHo(); return; }
+  const ha = e.target.closest("[data-haxis]");
+  if (ha){ HO_S.axis = ha.dataset.haxis; renderHo(); $("root").querySelector(`[data-haxis="${HO_S.axis}"]`)?.focus(); return; }
+  const ht = e.target.closest("[data-htab]");
+  if (ht){ HO_S[HO_S.axis === "ho" ? "hoTab" : "pl"] = ht.dataset.htab; renderHo(); $("root").querySelector(`[data-htab="${ht.dataset.htab}"]`)?.focus(); return; }
+  const ho = e.target.closest("[data-ho]");
+  if (ho){ const d = $("root").querySelector(`[data-hoitem="${ho.dataset.ho}"]`); if (d){ d.open = true; d.scrollIntoView({behavior: smooth(), block: "nearest"}); } return; }
   const t = e.target.closest("[data-sys]");
   if (t){ S.sys = t.dataset.sys; store.set("gSys", S.sys); renderIndex(); return; }
   const sh = e.target.closest("[data-sheet]");
@@ -559,7 +791,7 @@ async function load(again){
   const m = location.hash.match(/^#\/(.+)$/);
   const p = m && S.people.find(x => x.key === decodeURIComponent(m[1]));
   const y = window.scrollY;
-  if (p) renderProfile(p); else renderIndex();
+  if (location.hash === "#ho") renderHo(); else if (p) renderProfile(p); else renderIndex();
   window.scrollTo(0, y);
 }
 try { new BroadcastChannel("charsheet-data").onmessage = () => load(true); } catch {}
