@@ -309,7 +309,8 @@ async function kedamonoChars(token) {
 // tied to one 卓報告 has a date: a row tied to several (すごろくしないと出られない部屋, played
 // five times with different characters) can't tell which session was this character's.
 // Every row also gives its PL人数 (1PL〜5PL以上, for the sheet book's HO傾向), dated or not.
-// Map of sheet page id -> [{title, date, solo, pl}]. Empty when they can't be read.
+// シリーズ: the series an episode belongs to (the sheet book shows the episodes as one scenario).
+// Map of sheet page id -> [{title, date, solo, pl, series}]. Empty when they can't be read.
 async function runDates(token) {
   const out = new Map();
   try {
@@ -319,18 +320,19 @@ async function runDates(token) {
       const solo = prop(pg.properties["立場"]) === "GMレス";
       const pl = prop(pg.properties["PL人数"]) || "";
       const title = prop(pg.properties["シナリオ"]) || "";
+      const series = prop(pg.properties["シリーズ"]) || "";
       for (const id of prop(pg.properties["キャラ"]) || []) {
         if (!out.has(id)) out.set(id, []);
-        out.get(id).push({ title, date: dates.length === 1 && dates[0] ? dates[0] : "", solo, pl });
+        out.get(id).push({ title, date: dates.length === 1 && dates[0] ? dates[0] : "", solo, pl, series });
       }
     }
   } catch (e) { console.log(`通過記録・卓報告を読めませんでした (${e.message})。ギャラリーの最初のシナリオはシートの順になります。`); }
   return out;
 }
 // The date and PL人数 of each of a sheet's シナリオ lines, from its 通過記録 rows
-// ({dates: {line: "YYYY-MM-DD"}, pls: {line: "4PL" | "不明"}}).
+// ({dates: {line: "YYYY-MM-DD"}, pls: {line: "4PL" | "不明"}, series: {line: "シリーズ名"}}).
 function linesDated(page, runs) {
-  const dates = {}, pls = {};
+  const dates = {}, pls = {}, series = {};
   for (const line of String(prop(page.properties["シナリオ"]) || "").split("\n").map(s => s.trim()).filter(Boolean)) {
     const base = notionSplitHo(line.replace(/\s*(?:KPC|NPC|[KG]Pレス|GMレス)$/i, ""))[0].trim(), k = notionScenarioKey(base);
     const rows = runs.filter(r => { const t = notionScenarioKey(r.title); return notionSameScenario(r.title, base) || t.length >= 4 && k.length >= 4 && (k.includes(t) || t.includes(k)); });
@@ -339,8 +341,10 @@ function linesDated(page, runs) {
     // A line with a 通過記録 row always gets an entry ("不明" when its PL人数 is empty): the sheet book's
     // HO傾向 counts only lines that have one.
     if (rows.length) pls[line] = rows.map(r => r.pl).find(Boolean) || "不明";
+    const ser = rows.map(r => r.series).find(Boolean);
+    if (ser) series[line] = ser;
   }
-  return { dates, pls };
+  return { dates, pls, series };
 }
 
 async function main() {
@@ -361,15 +365,17 @@ async function main() {
     const body = same ? { notes: old.notes, palette: old.palette, piece: old.piece } : await pageBody(token, page.id);
     if (same) reused++;
     const c = toChar(page, body);
-    const { dates: dated, pls } = linesDated(page, runs.get(page.id.replace(/-/g, "")) || []);
+    const { dates: dated, pls, series } = linesDated(page, runs.get(page.id.replace(/-/g, "")) || []);
     if (Object.keys(dated).length) c.dates = dated;
     if (Object.keys(pls).length) c.pls = pls;
+    if (Object.keys(series).length) c.series = series;
     // A scenario whose 通過記録 says 立場 GMレス shows as "シナリオ名GMレス" (the role badge in the gallery).
     const solo = (runs.get(page.id.replace(/-/g, "")) || []).filter(r => r.solo);
     if (solo.length) c.tags = c.tags.map(t => {
       if (/(?:KPC|NPC|[KG]Pレス|GMレス)$/i.test(t) || !solo.some(r => notionSameScenario(r.title, notionSplitHo(t)[0].trim()))) return t;
       if (c.dates?.[t]) { c.dates[t + "GMレス"] = c.dates[t]; delete c.dates[t]; }
       if (c.pls?.[t]) { c.pls[t + "GMレス"] = c.pls[t]; delete c.pls[t]; }
+      if (c.series?.[t]) { c.series[t + "GMレス"] = c.series[t]; delete c.series[t]; }
       return t + "GMレス";
     });
     chars.push(c);

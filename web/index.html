@@ -300,6 +300,9 @@ a.portrait{text-decoration:none}
 .castline a{color:var(--accent);text-decoration:none;font-family:var(--f-display);font-weight:800;font-size:1.02rem;letter-spacing:.02em}
 .castline a:hover{text-decoration:underline}
 .castline li.is-lost a{color:var(--muted)}
+.scentab .eps{list-style:none;margin:4px 0 0;padding:0;font-family:var(--f-body);font-weight:400;font-size:.76rem;letter-spacing:0;color:var(--muted);line-height:1.5}
+.scentab .eps li::before{content:"・"}
+.castline .epn{font-size:.72rem;color:var(--muted);margin-left:6px}
 @media (max-width:760px){
   .scentab thead{display:none}
   .scentab tr,.scentab tbody th,.scentab td{display:block;width:auto}
@@ -594,7 +597,8 @@ function scenariosOf(c){
     }
     const m = t.match(ROLE_SUFFIX);
     const pl = (c.pls || {})[t] || "";   // the PL人数 of this line from 通過記録 ("不明" when empty; "" = no 通過記録 row)
-    out.push(m ? {name:m[1].trim(), role:m[2], pl} : {name:t, role:pending, pl});
+    const series = (c.series || {})[t] || "";   // 通過記録's シリーズ: an episode of a scenario told in episodes
+    out.push(m ? {name:m[1].trim(), role:m[2], pl, series} : {name:t, role:pending, pl, series});
     pending = "";
   }
   return out;
@@ -609,22 +613,30 @@ function scenarioIndex(chars = S.chars){
   const shown = new Map();
   const nameKey = n => n.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xfee0));
   // One entry per person in a scenario: the newest sheet, with whichever sheet names the HO.
+  // The episodes of a series (通過記録's シリーズ) are one scenario under the series' name: one entry per
+  // person, with the episodes they played (eps).
   const people = new Map();
-  for (const c of chars) for (const {name: raw, role, pl} of scenariosOf(c)){
-    const nk = nameKey(raw);
-    if (!shown.has(nk)) shown.set(nk, raw);
+  for (const c of chars) for (const {name: raw, role, pl, series} of scenariosOf(c)){
+    const nk = nameKey(series || raw);
+    if (!shown.has(nk)) shown.set(nk, series || raw);
     const name = shown.get(nk);
     const k = nk + "\u0000" + personKey(c);
-    const x = people.get(k);
-    if (!x){ people.set(k, {name, c, role, pl}); continue; }
-    if (!x.role) x.role = role;
-    if (!x.pl) x.pl = pl;
-    if ((c.updatedAt||0) > (x.c.updatedAt||0)) x.c = c;
+    let x = people.get(k);
+    if (!x){ x = {name, c, role, pl, eps: []}; people.set(k, x); }
+    else {
+      if (!x.role) x.role = role;
+      if (!x.pl) x.pl = pl;
+      if ((c.updatedAt||0) > (x.c.updatedAt||0)) x.c = c;
+    }
+    if (series && !x.eps.some(e => nameKey(e) === nameKey(raw))) x.eps.push(raw);
   }
-  for (const {name, c, role, pl} of people.values()){
+  const epsOf = new Map();   // series name -> every episode anyone played
+  for (const {name, c, role, pl, eps} of people.values()){
     if (!map.has(name)) map.set(name, []);
-    map.get(name).push({c, role, pl});
+    map.get(name).push({c, role, pl, eps});
+    if (eps.length){ const all = epsOf.get(name) || []; for (const e of eps) if (!all.includes(e)) all.push(e); epsOf.set(name, all); }
   }
+  map.eps = epsOf;
   const roleKey = r => r ? r.replace(/\d+/, d => d.padStart(3,"0")) : "\uffff";
   for (const cast of map.values()) cast.sort((a,b) => roleKey(a.role).localeCompare(roleKey(b.role), "ja") || a.c.name.localeCompare(b.c.name, "ja"));
   scenarioIndex.memo.set(chars, map);
@@ -634,8 +646,8 @@ function filteredScenarios(){
   const terms = S.sq.trim().toLowerCase().split(/[\s　]+/).filter(Boolean);
   const out = [];
   for (const [name, cast] of scenarioIndex()){
-    const text = [name, ...cast.flatMap(x => [x.c.name, x.c.ruby, x.role])].join(" ").toLowerCase();
-    if (terms.every(t => text.includes(t))) out.push({name, cast});
+    const text = [name, ...cast.flatMap(x => [x.c.name, x.c.ruby, x.role, ...x.eps])].join(" ").toLowerCase();
+    if (terms.every(t => text.includes(t))) out.push({name, cast, eps: scenarioIndex().eps.get(name) || []});
   }
   return out.sort((a,b) => a.name.localeCompare(b.name, "ja"));
 }
@@ -660,6 +672,8 @@ function renderScenMain(){
   const box = $("scenSearch"); if (box.value !== S.sq) box.value = S.sq;
   renderScenTable();
 }
+// An episode's name without its series' ("ヤドリギあやかし探偵社 第一話 〈春〉…" -> "第一話 〈春〉…").
+const epLabel = (series, ep) => { const rest = ep.startsWith(series) ? ep.slice(series.length) : ep.normalize("NFKC").startsWith(series.normalize("NFKC")) ? ep.normalize("NFKC").slice(series.normalize("NFKC").length) : null; return rest == null ? ep : rest.replace(/^[\s\u3000:：・\-－]+/, "") || ep; };
 function renderScenTable(){
   const t = $("scenTable"); if (!t) return;
   if (!S.ready){ t.innerHTML = `<p class="loading">読み込んでいます…</p>`; return; }
@@ -667,9 +681,9 @@ function renderScenTable(){
   $("scenCount").textContent = S.sq.trim() ? `${items.length} / ${all}本` : `${all}本`;
   $("count").textContent = `${all}本`;
   if (!items.length){ t.innerHTML = `<p class="none">${all ? "条件に合うシナリオはありません。" : "シナリオ名のタグが付いたキャラクターがいません。"}</p>`; return; }
-  t.innerHTML = `<table class="scentab"><thead><tr><th scope="col">シナリオ</th><th scope="col">キャラクター・HO</th></tr></thead><tbody>${items.map(({name, cast}) =>
-    `<tr><th scope="row">${esc(name)}</th><td><ul class="castline">${cast.map(({c, role}) =>
-      `<li${isLost(c) ? ` class="is-lost"` : ""}><a href="#sheet=${encodeURIComponent(sheetKey(c))}" title="${esc(c.name)}">${esc(shortName(c.name))}</a>${role ? `<span class="role after">${esc(role)}</span>` : ""}${lostMark(c)}</li>`).join("")}</ul></td></tr>`).join("")}</tbody></table>`;
+  t.innerHTML = `<table class="scentab"><thead><tr><th scope="col">シナリオ</th><th scope="col">キャラクター・HO</th></tr></thead><tbody>${items.map(({name, cast, eps}) =>
+    `<tr><th scope="row">${esc(name)}${eps.length ? `<ol class="eps">${eps.map(e => `<li>${esc(epLabel(name, e))}</li>`).join("")}</ol>` : ""}</th><td><ul class="castline">${cast.map(({c, role, eps: mine}) =>
+      `<li${isLost(c) ? ` class="is-lost"` : ""}><a href="#sheet=${encodeURIComponent(sheetKey(c))}" title="${esc(c.name)}">${esc(shortName(c.name))}</a>${role ? `<span class="role after">${esc(role)}</span>` : ""}${eps.length > 1 && mine.length < eps.length ? `<span class="epn" title="${esc(mine.map(e => epLabel(name, e)).join("\n"))}">${eps.length}話中${mine.length}話</span>` : ""}${lostMark(c)}</li>`).join("")}</ul></td></tr>`).join("")}</tbody></table>`;
 }
 /* ---------- HOの傾向 (#ho) ----------
    One count per person and scenario (scenarioIndex: a scenario on a 6版 and a 7版 sheet of one
@@ -923,7 +937,7 @@ function renderMain(){
         <h2 class="name">${esc(c.name||"名無し")}${lostMark(c)}</h2>
         <div class="meta">
           ${c.system ? `<span class="pill">${esc(c.system)}</span>` : ""}
-          ${c.tags.filter(t=>t!=="ロスト" && !(c.system && /^[67]版$/.test(t))).map(t=>{   /* 6版/7版 says the same as the system pill */ const sc = scenariosOf({tags:[t]})[0]; return sc ? `<button class="tag" type="button" data-scen="${esc(sc.name)}" title="シナリオ「${esc(sc.name)}」の一覧へ">${esc(t)}</button>` : `<span class="tag">${esc(t)}</span>`; }).join("")}
+          ${c.tags.filter(t=>t!=="ロスト" && !(c.system && /^[67]版$/.test(t))).map(t=>{   /* 6版/7版 says the same as the system pill */ const sc = scenariosOf({tags:[t], series:c.series})[0]; const sn = sc && (sc.series || sc.name); return sc ? `<button class="tag" type="button" data-scen="${esc(sn)}" title="シナリオ「${esc(sn)}」の一覧へ">${esc(t)}</button>` : `<span class="tag">${esc(t)}</span>`; }).join("")}
         </div>
         ${c.summary ? `<p class="summary">${esc(c.summary)}</p>` : ""}
         <p style="margin:10px 0 0;display:flex;gap:16px;flex-wrap:wrap">

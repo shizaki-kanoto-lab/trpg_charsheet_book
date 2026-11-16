@@ -73,6 +73,15 @@ function runsPlOf(takuPages) {
 }
 const runsBare = id => String(id).replace(/-/g, "");
 
+// A scenario told in episodes, one session each: the series name the 通過記録's シリーズ欄 gets, so the
+// sheet book shows them as one ("ヤドリギあやかし探偵社 第一話 〈春〉…", "Paranormal Crime Episode 1：…",
+// "奇々怪々同好会 Chapter1「心霊プリ」"). "" for anything else. The column can be changed by hand.
+const RUNS_EPISODE = /^(.+?)[\s\u3000]*(?:(?:Episode|EP\.?|Chapter|Case|File)[\s\u3000]*[0-9０-９]+|第[0-9０-９一二三四五六七八九十]+[話章幕夜])/i;
+function runsSeriesOf(title) {
+  const m = String(title || "").trim().match(RUNS_EPISODE);
+  return m && m[1].trim().length >= 2 ? m[1].trim() : "";
+}
+
 // "シナリオ名HO2" / "シナリオ名KPC" / "シナリオ名NPC" / "シナリオ名KPレス" -> { base, ho, role }
 function runsParseLine(line) {
   let t = String(line).trim(), role = "PL";
@@ -99,7 +108,7 @@ async function runsLoad(token, sheetDb) {
     const p = pg.properties;
     return { id: runsBare(pg.id), chars: runsProp(p["キャラ"]) || [], title: runsProp(p["シナリオ"]) || "", ho: runsProp(p["HO"]) || "",
       system: runsProp(p["システム"]) || "", taku: runsProp(p["卓報告"]) || [], role: runsProp(p["立場"]) || "",
-      pl: runsProp(p["PL人数"]) || "" };
+      pl: runsProp(p["PL人数"]) || "", series: runsProp(p["シリーズ"]) || "" };
   });
   return { sheets, taku, rows };
 }
@@ -149,7 +158,11 @@ function runsIndex({ sheets, taku, rows }, soloOf = {}) {
   // One sheet line -> the page it makes: its title (卓報告's name), 卓報告 links and system.
   const plan = r => {
     const all = takuOf(r);
-    const title = all.length && r.role !== "GMレス" && !RUNS_KEEP_NAME.has(notionScenarioKey(r.base)) ? all[0].name : r.base;
+    // An episode keeps its own name even when 卓報告 has the series' name only (Paranormal Crime, three
+    // episodes in one session): one 通過記録 page per episode, tied together by シリーズ.
+    const series = runsSeriesOf(r.base);
+    const episode = series && all.length && !notionSameScenario(all[0].name, r.base);
+    const title = all.length && r.role !== "GMレス" && !episode && !RUNS_KEEP_NAME.has(notionScenarioKey(r.base)) ? all[0].name : r.base;
     const key = `${r.sheet.id}|${notionScenarioKey(title)}|${notionScenarioKey(r.ho)}`;
     const mine = all.filter(t => !RUNS_ROLE_OF[r.role] || RUNS_ROLE_OF[r.role].includes(t.role));
     const alone = playersOf.get(r.role + "|" + notionScenarioKey(r.base)).size === 1;
@@ -158,7 +171,7 @@ function runsIndex({ sheets, taku, rows }, soloOf = {}) {
     // A line whose 卓報告 is in another system (an エモクロア session copied onto the CoC original)
     // makes no page: the run belongs on the sheet of the system it was played in.
     const crossSystem = all.length > 0 && !runsSystemsAgree(RUNS_SYSTEM[r.sheet.system], system);
-    return { ...r, all, title, key, mine, links, system, crossSystem, exists: existing.has(key) };
+    return { ...r, all, title, key, mine, links, system, crossSystem, series: runsSeriesOf(title), exists: existing.has(key) };
   };
   return { runs, takuOf, basesOf, takuOfName: title => basesOf.get(notionScenarioKey(title)) || [], plan, existing };
 }
@@ -174,6 +187,7 @@ async function runsCreate(token, p) {
       "卓報告": { relation: p.links.slice(0, 100).map(t => ({ id: t.id })) },
       ...(RUN_SYSTEMS.has(p.system) ? { "システム": { select: { name: p.system } } } : {}),
       "HO": { rich_text: p.ho ? [{ text: { content: p.ho } }] : [] },
+      ...(p.series ? { "シリーズ": { select: { name: p.series } } } : {}),
       "立場": { select: { name: p.role } },
       ...(p.role === "GMレス" ? { "PL人数": { select: { name: "1PL" } } }
         : runsPlOf(p.links).label ? { "PL人数": { select: { name: runsPlOf(p.links).label } } } : {}),
@@ -210,7 +224,7 @@ async function runsAddForSheets(token, sheetDb, urls, soloOf = {}) {
 //          chosen by hand, one session of several, stay as they are)
 //   立場    KPC / NPC / GMレス when the sheet says so (a bare line says nothing: PL never replaces)
 //   PL人数  1PL for GMレス, else from the 卓報告 when those changed or it is empty
-//   HO・システム  only when empty
+//   HO・システム・シリーズ  only when empty
 // Returns the changes ({ id, label, props, what }) without writing; runsApplyRefresh writes them.
 async function runsPlanRefresh(token, sheetDb, urls, soloOf = {}) {
   const want = urls ? new Set(urls.filter(Boolean)) : null;
@@ -243,6 +257,7 @@ async function runsPlanRefresh(token, sheetDb, urls, soloOf = {}) {
     if (pl && pl !== row.pl) { props["PL人数"] = { select: { name: pl } }; what.push(`PL人数: ${row.pl || "（空）"} → ${pl}`); }
     if (!row.ho && p.ho) { props["HO"] = { rich_text: [{ text: { content: p.ho } }] }; what.push(`HO: （空） → ${p.ho}`); }
     if (!row.system && RUN_SYSTEMS.has(p.system)) { props["システム"] = { select: { name: p.system } }; what.push(`システム: （空） → ${p.system}`); }
+    if (!row.series && p.series) { props["シリーズ"] = { select: { name: p.series } }; what.push(`シリーズ: （空） → ${p.series}`); }
     if (what.length) out.push({ id: row.id, label: `${r.sheet.name}（${r.sheet.system}）：${row.title}${row.ho ? " " + row.ho : ""}`, props, what });
   }
   return out;
@@ -258,5 +273,5 @@ async function runsApplyRefresh(token, changes, onEach) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { RUNS_DB, TAKU_DB, RUNS_SYSTEM, RUN_SYSTEMS, runsSystemsAgree, runsPlOf, runsLoad, runsIndex, runsLabel, runsCreate, runsAddForSheets, runsPlanRefresh, runsApplyRefresh };
+  module.exports = { RUNS_DB, TAKU_DB, RUNS_SYSTEM, RUN_SYSTEMS, runsSystemsAgree, runsPlOf, runsSeriesOf, runsLoad, runsIndex, runsLabel, runsCreate, runsAddForSheets, runsPlanRefresh, runsApplyRefresh };
 }
