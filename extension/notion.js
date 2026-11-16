@@ -126,6 +126,13 @@ function notionJoinHo(lines) {
 // win: a passed scenario already there (in any spelling, with any HO) is not added again, and
 // only gives its HO (or its full name) to a written line that lacks it. Written lines drop only repeats of themselves
 // (same scenario and the same HO); the same scenario with two HOs stays.
+// ["XKPレス", "Y"] -> { lines: ["X", "Y"], solo: ["X"] }
+function notionSoloSplit(list) {
+  const solo = [];
+  const lines = (list || []).map(t => { const m = String(t).match(/^(.+?)\s*KPレス$/); if (m) solo.push(m[1]); return m ? m[1] : t; });
+  return { lines, solo };
+}
+
 function notionMergeScenarios(have, add = []) {
   const out = [];
   for (const t of notionJoinHo(have)) {
@@ -188,7 +195,8 @@ function notionMergeScenarios(have, add = []) {
 function notionScenarioWithHo(name, memo) {
   name = String(name || "").trim();
   // 「KPレス」「GMレス」「技能成長シナリオ」 in the name or the memo: a scenario played without a KP
-  // (to grow skills, say), with no 卓報告 behind it -> "シナリオ名KPレス".
+  // (to grow skills, say), with no 卓報告 behind it -> "シナリオ名KPレス", which notionSoloSplit takes
+  // apart again: the sheet book keeps the bare name, the 通過記録 page gets 立場 GMレス.
   // In the name only at the end or in brackets (「KPレスの館」 is a title); in the memo anywhere.
   const TAG = "(?:技能成長シナリオ|[KGＫＧ][PＰ]レス|[GＧ][MＭ]レス)";
   const IN_NAME = new RegExp(`[\\s　]*(?:[（(【\\[]${TAG}[）)】\\]]|${TAG}$)[\\s　]*`, "i");
@@ -347,5 +355,5 @@ async function notionAddNew(token, db, records, onProgress = () => {}) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { NOTION_DEFAULT_DB, NOTION_GAP_MS, NOTION_META_TAG, notionCleanTag, notionRequest, notionSleep, notionDbId, notionExistingUrls, notionMergeScenarios, notionScenarios, notionScenarioWithHo, notionScenarioKey, notionSplitHo, notionSameScenario, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
+  module.exports = { NOTION_DEFAULT_DB, NOTION_GAP_MS, NOTION_META_TAG, notionCleanTag, notionRequest, notionSleep, notionDbId, notionExistingUrls, notionMergeScenarios, notionScenarios, notionScenarioWithHo, notionSoloSplit, notionScenarioKey, notionSplitHo, notionSameScenario, notionRecordFromItem, notionRecordFromDoc, notionProperties, notionBlocks, notionAddNew };
 }

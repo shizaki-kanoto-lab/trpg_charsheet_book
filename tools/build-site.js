@@ -315,11 +315,12 @@ async function runDates(token) {
     const taku = new Map((await allPages(token, TAKU_DB)).map(pg => [pg.id.replace(/-/g, ""), prop(pg.properties["日付"])]));
     for (const pg of await allPages(token, RUNS_DB)) {
       const dates = (prop(pg.properties["卓報告"]) || []).map(id => taku.get(id));
-      if (dates.length !== 1 || !dates[0]) continue;
+      const solo = prop(pg.properties["立場"]) === "GMレス";
+      if (!solo && (dates.length !== 1 || !dates[0])) continue;
       const title = prop(pg.properties["シナリオ"]) || "";
       for (const id of prop(pg.properties["キャラ"]) || []) {
         if (!out.has(id)) out.set(id, []);
-        out.get(id).push({ title, date: dates[0] });
+        out.get(id).push({ title, date: dates.length === 1 ? dates[0] : "", solo });
       }
     }
   } catch (e) { console.log(`通過記録・卓報告を読めませんでした (${e.message})。ギャラリーの最初のシナリオはシートの順になります。`); }
@@ -331,7 +332,7 @@ function linesDated(page, runs) {
   for (const line of String(prop(page.properties["シナリオ"]) || "").split("\n").map(s => s.trim()).filter(Boolean)) {
     const base = notionSplitHo(line.replace(/\s*(?:KPC|NPC|[KG]Pレス|GMレス)$/i, ""))[0].trim(), k = notionScenarioKey(base);
     const hit = runs.filter(r => { const t = notionScenarioKey(r.title); return notionSameScenario(r.title, base) || t.length >= 4 && k.length >= 4 && (k.includes(t) || t.includes(k)); })
-      .map(r => r.date).sort()[0];
+      .map(r => r.date).filter(Boolean).sort()[0];
     if (hit) out[line] = hit;
   }
   return out;
@@ -357,6 +358,13 @@ async function main() {
     const c = toChar(page, body);
     const dated = linesDated(page, runs.get(page.id.replace(/-/g, "")) || []);
     if (Object.keys(dated).length) c.dates = dated;
+    // A scenario whose 通過記録 says 立場 GMレス shows as "シナリオ名GMレス" (the role badge in the gallery).
+    const solo = (runs.get(page.id.replace(/-/g, "")) || []).filter(r => r.solo);
+    if (solo.length) c.tags = c.tags.map(t => {
+      if (/(?:KPC|NPC|[KG]Pレス|GMレス)$/i.test(t) || !solo.some(r => notionSameScenario(r.title, notionSplitHo(t)[0].trim()))) return t;
+      if (c.dates?.[t]) { c.dates[t + "GMレス"] = c.dates[t]; delete c.dates[t]; }
+      return t + "GMレス";
+    });
     chars.push(c);
   }
 

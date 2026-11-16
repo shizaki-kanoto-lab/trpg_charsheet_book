@@ -27,7 +27,8 @@ const runsSystemsAgree = (sheetSys, runSys) => !sheetSys || !runSys || sheetSys 
 // The same person across sheets (a CoC sheet and its エモクロア conversion).
 const runsPersonKey = name => String(name || "").normalize("NFKC").replace(/[(（][^()（）]*[)）]\s*$/, "").replace(/[\s　・]+/g, "").toLowerCase();
 // 卓報告's PL/GM for each 立場: a PC played as a PL, or the KP's own character.
-const RUNS_ROLE_OF = { PL: ["PL"], KPC: ["KP", "DL", "GM", "SKP"] };
+// GMレス (KPレス, 技能成長シナリオ): no 卓報告 at all.
+const RUNS_ROLE_OF = { PL: ["PL"], KPC: ["KP", "DL", "GM", "SKP"], "GMレス": [] };
 
 // Scenario names the user confirmed (2026-11-10) where the sheet is right and only part matches 卓報告:
 // 卓報告's session under a fuller name (TRASH1 of TRASH1 / TRASH2; 探索者：Uの証言), which keeps
@@ -75,7 +76,7 @@ const runsBare = id => String(id).replace(/-/g, "");
 // "シナリオ名HO2" / "シナリオ名KPC" / "シナリオ名NPC" / "シナリオ名KPレス" -> { base, ho, role }
 function runsParseLine(line) {
   let t = String(line).trim(), role = "PL";
-  if (/(?:[KG]P|GM)レス$/i.test(t)) { role = "KPレス"; t = t.replace(/\s*(?:[KG]P|GM)レス$/i, ""); }
+  if (/(?:[KG]P|GM)レス$/i.test(t)) { role = "GMレス"; t = t.replace(/\s*(?:[KG]P|GM)レス$/i, ""); }
   else if (/KPC$/i.test(t)) { role = "KPC"; t = t.replace(/\s*KPC$/i, ""); }
   else if (/NPC$/.test(t)) { role = "NPC"; t = t.replace(/\s*NPC$/, ""); }
   const [base, ho] = notionSplitHo(t);
@@ -103,11 +104,15 @@ async function runsLoad(token, sheetDb) {
   return { sheets, taku, rows };
 }
 
-// Every sheet line with its 卓報告 pages, and the 通過記録 page it would make.
-function runsIndex({ sheets, taku, rows }) {
+// Every sheet line with its 卓報告 pages, and the 通過記録 page it would make. soloOf: 元シート URL ->
+// the scenarios that sheet played without a KP (the source sheet says so; the sheet book keeps only the name).
+function runsIndex({ sheets, taku, rows }, soloOf = {}) {
   const runs = [];
-  // KPレス lines (技能成長シナリオ) have no 卓報告: no 通過記録 page, and nothing to report.
-  for (const s of sheets) for (const line of s.lines) { const r = runsParseLine(line); if (r.role !== "KPレス") runs.push({ sheet: s, ...r }); }
+  for (const s of sheets) for (const line of s.lines) {
+    const r = runsParseLine(line);
+    if (r.role === "PL" && (soloOf[s.url] || []).some(x => notionSameScenario(x, line))) r.role = "GMレス";
+    runs.push({ sheet: s, ...r });
+  }
   // A sheet line that only partly matches a 卓報告 name takes that name: "Paranormal Crime Episode 1：…"
   // and "TRASH1" are 卓報告's "Paranormal Crime" and "TRASH", "公演型まれびとこぞりて" is "まれびとこぞりて",
   // and "ヤドリギあやかし探偵社" is its episodes when only one of them fits. The rest after
@@ -144,7 +149,7 @@ function runsIndex({ sheets, taku, rows }) {
   // One sheet line -> the page it makes: its title (卓報告's name), 卓報告 links and system.
   const plan = r => {
     const all = takuOf(r);
-    const title = all.length && !RUNS_KEEP_NAME.has(notionScenarioKey(r.base)) ? all[0].name : r.base;
+    const title = all.length && r.role !== "GMレス" && !RUNS_KEEP_NAME.has(notionScenarioKey(r.base)) ? all[0].name : r.base;
     const key = `${r.sheet.id}|${notionScenarioKey(title)}|${notionScenarioKey(r.ho)}`;
     const mine = all.filter(t => !RUNS_ROLE_OF[r.role] || RUNS_ROLE_OF[r.role].includes(t.role));
     const alone = playersOf.get(r.role + "|" + notionScenarioKey(r.base)).size === 1;
@@ -170,24 +175,26 @@ async function runsCreate(token, p) {
       ...(RUN_SYSTEMS.has(p.system) ? { "システム": { select: { name: p.system } } } : {}),
       "HO": { rich_text: p.ho ? [{ text: { content: p.ho } }] : [] },
       "立場": { select: { name: p.role } },
-      ...(runsPlOf(p.links).label ? { "PL人数": { select: { name: runsPlOf(p.links).label } } } : {}),
+      ...(p.role === "GMレス" ? { "PL人数": { select: { name: "1PL" } } }
+        : runsPlOf(p.links).label ? { "PL人数": { select: { name: runsPlOf(p.links).label } } } : {}),
     },
   });
 }
 
 // The extension, after sending sheets to the sheet book: adds the 通過記録 pages of those sheets
-// (by 元シート URL) that tie to 卓報告. A line with no 卓報告 to link is only reported, so rows
-// deleted by hand (no 卓報告 for them) are not made again.
-async function runsAddForSheets(token, sheetDb, urls) {
+// (by 元シート URL) that tie to 卓報告, and those the source sheet marks as played without a KP (立場
+// GMレス, 1PL). Another line with no 卓報告 to link is only reported, so rows deleted by hand (no 卓報告
+// for them) are not made again.
+async function runsAddForSheets(token, sheetDb, urls, soloOf = {}) {
   const want = new Set(urls.filter(Boolean));
   const data = await runsLoad(token, sheetDb);
-  const idx = runsIndex(data);
+  const idx = runsIndex(data, soloOf);
   const result = { added: [], unlinked: [] };
   for (const r of idx.runs) {
     if (!want.has(r.sheet.url)) continue;
     const p = idx.plan(r);
     if (p.exists || idx.existing.has(p.key) || p.crossSystem) continue;
-    if (!p.links.length) { result.unlinked.push(runsLabel(p)); continue; }
+    if (!p.links.length && p.role !== "GMレス") { result.unlinked.push(runsLabel(p)); continue; }
     idx.existing.add(p.key);
     await runsCreate(token, p);
     result.added.push(runsLabel(p));

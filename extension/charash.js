@@ -79,8 +79,11 @@ function chPassed(sheet) {
   const echoes = (sheet.data?.systems?.[sheet.system]?.echoes || []).map(x => clean(x?.scenario)).filter(Boolean);
   const sessions = (sheet.data?.shared?.sessions || []).filter(s => chSameSystem(sheet.system, s?.system))
     .map(s => notionScenarioWithHo(clean(s?.scenario), s?.memo)).filter(Boolean);
-  return [...sessions, ...echoes];
+  return [...notionSoloSplit(sessions).lines, ...echoes];
 }
+// The scenarios played without a KP, from 参加セッション's memo (see notionScenarioWithHo).
+const chSolo = sheet => notionSoloSplit((sheet.data?.shared?.sessions || []).filter(s => chSameSystem(sheet.system, s?.system))
+  .map(s => notionScenarioWithHo(String(s?.scenario || "").trim(), s?.memo))).solo;
 // エモクロア sheets take their scenarios only from 残響の記録 and 参加セッション: the sheet's tags
 // keep only marks such as 「CoCコンバート」, since scenario tags there often name sessions of the
 // character's CoC original.
@@ -101,7 +104,7 @@ function charashToItem(sheet) {
     system: CH_SYSTEMS[sys] || sys || "",
     summary: sh.occupation || "",
     tags: [...chTags(sheet, sh.tags || []), sh.lost ? "ロスト" : ""].filter(Boolean),
-    passed: chPassed(sheet),
+    passed: chPassed(sheet), solo: chSolo(sheet),
     notes: [profile.join("\n"), ...memos].filter(Boolean).join("\n\n"),
     skills: [],
     ccfolia: null,

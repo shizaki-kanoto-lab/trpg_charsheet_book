@@ -141,7 +141,8 @@ function iacharaToItem(sheet) {
   ].filter(Boolean);
   const notes = [profileLines.join("\n"), d.memo || ""].filter(Boolean).join("\n\n");
   // 通過シナリオ: [{ name, memo }]
-  let passed = (Array.isArray(d.passedScenarios) ? d.passedScenarios : []).map(s => notionScenarioWithHo(s?.name, s?.memo)).filter(Boolean);
+  // KPレス scenarios (技能成長シナリオ) keep the bare name; solo goes to 通過記録 as 立場 GMレス.
+  let { lines: passed, solo } = notionSoloSplit((Array.isArray(d.passedScenarios) ? d.passedScenarios : []).map(s => notionScenarioWithHo(s?.name, s?.memo)).filter(Boolean));
   // A sheet that lists its 通過シナリオ takes its scenarios from there only: a tag then just names the
   // HO of a passed scenario it matches ("彼方からの君に捧ぐHO3"), and other tags (「船上の生命線NPC改変」,
   // tags copied from the 6版 sheet) add nothing. A sheet with no 通過シナリオ keeps its tags as scenarios.
@@ -163,7 +164,7 @@ function iacharaToItem(sheet) {
     ruby: p.furi || "",
     system: six ? "クトゥルフ神話TRPG 6版" : "クトゥルフ神話TRPG 7版",
     summary: p.profession || "",
-    tags, passed, notes, skills,
+    tags, passed, solo, notes, skills,
     image: (p.icons || []).find(i => i?.url)?.url || "",   // the first image shown on the sheet
     ccfolia: { kind: "character", data: { name: p.name || sheet.name || "", memo: "", initiative: v.dex, externalUrl: "https://iachara.com/view/" + sheet.id, status, params, commands } },
   };

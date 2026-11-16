@@ -93,7 +93,7 @@ async function send(list) {
 async function sendRuns(list, before) {
   setMsg(before + "\n通過記録を確かめています…");
   try {
-    const r = await runsAddForSheets(notion.token, notion.db, list.map(i => i.url));
+    const r = await runsAddForSheets(notion.token, notion.db, list.map(i => i.url), Object.fromEntries(list.map(i => [i.url, i.solo || []])));
     const lines = [before, r.added.length ? `通過記録に${r.added.length}件追加しました:\n` + r.added.join("\n") : "通過記録は変わりません",
       r.unlinked.length ? `卓報告とつなげられないので通過記録に入れなかったもの ${r.unlinked.length}件:\n` + r.unlinked.join("\n") : ""];
     setMsg(lines.filter(Boolean).join("\n"));
