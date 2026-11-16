@@ -233,7 +233,13 @@ a.portrait{text-decoration:none}
 .hochart .xs span{text-align:center;font-family:var(--f-mono);font-size:.84rem;color:var(--muted)}
 .hotip{position:absolute;z-index:5;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:.8rem;box-shadow:0 6px 20px rgb(0 0 0 / .14);white-space:nowrap;transform:translate(-50%,-100%)}
 .hotip b{font-family:var(--f-mono)}
-.honote{margin:12px 0 0;color:var(--muted);font-size:.8rem;line-height:1.7}
+.honote{color:var(--muted);font-size:.82rem;line-height:1.7}
+.honote summary{cursor:pointer;list-style:none}
+.honote summary::-webkit-details-marker{display:none}
+.honote .more{margin-left:.5em;color:var(--accent);white-space:nowrap}
+.honote .more::after{content:" ▸"}
+.honote[open] .more::after{content:" ▾"}
+.honote ul{margin:6px 0 0;padding-left:1.2em}
 .hochart .col.zero{cursor:default}
 .hoacc{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .hoitem{border-top:1px solid var(--line);interpolate-size:allow-keywords}
@@ -736,7 +742,17 @@ function renderHoMain(){
   const isNamed = tabKey === NAMED;
   const runLi = r => `<li${isLost(r.c) ? ` class="is-lost"` : ""}><span class="t">${esc(r.name)}</span><span class="who">${lostMark(r.c)}<a href="#sheet=${encodeURIComponent(sheetKey(r.c))}" title="${esc(r.c.name)}">${esc(shortName(r.c.name))}</a><span class="role after">${esc(r.role)}</span>${isNamed ? `<span class="plk">${esc(plOf(r))}</span>` : ""}</span></li>`;
   $("count").textContent = `HO ${isNamed ? allNamed.length : numbered.length}件`;
+  // How the page counts: one short line at the top, the rest folded under くわしく (stays open across redraws).
   m.innerHTML = `<section class="hopage">
+    <details class="honote" data-honote${HO_S.noteOpen ? " open" : ""}><summary>HOの通過を数えたものです。PL人数は通過記録のPL人数欄から取り、「HO1なになに」「HO-1」「PC1」はHO1として数えます。<span class="more">くわしく</span></summary>
+      <ul>
+        <li>同じキャラが同じシナリオを複数のシートに持っているときは1回です。話の分かれたシナリオ（通過記録のシリーズ）も1回です。</li>
+        <li>通過記録のないシナリオ（遊んでいる途中のものなど）と、ギャラリー非表示のシートは数えません。</li>
+        ${plKeys.includes("不明") ? "<li>PL人数欄が空の行は「不明」に入れます。</li>" : ""}
+        <li>「HO蜘蛛」のように番号のないHOは、グラフに入れず「番号なし」のタブに一覧で出します。</li>
+        <li>棒か内訳の行を押すと、そのシナリオが開きます。</li>
+      </ul>
+    </details>
     <div class="ho-chips" role="group" aria-label="システムで絞り込む">
       <button type="button" data-hsys="" aria-pressed="${!HO_S.sys}">すべて</button>
       ${systems.map(s => `<button type="button" data-hsys="${esc(s)}" aria-pressed="${HO_S.sys===s}">${esc(sysShort(s))}</button>`).join("")}
@@ -765,7 +781,6 @@ function renderHoMain(){
         </div>
         <div class="xs">${bins.map(b => `<span>${b.void ? "" : b.label}</span>`).join("")}</div>
       </div>` : `<p class="none">${byPl ? "この人数の卓でHO番号のある通過はありません。" : "このHOの通過はありません。"}</p>`}
-      <p class="honote">PL人数は通過記録のPL人数欄から取ります${plKeys.includes("不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。通過記録のないシナリオ（遊んでいる途中のものなど）と、ギャラリー非表示のシートは数えません。棒か下の行を押すと、そのシナリオが開きます。${allNamed.length ? "<br>「HO蜘蛛」のように番号のないHOは、グラフに入れず「番号なし」のタブに一覧で出します。" : ""}</p>
     </div>
     ${numbered.length ? `<div class="hoacc">${bins.map(b => b.runs.length
       ? `<details class="hoitem" data-hoitem="${b.label}"><summary><span class="k">${b.label}</span><span class="n">${b.runs.length}件<span class="pc">・${pct(b.runs.length)}%</span></span><span class="chev" aria-hidden="true"></span></summary>
@@ -1096,6 +1111,8 @@ S.group = store.get("groupByName") !== "0";
 $("groupToggle").checked = S.group;
 $("filters").open = store.get("filtersOpen") !== "0";
 $("filters").addEventListener("toggle", () => store.set("filtersOpen", $("filters").open ? "1" : "0"));
+// HO傾向's くわしく stays as it was when the page redraws (a chip or tab press rebuilds it). toggle doesn't bubble.
+document.addEventListener("toggle", e => { if (e.target.matches?.("[data-honote]")) HO_S.noteOpen = e.target.open; }, true);
 if (!location.hash && store.get("view") === "scen") history.replaceState(null, "", "#scen");
 route();
 S.mcp = undefined;
