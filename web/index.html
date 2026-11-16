@@ -269,6 +269,7 @@ a.portrait{text-decoration:none}
 .hoaxis button{border:0;background:var(--surface);padding:4px 14px;font-size:.86rem;color:var(--muted);white-space:nowrap}
 .hoaxis button+button{border-left:1px solid var(--line)}
 .hoaxis button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:700}
+.horuns .plk{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);margin-left:8px}
 .hotabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
 .hotabs button{flex:none;border:0;background:none;padding:6px 14px 8px;font-size:.92rem;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
 .hotabs button small{font-family:var(--f-mono);font-weight:400;font-size:.76rem;margin-left:6px;opacity:.85}
@@ -702,19 +703,21 @@ function renderHoMain(){
   const hoKeys = [...[...Array(HO_MAX).keys()].map(i => `HO${i+1}`), ...(allNum.some(r => r.n > HO_MAX) ? [`HO${HO_MAX+1}〜`] : [])];
   const byPl = HO_S.axis !== "ho";
   const tabOf = byPl ? plOf : hoOf, binOf = byPl ? hoOf : plOf;
-  const tabs = (byPl ? plKeys : hoKeys).map(k => ({k, n: allNum.filter(r => tabOf(r) === k).length}));
+  // HO with a name only (HO蜘蛛): a tab of its own at the end, a list with no chart.
+  const NAMED = "番号なし", allNamed = inSys.filter(r => r.n == null);
+  const tabs = [...(byPl ? plKeys : hoKeys).map(k => ({k, n: allNum.filter(r => tabOf(r) === k).length})), ...(allNamed.length ? [{k: NAMED, n: allNamed.length}] : [])];
   const cur = byPl ? "pl" : "hoTab";
   if (!tabs.some(t => t.k === HO_S[cur])) HO_S[cur] = (byPl ? tabs.find(t => t.k === "2PL" && t.n) : null)?.k || (tabs.find(t => t.n) || tabs[0]).k;
   const tabKey = HO_S[cur];
   const numbered = allNum.filter(r => tabOf(r) === tabKey);
-  const named = byPl ? inSys.filter(r => r.n == null && plOf(r) === tabKey) : [];
   const bins = (byPl ? hoKeys : plKeys).map(label => ({label, runs: numbered.filter(r => binOf(r) === label)}));
   const max = Math.max(1, ...bins.map(b => b.runs.length));
   // The scale always goes past the tallest bar (at least 15% and one grid step), so its number stays inside the chart.
   const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.max(Math.ceil(max * 1.15 / step), Math.floor(max / step) + 1) * step;
   const pct = n => numbered.length ? Math.round(n / numbered.length * 100) : 0;
-  const namedRoles = [...new Set(named.map(r => r.role))];
-  $("count").textContent = `HO ${numbered.length}件`;
+  const isNamed = tabKey === NAMED;
+  const runLi = r => `<li${isLost(r.c) ? ` class="is-lost"` : ""}><span class="t">${esc(r.name)}</span><span class="who">${lostMark(r.c)}<a href="#sheet=${encodeURIComponent(sheetKey(r.c))}" title="${esc(r.c.name)}">${esc(shortName(r.c.name))}</a><span class="role after">${esc(r.role)}</span>${isNamed ? `<span class="plk">${esc(plOf(r))}</span>` : ""}</span></li>`;
+  $("count").textContent = `HO ${isNamed ? allNamed.length : numbered.length}件`;
   m.innerHTML = `<section class="hopage">
     <div class="ho-chips" role="group" aria-label="システムで絞り込む">
       <button type="button" data-hsys="" aria-pressed="${!HO_S.sys}">すべて</button>
@@ -726,6 +729,11 @@ function renderHoMain(){
     <div class="hotabs" role="tablist" aria-label="${byPl ? "PL人数" : "HO"}">
       ${tabs.map(t => `<button type="button" role="tab" data-htab="${t.k}" aria-selected="${tabKey===t.k}">${t.k}<small>${t.n}</small></button>`).join("")}
     </div>
+    ${isNamed ? `<div class="hocard" role="tabpanel">
+      <h2>番号のないHO</h2>
+      <p class="sub">通過 <b>${allNamed.length}</b>件${HO_S.sys ? `（${esc(sysShort(HO_S.sys))}）` : ""}・グラフには入れていません</p>
+      <ul class="horuns">${[...allNamed].sort((a, b) => a.role.localeCompare(b.role, "ja") || a.name.localeCompare(b.name, "ja")).map(runLi).join("")}</ul>
+    </div>` : `
     <div class="hocard" role="tabpanel">
       <h2>${byPl ? `${esc(tabKey)}の卓のHO` : `${esc(tabKey)}を担当した卓のPL人数`}</h2>
       <p class="sub">HO番号のある通過 <b>${numbered.length}</b>件${HO_S.sys ? `（${esc(sysShort(HO_S.sys))}）` : ""}</p>
@@ -738,13 +746,13 @@ function renderHoMain(){
         </div>
         <div class="xs">${bins.map(b => `<span>${b.label}</span>`).join("")}</div>
       </div>` : `<p class="none">${byPl ? "この人数の卓でHO番号のある通過はありません。" : "このHOの通過はありません。"}</p>`}
-      <p class="honote">PL人数は通過記録のPL人数欄から取ります${plKeys.includes("不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。通過記録のないシナリオ（遊んでいる途中のものなど）と、ギャラリー非表示のシートは数えません。棒か下の行を押すと、そのシナリオが開きます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
+      <p class="honote">PL人数は通過記録のPL人数欄から取ります${plKeys.includes("不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。通過記録のないシナリオ（遊んでいる途中のものなど）と、ギャラリー非表示のシートは数えません。棒か下の行を押すと、そのシナリオが開きます。${allNamed.length ? "<br>「HO蜘蛛」のように番号のないHOは、グラフに入れず「番号なし」のタブに一覧で出します。" : ""}</p>
     </div>
     ${numbered.length ? `<div class="hoacc">${bins.map(b => b.runs.length
       ? `<details class="hoitem" data-hoitem="${b.label}"><summary><span class="k">${b.label}</span><span class="n">${b.runs.length}件<span class="pc">・${pct(b.runs.length)}%</span></span><span class="chev" aria-hidden="true"></span></summary>
-          <div class="hobody"><ul class="horuns">${b.runs.map(r =>
-            `<li${isLost(r.c) ? ` class="is-lost"` : ""}><span class="t">${esc(r.name)}</span><span class="who">${lostMark(r.c)}<a href="#sheet=${encodeURIComponent(sheetKey(r.c))}" title="${esc(r.c.name)}">${esc(shortName(r.c.name))}</a><span class="role after">${esc(r.role)}</span></span></li>`).join("")}</ul></div></details>`
+          <div class="hobody"><ul class="horuns">${b.runs.map(runLi).join("")}</ul></div></details>`
       : "").join("")}</div>` : ""}
+    `}
   </section>`;
   const chart = m.querySelector(".hochart");
   if (!chart) return;
@@ -757,7 +765,7 @@ function renderHoMain(){
     tip.style.left = `${r.left - c.left + r.width/2}px`; tip.style.top = `${bar.top - c.top - 26}px`;
   };
   const hide = () => { tip?.remove(); tip = null; };
-  for (const col of chart.querySelectorAll(".col")){
+  for (const col of chart.querySelectorAll(".col[data-ho]")){   // 0件 bars have no tooltip
     col.addEventListener("pointerenter", () => show(col)); col.addEventListener("pointerleave", hide);
     col.addEventListener("focus", () => show(col)); col.addEventListener("blur", hide);
   }
