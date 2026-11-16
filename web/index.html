@@ -219,7 +219,7 @@ a.portrait{text-decoration:none}
 .hocard .sub{margin:0 0 14px;color:var(--muted);font-size:.84rem}
 .hocard .sub b{font-family:var(--f-mono);color:var(--ink);font-size:1rem;margin:0 2px}
 .hochart{position:relative;padding-left:2.2em}
-.hochart .plot{position:relative;height:240px;margin-top:26px;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;align-items:end;border-bottom:1px solid var(--muted)}
+.hochart .plot{position:relative;height:240px;margin-top:12px;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;align-items:end;border-bottom:1px solid var(--muted)}
 .hochart .gl{position:absolute;left:0;right:0;border-top:1px solid color-mix(in srgb,var(--line) 75%,transparent);pointer-events:none}
 .hochart .gl span{position:absolute;right:calc(100% + 8px);top:-.75em;font-family:var(--f-mono);font-size:.74rem;color:var(--muted);line-height:1.5}
 .hochart .col{position:relative;height:100%;display:flex;align-items:flex-end;justify-content:center;background:none;border:0;padding:0;cursor:pointer}
@@ -663,7 +663,8 @@ function renderHoMain(){
   const bins = [...Array(HO_MAX).keys()].map(i => ({label: `HO${i+1}`, runs: numbered.filter(r => r.n === i+1)}));
   if (numbered.some(r => r.n > HO_MAX)) bins.push({label: `HO${HO_MAX+1}〜`, runs: numbered.filter(r => r.n > HO_MAX)});
   const max = Math.max(1, ...bins.map(b => b.runs.length));
-  const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.ceil(max / step) * step;
+  // The scale always goes past the tallest bar (at least 15% and one grid step), so its number stays inside the chart.
+  const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.max(Math.ceil(max * 1.15 / step), Math.floor(max / step) + 1) * step;
   const pct = n => numbered.length ? Math.round(n / numbered.length * 100) : 0;
   const pick = bins.find(b => b.label === HO_S.pick);
   const namedRoles = [...new Set(named.map(r => r.role))];
