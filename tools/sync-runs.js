@@ -106,9 +106,24 @@ async function main() {
     const noTakuPl = rows.filter(r => !r.pl && !r.taku.length).length;
     console.log(`卓報告がなくてPL人数を入れられない行 ${noTakuPl} 件`);
   }
+  // A row whose シナリオ is not the name of the 卓報告 it links to. Full-width / half-width digits are
+  // not a difference; an episode under its series' 卓報告 (シリーズ欄) and RUNS_KEEP_NAME are on purpose.
+  const digits = t => String(t).replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xfee0));
+  const nameDiff = { spelling: [], series: [], other: [] };
+  for (const r of rows) {
+    const names = [...new Set(r.taku.map(id => takuById.get(id)?.name).filter(Boolean))];
+    if (!names.length || names.some(n => digits(n) === digits(r.title))) continue;
+    const line = `${label(r)}  ⇔  卓報告「${names.join("」「")}」`;
+    if (r.series && names.some(n => notionScenarioKey(n) === notionScenarioKey(r.series))) nameDiff.series.push(line);
+    else if (names.some(n => notionScenarioKey(n) === notionScenarioKey(r.title))) nameDiff.spelling.push(line);
+    else nameDiff.other.push(line);
+  }
   console.log(`\n=== 通過記録 ${rows.length} 件の点検 ===`);
   console.log(`\n■ キャラが空の行 ${noChar.length} 件\n` + noChar.join("\n"));
   console.log(`\n■ 卓報告が空の行 ${noLink.length} 件\n` + noLink.join("\n"));
+  console.log(`\n■ 卓報告と名前が違う行 ${nameDiff.other.length} 件\n` + nameDiff.other.join("\n"));
+  console.log(`\n■ 卓報告と空白・記号・英字の大小だけ違う行 ${nameDiff.spelling.length} 件\n` + nameDiff.spelling.join("\n"));
+  console.log(`\n■ シリーズの話として卓報告と名前が違う行（意図どおり）${nameDiff.series.length} 件\n` + nameDiff.series.join("\n"));
   console.log(`\n■ キャラのシートとシステムが違う行 ${wrongSys.length} 件\n` + wrongSys.join("\n"));
   console.log(`\n■ リンクした卓報告とシステムが違う行 ${takuSys.length} 件\n` + takuSys.join("\n"));
   console.log(`\n■ シートのシナリオ欄にもう無い行 ${gone.length} 件\n` + gone.join("\n"));
