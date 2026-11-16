@@ -598,8 +598,10 @@ function scenariosOf(c){
   }
   return out;
 }
-function scenarioIndex(){
-  if (scenarioIndex.src === S.chars) return scenarioIndex.map;
+// chars: the sheets to read (all of them by default); the last result is kept for each list.
+function scenarioIndex(chars = S.chars){
+  scenarioIndex.memo = scenarioIndex.memo || new WeakMap();
+  if (scenarioIndex.memo.has(chars)) return scenarioIndex.memo.get(chars);
   const map = new Map();
   // Full-width and half-width digits name the same scenario ("５日間" = "5日間"); the list shows
   // the spelling seen first.
@@ -607,7 +609,7 @@ function scenarioIndex(){
   const nameKey = n => n.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xfee0));
   // One entry per person in a scenario: the newest sheet, with whichever sheet names the HO.
   const people = new Map();
-  for (const c of S.chars) for (const {name: raw, role, pl} of scenariosOf(c)){
+  for (const c of chars) for (const {name: raw, role, pl} of scenariosOf(c)){
     const nk = nameKey(raw);
     if (!shown.has(nk)) shown.set(nk, raw);
     const name = shown.get(nk);
@@ -624,7 +626,7 @@ function scenarioIndex(){
   }
   const roleKey = r => r ? r.replace(/\d+/, d => d.padStart(3,"0")) : "\uffff";
   for (const cast of map.values()) cast.sort((a,b) => roleKey(a.role).localeCompare(roleKey(b.role), "ja") || a.c.name.localeCompare(b.c.name, "ja"));
-  scenarioIndex.src = S.chars; scenarioIndex.map = map;
+  scenarioIndex.memo.set(chars, map);
   return map;
 }
 function filteredScenarios(){
@@ -684,7 +686,9 @@ function renderHoMain(){
   m.dataset.mode = "ho";
   if (!S.ready){ m.innerHTML = `<p class="loading">読み込んでいます…</p>`; return; }
   const runs = [];
-  for (const [name, cast] of scenarioIndex()) for (const {c, role, pl} of cast) if (isHoRole(role) && pl) runs.push({name, c, role, pl, n: hoNumber(role)});   // only lines with a 通過記録 row
+  // Sheets hidden from the gallery (ギャラリー非表示) are left out, as are lines with no 通過記録 row.
+  if (renderHoMain.src !== S.chars){ renderHoMain.src = S.chars; renderHoMain.shown = S.chars.filter(c => !c.galleryHidden); }
+  for (const [name, cast] of scenarioIndex(renderHoMain.shown)) for (const {c, role, pl} of cast) if (isHoRole(role) && pl) runs.push({name, c, role, pl, n: hoNumber(role)});   // only lines with a 通過記録 row
   const systems = [...new Set(runs.map(r => r.c.system).filter(Boolean))].sort(bySystem);
   if (HO_S.sys && !systems.includes(HO_S.sys)) HO_S.sys = "";
   const inSys = runs.filter(r => !HO_S.sys || r.c.system === HO_S.sys);
@@ -734,7 +738,7 @@ function renderHoMain(){
         </div>
         <div class="xs">${bins.map(b => `<span>${b.label}</span>`).join("")}</div>
       </div>` : `<p class="none">${byPl ? "この人数の卓でHO番号のある通過はありません。" : "このHOの通過はありません。"}</p>`}
-      <p class="honote">PL人数は通過記録のPL人数欄から取ります${plKeys.includes("不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。通過記録のないシナリオ（遊んでいる途中のものなど）は数えません。棒か下の行を押すと、そのシナリオが開きます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
+      <p class="honote">PL人数は通過記録のPL人数欄から取ります${plKeys.includes("不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。通過記録のないシナリオ（遊んでいる途中のものなど）と、ギャラリー非表示のシートは数えません。棒か下の行を押すと、そのシナリオが開きます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
     </div>
     ${numbered.length ? `<div class="hoacc">${bins.map(b => b.runs.length
       ? `<details class="hoitem" data-hoitem="${b.label}"><summary><span class="k">${b.label}</span><span class="n">${b.runs.length}件<span class="pc">・${pct(b.runs.length)}%</span></span><span class="chev" aria-hidden="true"></span></summary>
