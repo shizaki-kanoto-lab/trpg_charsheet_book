@@ -181,6 +181,9 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .scen li .no{font-family:var(--f-latin);font-style:italic;color:var(--accent);font-size:1rem;min-width:2ch}
 .scen li .t{font-family:var(--f-mincho);font-weight:500;overflow-wrap:anywhere}
 .scen li .r{font-size:.75rem;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);padding:0 8px;white-space:nowrap}
+.scen li.series .eps{grid-column:2/-1;list-style:none;margin:2px 0 0;padding:0 0 0 12px;border-left:2px solid var(--line)}
+.scen li.series .eps li{grid-template-columns:minmax(0,1fr) auto;padding:6px 4px;border-bottom:0;font-size:.92rem}
+.scen li.series .eps li .t{color:var(--muted)}
 /* ---------- HO傾向 (#ho) ----------
    The same page the sheet book had, in the gallery's colors: its tokens are mapped below. */
 .ho-link{display:inline-block;margin-top:18px;font-size:.85rem;letter-spacing:.14em;color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:1px}
@@ -406,6 +409,40 @@ function scenariosOf(c){
   }
   return out;
 }
+/* The 通過シナリオ list of a sheet. Episodes of a series (通過記録's シリーズ) are one numbered row with
+   the series name, where the first episode was, and the episodes under it without the series name
+   ("Paranormal Crime Episode 1：枯れた花は戻らない" -> "Episode 1：枯れた花は戻らない"). An HO that
+   every episode shares goes on the series row. */
+function scenGroups(list){
+  const out = [], bySeries = new Map();
+  for (const x of list){
+    if (!x.series){ out.push({...x, eps: null}); continue; }
+    let g = bySeries.get(x.series);
+    if (!g){ g = {name: x.series, role: "", eps: []}; bySeries.set(x.series, g); out.push(g); }
+    const key = t => t.normalize("NFKC").replace(/\s+/g, "");
+    const sk = key(x.series), nk = key(x.name);
+    let ep = x.name;
+    if (nk.startsWith(sk) && nk.length > sk.length){
+      // Drop the series name and what joins it (spaces, 「：」, 「-」) from the front of the episode's name.
+      let i = 0, n = 0;
+      while (i < x.name.length && n < sk.length){ const c = key(x.name[i]); n += c.length; i++; }
+      ep = x.name.slice(i).replace(/^[\s:：\-－―~～〜]+/, "") || x.name;
+    }
+    g.eps.push({...x, ep});
+  }
+  for (const g of out) if (g.eps){
+    const roles = new Set(g.eps.map(e => e.role || ""));
+    if (roles.size === 1) g.role = g.eps[0].role || "";
+  }
+  return out;
+}
+function scenListHTML(list){
+  const role = r => r ? `<span class="r">${esc(r)}</span>` : "<span></span>";
+  return `<ol class="scen">${scenGroups(list).map((s, n) => s.eps
+    ? `<li class="series"><span class="no">${n+1}</span><span class="t">${esc(s.name)}</span>${role(s.role)}
+        <ol class="eps">${s.eps.map(e => `<li><span class="t">${esc(e.ep)}</span>${role(s.role ? "" : e.role)}</li>`).join("")}</ol></li>`
+    : `<li><span class="no">${n+1}</span><span class="t">${esc(s.name)}</span>${role(s.role)}</li>`).join("")}</ol>`;
+}
 /* Every scenario of the person, whatever the system, in the order played: lines with a 卓報告 date
    (from 通過記録) by date, then the undated ones in sheet order. The same line on two sheets (a 6版 and
    a 7版 sheet of one character) is listed once. */
@@ -594,7 +631,7 @@ function profileHTML(p){
           <ul class="skills">${skills.map(s => `<li style="--p:${Math.max(0, Math.min(100, num(s.value)))}"><span class="l">${esc(s.label)}</span><span class="v">${esc(s.value)}</span></li>`).join("")}</ul></section>` : ""}
 
         ${scen.length || multi ? `<section class="sec"><h2><span class="en">Scenarios</span>通過シナリオ</h2>
-          ${scen.length ? `<ol class="scen">${scen.map((s, n) => `<li><span class="no">${n+1}</span><span class="t">${esc(s.name)}</span>${s.role ? `<span class="r">${esc(s.role)}</span>` : "<span></span>"}</li>`).join("")}</ol>` : ""}
+          ${scen.length ? scenListHTML(scen) : ""}
           ${multi ? `<button class="tl-open" type="button" data-tl="open">全システムの通過シナリオを時系列で見る →</button>` : ""}</section>` : ""}
       </article>
     </div>
