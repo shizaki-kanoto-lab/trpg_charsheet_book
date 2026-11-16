@@ -264,6 +264,10 @@ a.portrait{text-decoration:none}
 .horuns .who a{color:var(--ink)}
 .horuns li.is-lost .who a{color:var(--muted)}
 @media (max-width:520px){.horuns li{grid-template-columns:1fr}.horuns .who{white-space:normal}.hoitem .pc{display:none}}
+.hoaxis{display:inline-grid;grid-template-columns:1fr 1fr;width:max-content;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.hoaxis button{border:0;background:var(--surface);padding:4px 14px;font-size:.86rem;color:var(--muted);white-space:nowrap}
+.hoaxis button+button{border-left:1px solid var(--line)}
+.hoaxis button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:700}
 .hotabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
 .hotabs button{flex:none;border:0;background:none;padding:6px 14px 8px;font-size:.92rem;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
 .hotabs button small{font-family:var(--f-mono);font-weight:400;font-size:.76rem;margin-left:6px;opacity:.85}
@@ -670,7 +674,7 @@ function renderScenTable(){
 const HO_MAX = 5;
 const hoNumber = role => { const m = String(role||"").normalize("NFKC").match(/^(?:HO|PC)[\s:：\-－]*(\d+)/i); return m ? Number(m[1]) : null; };
 const isHoRole = role => /^(?:HO|PC\d)/i.test(String(role||"").normalize("NFKC"));
-const HO_S = {sys: "", pl: ""};
+const HO_S = {sys: "", axis: "pl", pl: "", hoTab: ""};
 const HO_SYS_FIRST = ["クトゥルフ神話TRPG 6版", "クトゥルフ神話TRPG 7版", "エモクロアTRPG"];
 const bySystem = (a, b) => { const r = s => { const i = HO_SYS_FIRST.indexOf(s); return i < 0 ? 9 : i; }; return r(a) - r(b) || String(a).localeCompare(String(b), "ja"); };
 function renderHoMain(){
@@ -683,15 +687,23 @@ function renderHoMain(){
   const systems = [...new Set(runs.map(r => r.c.system).filter(Boolean))].sort(bySystem);
   if (HO_S.sys && !systems.includes(HO_S.sys)) HO_S.sys = "";
   const inSys = runs.filter(r => !HO_S.sys || r.c.system === HO_S.sys);
-  // One tab per PL人数 (通過記録's PL人数欄); a run whose row has none is 不明, shown only when there is one.
+  // Two ways round: PL人数 tabs with a bar per HO (axis "pl"), or HO tabs with a bar per PL人数 (axis "ho").
+  // PL人数 is 通過記録's PL人数欄; a run whose row has none is 不明, shown only when there is one.
   const PLS = ["1PL", "2PL", "3PL", "4PL", "5PL以上"];
   const plOf = r => PLS.includes(r.pl) ? r.pl : "不明";
-  const tabs = [...PLS, ...(inSys.some(r => plOf(r) === "不明") ? ["不明"] : [])].map(k => ({k, n: inSys.filter(r => r.n != null && plOf(r) === k).length}));
-  if (!tabs.some(t => t.k === HO_S.pl)) HO_S.pl = (tabs.find(t => t.k === "2PL" && t.n) || tabs.find(t => t.n) || tabs[1]).k;
-  const mine = inSys.filter(r => plOf(r) === HO_S.pl);
-  const numbered = mine.filter(r => r.n != null), named = mine.filter(r => r.n == null);
-  const bins = [...Array(HO_MAX).keys()].map(i => ({label: `HO${i+1}`, runs: numbered.filter(r => r.n === i+1)}));
-  if (numbered.some(r => r.n > HO_MAX)) bins.push({label: `HO${HO_MAX+1}〜`, runs: numbered.filter(r => r.n > HO_MAX)});
+  const hoOf = r => r.n > HO_MAX ? `HO${HO_MAX+1}〜` : `HO${r.n}`;
+  const allNum = inSys.filter(r => r.n != null);
+  const plKeys = [...PLS, ...(allNum.some(r => plOf(r) === "不明") ? ["不明"] : [])];
+  const hoKeys = [...[...Array(HO_MAX).keys()].map(i => `HO${i+1}`), ...(allNum.some(r => r.n > HO_MAX) ? [`HO${HO_MAX+1}〜`] : [])];
+  const byPl = HO_S.axis !== "ho";
+  const tabOf = byPl ? plOf : hoOf, binOf = byPl ? hoOf : plOf;
+  const tabs = (byPl ? plKeys : hoKeys).map(k => ({k, n: allNum.filter(r => tabOf(r) === k).length}));
+  const cur = byPl ? "pl" : "hoTab";
+  if (!tabs.some(t => t.k === HO_S[cur])) HO_S[cur] = (byPl ? tabs.find(t => t.k === "2PL" && t.n) : null)?.k || (tabs.find(t => t.n) || tabs[0]).k;
+  const tabKey = HO_S[cur];
+  const numbered = allNum.filter(r => tabOf(r) === tabKey);
+  const named = byPl ? inSys.filter(r => r.n == null && plOf(r) === tabKey) : [];
+  const bins = (byPl ? hoKeys : plKeys).map(label => ({label, runs: numbered.filter(r => binOf(r) === label)}));
   const max = Math.max(1, ...bins.map(b => b.runs.length));
   // The scale always goes past the tallest bar (at least 15% and one grid step), so its number stays inside the chart.
   const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.max(Math.ceil(max * 1.15 / step), Math.floor(max / step) + 1) * step;
@@ -703,22 +715,25 @@ function renderHoMain(){
       <button type="button" data-hsys="" aria-pressed="${!HO_S.sys}">すべて</button>
       ${systems.map(s => `<button type="button" data-hsys="${esc(s)}" aria-pressed="${HO_S.sys===s}">${esc(sysShort(s))}</button>`).join("")}
     </div>
-    <div class="hotabs" role="tablist" aria-label="PL人数">
-      ${tabs.map(t => `<button type="button" role="tab" data-hpl="${t.k}" aria-selected="${HO_S.pl===t.k}">${t.k}<small>${t.n}</small></button>`).join("")}
+    <div class="hoaxis" role="group" aria-label="見かた">
+      <button type="button" data-haxis="pl" aria-pressed="${byPl}">PL人数で見る</button><button type="button" data-haxis="ho" aria-pressed="${!byPl}">HOで見る</button>
+    </div>
+    <div class="hotabs" role="tablist" aria-label="${byPl ? "PL人数" : "HO"}">
+      ${tabs.map(t => `<button type="button" role="tab" data-htab="${t.k}" aria-selected="${tabKey===t.k}">${t.k}<small>${t.n}</small></button>`).join("")}
     </div>
     <div class="hocard" role="tabpanel">
-      <h2>${esc(HO_S.pl)}の卓のHO</h2>
+      <h2>${byPl ? `${esc(tabKey)}の卓のHO` : `${esc(tabKey)}を担当した卓のPL人数`}</h2>
       <p class="sub">HO番号のある通過 <b>${numbered.length}</b>件${HO_S.sys ? `（${esc(sysShort(HO_S.sys))}）` : ""}</p>
       ${numbered.length ? `<div class="hochart" style="--n:${bins.length}">
-        <div class="plot" role="group" aria-label="${esc(HO_S.pl)}の卓のHO番号ごとの通過数">
+        <div class="plot" role="group" aria-label="${byPl ? `${esc(tabKey)}の卓のHO番号ごとの通過数` : `${esc(tabKey)}のPL人数ごとの通過数`}">
           ${[...Array(top / step + 1).keys()].map(i => `<div class="gl" style="bottom:${i*step/top*100}%"><span>${i*step}</span></div>`).join("")}
           ${bins.map(b => b.runs.length
             ? `<button type="button" class="col" data-ho="${b.label}" style="--h:${b.runs.length/top*100}%" aria-label="${b.label}：${b.runs.length}件（${pct(b.runs.length)}%）。押すと内訳を開く"><i></i><span class="v">${b.runs.length}</span></button>`
             : `<div class="col zero" style="--h:0%" aria-label="${b.label}：0件"><i></i><span class="v">0</span></div>`).join("")}
         </div>
         <div class="xs">${bins.map(b => `<span>${b.label}</span>`).join("")}</div>
-      </div>` : `<p class="none">この人数の卓でHO番号のある通過はありません。</p>`}
-      <p class="honote">PL人数は通過記録のPL人数欄から取ります${tabs.some(t => t.k === "不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。棒か下のHOを押すと、そのHOのシナリオが開きます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
+      </div>` : `<p class="none">${byPl ? "この人数の卓でHO番号のある通過はありません。" : "このHOの通過はありません。"}</p>`}
+      <p class="honote">PL人数は通過記録のPL人数欄から取ります${plKeys.includes("不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。棒か下の行を押すと、そのシナリオが開きます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
     </div>
     ${numbered.length ? `<div class="hoacc">${bins.map(b => b.runs.length
       ? `<details class="hoitem" data-hoitem="${b.label}"><summary><span class="k">${b.label}</span><span class="n">${b.runs.length}件<span class="pc">・${pct(b.runs.length)}%</span></span><span class="chev" aria-hidden="true"></span></summary>
@@ -732,7 +747,7 @@ function renderHoMain(){
   const show = col => {
     const b = bins.find(x => x.label === col.dataset.ho);
     if (!tip){ tip = document.createElement("div"); tip.className = "hotip"; chart.append(tip); }
-    tip.innerHTML = `${esc(HO_S.pl)}・${b.label}　<b>${b.runs.length}</b>件（${pct(b.runs.length)}%）`;
+    tip.innerHTML = `${esc(tabKey)}・${b.label}　<b>${b.runs.length}</b>件（${pct(b.runs.length)}%）`;
     const r = col.getBoundingClientRect(), c = chart.getBoundingClientRect(), bar = col.querySelector("i").getBoundingClientRect();
     tip.style.left = `${r.left - c.left + r.width/2}px`; tip.style.top = `${bar.top - c.top - 26}px`;
   };
@@ -944,8 +959,10 @@ $("views").addEventListener("click", e => { const b = e.target.closest("[data-vi
 $("main").addEventListener("click", e => {
   const hs = e.target.closest("[data-hsys]");
   if (hs){ HO_S.sys = hs.dataset.hsys; renderHoMain(); return; }
-  const hp = e.target.closest("[data-hpl]");
-  if (hp){ HO_S.pl = hp.dataset.hpl; renderHoMain(); $("main").querySelector(`[data-hpl="${HO_S.pl}"]`)?.focus(); return; }
+  const ha = e.target.closest("[data-haxis]");
+  if (ha){ HO_S.axis = ha.dataset.haxis; renderHoMain(); $("main").querySelector(`[data-haxis="${HO_S.axis}"]`)?.focus(); return; }
+  const ht = e.target.closest("[data-htab]");
+  if (ht){ HO_S[HO_S.axis === "ho" ? "hoTab" : "pl"] = ht.dataset.htab; renderHoMain(); $("main").querySelector(`[data-htab="${ht.dataset.htab}"]`)?.focus(); return; }
   const ho = e.target.closest("[data-ho]");
   if (ho){ const d = $("main").querySelector(`[data-hoitem="${ho.dataset.ho}"]`); if (d){ d.open = true; d.scrollIntoView({behavior: "smooth", block: "nearest"}); } }
 });
