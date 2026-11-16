@@ -15,6 +15,10 @@ on:
         description: "PL人数が空の行に、卓報告のPL欄から人数を入れる（書き込みはwriteもオン）"
         type: boolean
         default: false
+      refresh:
+        description: "取り直し：今ある行の卓報告・立場・PL人数などを今のシート帳と卓報告に合わせる（空にはしない。書き込みはwriteもオン）"
+        type: boolean
+        default: false
       prune:
         description: "いあきゃら・キャラッシュ・エモクロアのシートからなくなった行をゴミ箱へ移す"
         type: boolean
@@ -36,4 +40,4 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ vars.NOTION_DATABASE_ID }}
           ONLY: ${{ inputs.only }}
-        run: node tools/sync-runs.js ${{ inputs.write && '--write' || '' }} ${{ inputs.prune && '--prune' || '' }} ${{ inputs.pl && '--pl --pl-list' || '' }} "--only=$ONLY"
+        run: node tools/sync-runs.js ${{ inputs.write && '--write' || '' }} ${{ inputs.prune && '--prune' || '' }} ${{ inputs.pl && '--pl --pl-list' || '' }} ${{ inputs.refresh && '--refresh' || '' }} "--only=$ONLY"

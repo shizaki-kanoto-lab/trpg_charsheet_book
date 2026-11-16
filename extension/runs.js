@@ -203,6 +203,60 @@ async function runsAddForSheets(token, sheetDb, urls, soloOf = {}) {
   return result;
 }
 
+// 取り直し: look again at the 通過記録 pages already made for these sheets (urls; null = every
+// sheet) and bring them up to date with the sheet book and 卓報告 as they stand now. Only fills in or
+// moves forward, so what was set by hand stays:
+//   卓報告  the 卓報告 pages it ties to now, when it can tell (never cleared)
+//   立場    KPC / NPC / GMレス when the sheet says so (a bare line says nothing: PL never replaces)
+//   PL人数  1PL for GMレス, else from the 卓報告 when those changed or it is empty
+//   HO・システム  only when empty
+// Returns the changes ({ id, label, props, what }) without writing; runsApplyRefresh writes them.
+async function runsPlanRefresh(token, sheetDb, urls, soloOf = {}) {
+  const want = urls ? new Set(urls.filter(Boolean)) : null;
+  const data = await runsLoad(token, sheetDb);
+  const idx = runsIndex(data, soloOf);
+  const takuById = new Map(data.taku.map(t => [t.id, t]));
+  const rowOf = new Map(data.rows.map(r => [`${r.chars[0]}|${notionScenarioKey(r.title)}|${notionScenarioKey(r.ho)}`, r]));
+  const out = [], seen = new Set();
+  const same = (a, b) => [...a].sort().join(",") === [...b].sort().join(",");
+  for (const r of idx.runs) {
+    if (want && !want.has(r.sheet.url)) continue;
+    const p = idx.plan(r);
+    const row = rowOf.get(p.key);
+    if (!row || seen.has(row.id) || p.crossSystem) continue;
+    seen.add(row.id);
+    const props = {}, what = [];
+    const name = id => { const t = takuById.get(id); return t ? `${t.date || "日付なし"}` : "?"; };
+    let taku = row.taku;
+    const links = p.links.slice(0, 100).map(t => t.id);
+    if (links.length && !same(links, row.taku)) {
+      props["卓報告"] = { relation: links.map(id => ({ id })) };
+      what.push(`卓報告: ${row.taku.length ? row.taku.map(name).join("・") : "（空）"} → ${links.map(name).join("・")}`);
+      taku = links;
+    }
+    if (p.role !== "PL" && p.role !== row.role) {
+      props["立場"] = { select: { name: p.role } };
+      what.push(`立場: ${row.role || "（空）"} → ${p.role}`);
+    }
+    const role = props["立場"] ? p.role : row.role;
+    const pl = role === "GMレス" ? "1PL" : (taku !== row.taku || !row.pl) ? runsPlOf(taku.map(id => takuById.get(id))).label : "";
+    if (pl && pl !== row.pl) { props["PL人数"] = { select: { name: pl } }; what.push(`PL人数: ${row.pl || "（空）"} → ${pl}`); }
+    if (!row.ho && p.ho) { props["HO"] = { rich_text: [{ text: { content: p.ho } }] }; what.push(`HO: （空） → ${p.ho}`); }
+    if (!row.system && RUN_SYSTEMS.has(p.system)) { props["システム"] = { select: { name: p.system } }; what.push(`システム: （空） → ${p.system}`); }
+    if (what.length) out.push({ id: row.id, label: `${r.sheet.name}（${r.sheet.system}）：${row.title}${row.ho ? " " + row.ho : ""}`, props, what });
+  }
+  return out;
+}
+async function runsApplyRefresh(token, changes, onEach) {
+  let done = 0;
+  for (const c of changes) {
+    await notionRequest(token, `/pages/${c.id}`, { properties: c.props }, "PATCH");
+    await notionSleep(NOTION_GAP_MS);
+    if (onEach) onEach(++done, changes.length);
+  }
+  return done;
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { RUNS_DB, TAKU_DB, RUNS_SYSTEM, RUN_SYSTEMS, runsSystemsAgree, runsPlOf, runsLoad, runsIndex, runsLabel, runsCreate, runsAddForSheets };
+  module.exports = { RUNS_DB, TAKU_DB, RUNS_SYSTEM, RUN_SYSTEMS, runsSystemsAgree, runsPlOf, runsLoad, runsIndex, runsLabel, runsCreate, runsAddForSheets, runsPlanRefresh, runsApplyRefresh };
 }

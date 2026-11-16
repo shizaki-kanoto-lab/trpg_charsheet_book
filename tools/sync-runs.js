@@ -8,12 +8,15 @@
 //
 // --pl fills PL人数 on pages where it is empty, from the PL欄 of their 卓報告 (with --write);
 // it then adds no rows.
+// --refresh (取り直し) looks again at the pages already there and brings their 卓報告, 立場, PL人数,
+// HO and システム up to date (runsPlanRefresh in extension/runs.js: it only fills in, never clears);
+// it then adds no rows. With --only, only that character's pages.
 //
 // Without --write it only prints what it would add. A character and scenario (and HO) already
 // in 通過記録 is left alone, so it can be run again after the sheets are fixed.
 
 const { NOTION_DEFAULT_DB, NOTION_GAP_MS, notionDbId, notionRequest, notionSleep, notionScenarioKey } = require("../extension/notion.js");
-const { RUNS_SYSTEM: SYSTEM, runsSystemsAgree: systemsAgree, runsPlOf, runsLoad, runsIndex, runsLabel, runsCreate } = require("../extension/runs.js");
+const { RUNS_SYSTEM: SYSTEM, runsSystemsAgree: systemsAgree, runsPlOf, runsLoad, runsIndex, runsLabel, runsCreate, runsPlanRefresh, runsApplyRefresh } = require("../extension/runs.js");
 
 async function main() {
   const token = process.env.NOTION_TOKEN;
@@ -23,6 +26,13 @@ async function main() {
   const only = (process.argv.find(a => a.startsWith("--only=")) || "").slice(7).trim();
   const sheetDb = notionDbId(process.env.NOTION_DATABASE_ID || NOTION_DEFAULT_DB);
 
+  if (process.argv.includes("--refresh")) {
+    let changes = await runsPlanRefresh(token, sheetDb, null);
+    if (only) changes = changes.filter(c => c.label.includes(only));
+    console.log(`${write ? "直した" : "直す予定の"}通過記録 ${changes.length} 件\n` + changes.map(c => `${c.label}\n  ` + c.what.join("\n  ")).join("\n"));
+    if (write) await runsApplyRefresh(token, changes);
+    return;
+  }
   const { sheets, taku, rows } = await runsLoad(token, sheetDb);
   const idx = runsIndex({ sheets, taku, rows });
   const { runs, takuOfName, existing } = idx;

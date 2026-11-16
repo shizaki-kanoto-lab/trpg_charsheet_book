@@ -102,6 +102,32 @@ async function sendRuns(list, before) {
   }
 }
 
+// 取り直し: the 通過記録 pages already made for these sheets, checked again against the sheet book
+// and 卓報告 (see runsPlanRefresh). The first press only lists the changes; the second writes them.
+let rerunPlan = null;
+async function rerun(list, btn) {
+  if (rerunPlan && rerunPlan.btn === btn) {
+    const changes = rerunPlan.changes; rerunPlan = null;
+    try {
+      await runsApplyRefresh(notion.token, changes, (d, n) => setMsg(`通過記録を直しています… ${d} / ${n}`));
+      setMsg(`通過記録を${changes.length}件直しました:\n` + changes.map(c => c.label).join("\n"));
+    } catch (e) { setMsg("通過記録を直せませんでした: " + e.message, true); }
+    btn.textContent = btn.dataset.label;
+    return;
+  }
+  btn.dataset.label = btn.dataset.label || btn.textContent;
+  setMsg("通過記録を確かめています…");
+  try {
+    const changes = await runsPlanRefresh(notion.token, notion.db, list.map(i => i.url), Object.fromEntries(list.map(i => [i.url, i.solo || []])));
+    if (!changes.length) { setMsg("通過記録は今のままで合っています（直すところはありません）"); return; }
+    rerunPlan = { btn, changes };
+    btn.textContent = `この${changes.length}件を書き込む`;
+    setMsg(`直すところ ${changes.length}件（もう一度押すと書き込みます）:\n` + changes.map(c => `${c.label}\n  ` + c.what.join("\n  ")).join("\n"));
+  } catch (e) {
+    setMsg("通過記録を確かめられませんでした: " + (e.status === 404 ? "Notionの連携が「通過記録」か「卓報告」につながっていません" : e.message), true);
+  }
+}
+
 // Sites whose whole character list the extension can read with the visitor's login.
 const BULK_SITES = [
   { name: "いあきゃら", host: /^https:\/\/iachara\.com\//, sheet: /^https:\/\/iachara\.com\/(?:view|edit)\/(\d+)/,
@@ -241,6 +267,8 @@ $("send").addEventListener("click", () => {
   send([{ ...items[0], name: name || items[0].name, ...(items[0].ccfolia && name ? { ccfolia: { ...items[0].ccfolia, data: { ...items[0].ccfolia.data, name } } } : {}) }]);
 });
 $("sendAll").addEventListener("click", () => send(iaAll));
+$("rerun").addEventListener("click", e => rerun(items, e.currentTarget));
+$("rerunAll").addEventListener("click", e => rerun(iaAll, e.currentTarget));
 $("open").addEventListener("click", () => chrome.tabs.create({ url: "https://www.notion.so/" + notion.db }));
 $("save").addEventListener("click", async () => {
   await chrome.storage.local.set({ notionToken: $("token").value.trim(), notionDb: notionDbId($("db").value) || NOTION_DEFAULT_DB });
