@@ -418,11 +418,13 @@ const titleOf = x => x.series || x.name || "";
    the series name, where the first episode was, and the episodes under it without the series name
    ("Paranormal Crime Episode 1：枯れた花は戻らない" -> "Episode 1：枯れた花は戻らない"). An HO that
    every episode shares goes on the series row. */
-function scenGroups(list){
+// With apart = true (the timeline), only episodes next to each other join: a scenario played in between
+// starts the series again under its name.
+function scenGroups(list, apart = false){
   const out = [], bySeries = new Map();
   for (const x of list){
     if (!x.series){ out.push({...x, eps: null}); continue; }
-    let g = bySeries.get(x.series);
+    let g = apart ? (out[out.length-1]?.eps && out[out.length-1].name === x.series ? out[out.length-1] : null) : bySeries.get(x.series);
     if (!g){ g = {name: x.series, role: "", eps: []}; bySeries.set(x.series, g); out.push(g); }
     const key = t => t.normalize("NFKC").replace(/\s+/g, "");
     const sk = key(x.series), nk = key(x.name);
@@ -472,8 +474,8 @@ function timelineHTML(p){
   return `<dialog class="tl" id="tl" aria-labelledby="tlTitle">
     <div class="hd"><h2 id="tlTitle"><small>All Scenarios</small>${esc(p.name)}の通過シナリオ（全システム・時系列）</h2><button class="x" type="button" data-tl="close" aria-label="閉じる">×</button></div>
     <div class="bd">
-      ${dated.length ? `<ol class="tline">${scenGroups(dated).map(row).join("")}</ol>` : ""}
-      ${undated.length ? `<p class="grp">日付の分からないシナリオ（シートの順）</p><ol class="tline">${scenGroups(undated).map(row).join("")}</ol>` : ""}
+      ${dated.length ? `<ol class="tline">${scenGroups(dated, true).map(row).join("")}</ol>` : ""}
+      ${undated.length ? `<p class="grp">日付の分からないシナリオ（シートの順）</p><ol class="tline">${scenGroups(undated, true).map(row).join("")}</ol>` : ""}
     </div></dialog>`;
 }
 /* Notes start with "職業: …" lines (written by the importer); the rest is the character's text.
