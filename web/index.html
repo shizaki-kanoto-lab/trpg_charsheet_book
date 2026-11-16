@@ -711,6 +711,10 @@ function renderHoMain(){
   const tabKey = HO_S[cur];
   const numbered = allNum.filter(r => tabOf(r) === tabKey);
   const bins = (byPl ? hoKeys : plKeys).map(label => ({label, runs: numbered.filter(r => binOf(r) === label)}));
+  // An HO past the table's PL人数 can't happen (HO4 at a 3PL table): its empty slot keeps its place but
+  // shows no name or number. (One that does have runs is a mistake in the data, so it stays visible.)
+  const plN = k => /^(\d)PL$/.test(k) ? Number(k[0]) : Infinity, hoN = k => /^HO(\d+)$/.test(k) ? Number(k.slice(2)) : Infinity;
+  for (const b of bins) b.void = !b.runs.length && (byPl ? hoN(b.label) > plN(tabKey) : hoN(tabKey) > plN(b.label));
   const max = Math.max(1, ...bins.map(b => b.runs.length));
   // The scale always goes past the tallest bar (at least 15% and one grid step), so its number stays inside the chart.
   const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.max(Math.ceil(max * 1.15 / step), Math.floor(max / step) + 1) * step;
@@ -742,9 +746,10 @@ function renderHoMain(){
           ${[...Array(top / step + 1).keys()].map(i => `<div class="gl" style="bottom:${i*step/top*100}%"><span>${i*step}</span></div>`).join("")}
           ${bins.map(b => b.runs.length
             ? `<button type="button" class="col" data-ho="${b.label}" style="--h:${b.runs.length/top*100}%" aria-label="${b.label}：${b.runs.length}件（${pct(b.runs.length)}%）。押すと内訳を開く"><i></i><span class="v">${b.runs.length}</span></button>`
+            : b.void ? `<div class="col zero" aria-hidden="true"></div>`
             : `<div class="col zero" style="--h:0%" aria-label="${b.label}：0件"><i></i><span class="v">0</span></div>`).join("")}
         </div>
-        <div class="xs">${bins.map(b => `<span>${b.label}</span>`).join("")}</div>
+        <div class="xs">${bins.map(b => `<span>${b.void ? "" : b.label}</span>`).join("")}</div>
       </div>` : `<p class="none">${byPl ? "この人数の卓でHO番号のある通過はありません。" : "このHOの通過はありません。"}</p>`}
       <p class="honote">PL人数は通過記録のPL人数欄から取ります${plKeys.includes("不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。通過記録のないシナリオ（遊んでいる途中のものなど）と、ギャラリー非表示のシートは数えません。棒か下の行を押すと、そのシナリオが開きます。${allNamed.length ? "<br>「HO蜘蛛」のように番号のないHOは、グラフに入れず「番号なし」のタブに一覧で出します。" : ""}</p>
     </div>
