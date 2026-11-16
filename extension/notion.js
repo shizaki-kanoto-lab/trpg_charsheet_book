@@ -209,10 +209,13 @@ function notionScenarioWithHo(name, memo) {
   // A line that is only an HO followed by a sheet link ("HO2" then "https://iachara.com/view/…")
   // names the other player's character, so it is left out.
   const lines = String(memo || "").normalize("NFKC").split("\n");
-  // A memo line that is only "KPC" (or "KPCとして") means the character was the KPC: "シナリオ名KPC".
-  if (lines.some(l => /^\s*KPC(として)?\s*$/i.test(l))) return /KPC$/i.test(name) ? name : `${name}KPC`;
   const isLink = l => /^\s*https?:\/\//.test(l || "");
   const nextLine = i => lines.slice(i + 1).find(l => l.trim());
+  // A memo line that is only "KPC" (or "KPCとして") means the character was the KPC: "シナリオ名KPC".
+  // Not when a sheet link follows it (on the same line or the next): that names the KPC's sheet of a
+  // session this character played as a PL ("KPC\nhttps://iachara.com/…").
+  if (lines.some((l, i) => /^\s*KPC(として)?\s*$/i.test(l) && !isLink(nextLine(i))))
+    return /KPC$/i.test(name) ? name : `${name}KPC`;
   const text = lines.filter((l, i) => !(/^\s*HO\s*[:\-]?\s*\S{0,12}\s*(https?:\/\/\S+\s*)?$/i.test(l) && (/https?:\/\//.test(l) || isLink(nextLine(i)))))
     .join("\n").replace(/https?:\/\/\S+/g, " ");
   const found = [...text.matchAll(/(?<![A-Za-z])HO\s*[:\-]?\s*[「『]?\s*([0-9A-Za-zα-ωΑ-Ωァ-ヶー一-龥]{1,12})/gi)].map(m => m[1]);
