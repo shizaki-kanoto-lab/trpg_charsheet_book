@@ -592,7 +592,7 @@ function scenariosOf(c){
       continue;
     }
     const m = t.match(ROLE_SUFFIX);
-    const pl = (c.pls || {})[t] || "";   // the PL人数 of this line (from 通過記録), when known
+    const pl = (c.pls || {})[t] || "";   // the PL人数 of this line from 通過記録 ("不明" when empty; "" = no 通過記録 row)
     out.push(m ? {name:m[1].trim(), role:m[2], pl} : {name:t, role:pending, pl});
     pending = "";
   }
@@ -684,7 +684,7 @@ function renderHoMain(){
   m.dataset.mode = "ho";
   if (!S.ready){ m.innerHTML = `<p class="loading">読み込んでいます…</p>`; return; }
   const runs = [];
-  for (const [name, cast] of scenarioIndex()) for (const {c, role, pl} of cast) if (isHoRole(role)) runs.push({name, c, role, pl, n: hoNumber(role)});
+  for (const [name, cast] of scenarioIndex()) for (const {c, role, pl} of cast) if (isHoRole(role) && pl) runs.push({name, c, role, pl, n: hoNumber(role)});   // only lines with a 通過記録 row
   const systems = [...new Set(runs.map(r => r.c.system).filter(Boolean))].sort(bySystem);
   if (HO_S.sys && !systems.includes(HO_S.sys)) HO_S.sys = "";
   const inSys = runs.filter(r => !HO_S.sys || r.c.system === HO_S.sys);
@@ -734,7 +734,7 @@ function renderHoMain(){
         </div>
         <div class="xs">${bins.map(b => `<span>${b.label}</span>`).join("")}</div>
       </div>` : `<p class="none">${byPl ? "この人数の卓でHO番号のある通過はありません。" : "このHOの通過はありません。"}</p>`}
-      <p class="honote">PL人数は通過記録のPL人数欄から取ります${plKeys.includes("不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。棒か下の行を押すと、そのシナリオが開きます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
+      <p class="honote">PL人数は通過記録のPL人数欄から取ります${plKeys.includes("不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。通過記録のないシナリオ（遊んでいる途中のものなど）は数えません。棒か下の行を押すと、そのシナリオが開きます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
     </div>
     ${numbered.length ? `<div class="hoacc">${bins.map(b => b.runs.length
       ? `<details class="hoitem" data-hoitem="${b.label}"><summary><span class="k">${b.label}</span><span class="n">${b.runs.length}件<span class="pc">・${pct(b.runs.length)}%</span></span><span class="chev" aria-hidden="true"></span></summary>

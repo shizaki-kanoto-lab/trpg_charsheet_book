@@ -328,7 +328,7 @@ async function runDates(token) {
   return out;
 }
 // The date and PL人数 of each of a sheet's シナリオ lines, from its 通過記録 rows
-// ({dates: {line: "YYYY-MM-DD"}, pls: {line: "4PL"}}).
+// ({dates: {line: "YYYY-MM-DD"}, pls: {line: "4PL" | "不明"}}).
 function linesDated(page, runs) {
   const dates = {}, pls = {};
   for (const line of String(prop(page.properties["シナリオ"]) || "").split("\n").map(s => s.trim()).filter(Boolean)) {
@@ -336,8 +336,9 @@ function linesDated(page, runs) {
     const rows = runs.filter(r => { const t = notionScenarioKey(r.title); return notionSameScenario(r.title, base) || t.length >= 4 && k.length >= 4 && (k.includes(t) || t.includes(k)); });
     const hit = rows.map(r => r.date).filter(Boolean).sort()[0];
     if (hit) dates[line] = hit;
-    const pl = rows.map(r => r.pl).find(Boolean);
-    if (pl) pls[line] = pl;
+    // A line with a 通過記録 row always gets an entry ("不明" when its PL人数 is empty): the sheet book's
+    // HO傾向 counts only lines that have one.
+    if (rows.length) pls[line] = rows.map(r => r.pl).find(Boolean) || "不明";
   }
   return { dates, pls };
 }
