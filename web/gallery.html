@@ -186,9 +186,17 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .ho-link{display:inline-block;margin-top:18px;font-size:.85rem;letter-spacing:.14em;color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:1px}
 .ho-link:hover{opacity:.8}
 .ho{--surface:var(--paper);--surface-2:var(--soft);--copper:var(--accent);--f-display:var(--f-mincho);--f-mono:var(--f-latin);--f-body:var(--f-sans);padding-bottom:60px}
+.ho{--ho1:#2a78d6;--ho2:#eb6834;--ho3:#1baf7a;--ho4:#eda100;--ho5:#e87ba4;--ho6:#008300;
+  --pl1:#6da7ec;--pl2:#3987e5;--pl3:#256abf;--pl4:#184f95;--pl5:#0d366b;--plx:#9a968f}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ho{--ho1:#3987e5;--ho2:#d95926;--ho3:#199e70;--ho4:#c98500;--ho5:#d55181;--ho6:#0ca30c;
+  --pl1:#184f95;--pl2:#256abf;--pl3:#3987e5;--pl4:#6da7ec;--pl5:#9ec5f4;--plx:#6b6872}}
+:root[data-theme="dark"] .ho{--ho1:#3987e5;--ho2:#d95926;--ho3:#199e70;--ho4:#c98500;--ho5:#d55181;--ho6:#0ca30c;
+  --pl1:#184f95;--pl2:#256abf;--pl3:#3987e5;--pl4:#6da7ec;--pl5:#9ec5f4;--plx:#6b6872}
+.ho .hochart .col i{background:var(--c,var(--accent))}
 .ho .hopage{font-size:15px;font-variant-numeric:lining-nums tabular-nums}
 .ho .lostmark{font-size:.75rem;font-weight:700;white-space:nowrap;color:var(--accent);border:1px solid currentColor;border-radius:4px;padding:0 5px;margin-right:8px;vertical-align:1px}
-.ho .role{display:inline-block;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);border-radius:4px;padding:0 7px;font-weight:700;font-size:.8rem;margin-left:6px;vertical-align:1px}
+.ho .role{display:inline-block;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);border-radius:4px;padding:0 7px;font-weight:700;font-size:.8rem;margin-right:8px;vertical-align:1px}
+.ho .lostx{font-size:.8rem;margin-right:6px;vertical-align:1px}
 .ho .none{color:var(--muted);font-size:.9rem}
 .ho button{font:inherit;cursor:pointer}
 .ho .back{display:block;width:max-content;margin:40px auto 0;font-size:.85rem;letter-spacing:.14em;color:var(--accent);text-decoration:none}
@@ -231,7 +239,8 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .hoitem summary{cursor:pointer}
 .hoitem summary::-webkit-details-marker{display:none}
 .hoitem summary:hover{background:var(--surface-2)}
-.hoitem .k{font-family:var(--f-latin);font-weight:600;font-size:1.3rem;letter-spacing:.06em;color:var(--accent)}
+.hoitem .k{font-family:var(--f-latin);font-weight:600;font-size:1.3rem;letter-spacing:.06em;display:flex;align-items:center;gap:10px}
+.hoitem .sw{display:block;width:12px;height:12px;border-radius:3px;background:var(--c)}
 .hoitem .n{font-family:var(--f-mono);font-size:.9rem;white-space:nowrap}
 .hoitem.zero{color:var(--muted)}
 .hoitem.zero .k{font-weight:500}
@@ -652,14 +661,21 @@ function renderHo(){
   // other columns keep their width and move to the middle. (One that does have runs is a mistake in the data, so it stays visible.)
   const plN = k => /^(\d)PL$/.test(k) ? Number(k[0]) : Infinity, hoN = k => /^HO(\d+)$/.test(k) ? Number(k.slice(2)) : Infinity;
   for (const b of bins) b.void = !b.runs.length && (byPl ? hoN(b.label) > plN(tabKey) : hoN(tabKey) > plN(b.label));
+  // Each bar has a colour of its own, the same in every tab: HO1〜HO6〜 the categorical slots in order,
+  // PL人数 one blue stepping darker (lighter in dark mode) with more players, 不明 grey.
+  const colorOf = label => /^HO(\d+)/.test(label) ? `var(--ho${Math.min(Number(label.match(/\d+/)[0]), HO_MAX + 1)})` : /^(\d)PL/.test(label) ? `var(--pl${label[0]})` : "var(--plx)";
   const shown = bins.filter(b => !b.void);
   const max = Math.max(1, ...bins.map(b => b.runs.length));
   // The scale always goes past the tallest bar (at least 15% and one grid step), so its number stays inside the chart.
   const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.max(Math.ceil(max * 1.15 / step), Math.floor(max / step) + 1) * step;
   const pct = n => total ? Math.round(n / total * 100) : 0;
   const isNamed = tabKey === NAMED;
-  const lostMark = c => isLost(c) ? `<span class="lostmark">ロスト${c.system ? `（${esc(sysShort(c.system))}）` : ""}</span>` : "";
-  const runLi = r => `<li${isLost(r.c) ? ` class="is-lost"` : ""}><span class="t">${esc(r.name)}</span><span class="who">${lostMark(r.c)}<a href="#/${encodeURIComponent(r.p.key)}">${esc(r.p.name)}</a><span class="role after">${esc(r.role)}</span>${isNamed ? `<span class="plk">${esc(plOf(r))}</span>` : ""}</span></li>`;
+  // A row reads "❌ HO名 名前": ❌ for a lost character, and the HO without its number (the bar already
+  // says it): "HO1" and "HO1兼HO2" show nothing, "HO1英国テーラー" shows 英国テーラー. The 番号なし list keeps the whole HO.
+  const lostMark = c => isLost(c) ? `<span class="lostx" role="img" aria-label="ロスト${c.system ? `（${esc(sysShort(c.system))}）` : ""}" title="ロスト${c.system ? `（${esc(sysShort(c.system))}）` : ""}">❌</span>` : "";
+  const hoName = role => isNamed ? role : String(role).replace(/^(?:HO|PC)[\s:：\-－]*[0-9０-９]+/i, "")
+    .replace(/^(?:\s*(?:兼|[・&/,、＆／])\s*(?:HO|PC)?[\s\-－]*[0-9０-９]+)+/i, "").replace(/^[\s:：・\-－]+/, "");
+  const runLi = r => { const h = hoName(r.role); return `<li${isLost(r.c) ? ` class="is-lost"` : ""}><span class="t">${esc(r.name)}</span><span class="who">${lostMark(r.c)}${h ? `<span class="role">${esc(h)}</span>` : ""}<a href="#/${encodeURIComponent(r.p.key)}" title="${esc(r.role)}">${esc(r.p.name)}</a>${isNamed ? `<span class="plk">${esc(plOf(r))}</span>` : ""}</span></li>`; };
   $("root").innerHTML = `
   <header class="hero wrap">
     <p class="eyebrow">HO Tendency</p>
@@ -699,7 +715,7 @@ function renderHo(){
         <div class="plot" role="group" aria-label="${byPl ? `${esc(tabKey)}の卓のHO番号ごとの通過数` : `${esc(tabKey)}のPL人数ごとの通過数`}">
           ${[...Array(top / step + 1).keys()].map(i => `<div class="gl" style="bottom:${i*step/top*100}%"><span>${i*step}</span></div>`).join("")}
           ${shown.map(b => b.runs.length
-            ? `<button type="button" class="col" data-ho="${b.label}" style="--h:${b.runs.length/top*100}%" aria-label="${b.label}：${b.runs.length}件（${pct(b.runs.length)}%）。押すと内訳を開く"><i></i><span class="v">${b.runs.length}</span></button>`
+            ? `<button type="button" class="col" data-ho="${b.label}" style="--h:${b.runs.length/top*100}%;--c:${colorOf(b.label)}" aria-label="${b.label}：${b.runs.length}件（${pct(b.runs.length)}%）。押すと内訳を開く"><i></i><span class="v">${b.runs.length}</span></button>`
             : b.void ? `<div class="col zero" aria-hidden="true"></div>`
             : `<div class="col zero" style="--h:0%" aria-label="${b.label}：0件"><i></i><span class="v">0</span></div>`).join("")}
         </div>
@@ -707,7 +723,7 @@ function renderHo(){
       </div>` : `<p class="none">${byPl ? "この人数の卓でHO番号のある通過はありません。" : "このHOの通過はありません。"}</p>`}
     </div>
     ${total ? `<div class="hoacc">${bins.map(b => b.runs.length
-      ? `<details class="hoitem" data-hoitem="${b.label}"><summary><span class="k">${b.label}</span><span class="n">${b.runs.length}件<span class="pc">・${pct(b.runs.length)}%</span></span><span class="chev" aria-hidden="true"></span></summary>
+      ? `<details class="hoitem" data-hoitem="${b.label}"><summary><span class="k"><i class="sw" style="--c:${colorOf(b.label)}" aria-hidden="true"></i>${b.label}</span><span class="n">${b.runs.length}件<span class="pc">・${pct(b.runs.length)}%</span></span><span class="chev" aria-hidden="true"></span></summary>
           <div class="hobody"><ul class="horuns">${b.runs.map(runLi).join("")}</ul></div></details>`
       : "").join("")}</div>` : ""}
     `}
