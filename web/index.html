@@ -198,7 +198,7 @@ a.portrait{text-decoration:none}
 .banner{max-width:880px;margin:0 auto 20px;border:1px solid var(--line);border-left:3px solid var(--danger);background:var(--surface);border-radius:0 8px 8px 0;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .banner p{margin:0}
 .fresh{font-size:.8rem;color:var(--muted)}
-.views{display:inline-grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-left:6px;align-self:center}
+.views{display:inline-grid;grid-template-columns:repeat(3,auto);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-left:6px;align-self:center}
 .views button{border:0;background:var(--surface);padding:4px 14px;font-size:.86rem;color:var(--muted);white-space:nowrap}
 .brand{flex-wrap:wrap;row-gap:6px}
 .brand h1{white-space:nowrap}
@@ -209,6 +209,32 @@ a.portrait{text-decoration:none}
 .app.scen{grid-template-columns:minmax(0,1fr)}
 .app.scen .rack{display:none}
 .app.scen .main{display:block}
+/* HOの傾向 (#ho): how often each HO number comes up. */
+.hopage{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.ho-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ho-chips button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 12px;font-size:.84rem;color:var(--muted)}
+.ho-chips button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface);font-weight:700}
+.hocard{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px 20px 16px}
+.hocard h2{margin:0 0 4px;font-family:var(--f-display);font-weight:800;font-size:1.05rem;letter-spacing:.1em}
+.hocard .sub{margin:0 0 14px;color:var(--muted);font-size:.84rem}
+.hocard .sub b{font-family:var(--f-mono);color:var(--ink);font-size:1rem;margin:0 2px}
+.hochart{position:relative;padding-left:2.2em}
+.hochart .plot{position:relative;height:240px;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;align-items:end;border-bottom:1px solid var(--muted)}
+.hochart .gl{position:absolute;left:0;right:0;border-top:1px solid color-mix(in srgb,var(--line) 75%,transparent);pointer-events:none}
+.hochart .gl span{position:absolute;right:calc(100% + 8px);top:-.75em;font-family:var(--f-mono);font-size:.74rem;color:var(--muted);line-height:1.5}
+.hochart .col{position:relative;height:100%;display:flex;align-items:flex-end;justify-content:center;background:none;border:0;padding:0;cursor:pointer}
+.hochart .col i{display:block;width:min(56px,62%);height:var(--h);min-height:2px;background:var(--accent);border-radius:4px 4px 0 0;transition:opacity .15s}
+.hochart .col .v{position:absolute;bottom:calc(var(--h) + 4px);left:0;right:0;text-align:center;font-family:var(--f-mono);font-weight:700;font-size:.9rem}
+.hochart .col:hover i{opacity:.8}
+.hochart .col[aria-pressed="true"] i{outline:2px solid var(--copper);outline-offset:2px}
+.hochart .col:focus-visible{outline:none}
+.hochart .col:focus-visible i{outline:2px solid var(--ink);outline-offset:2px}
+.hochart .xs{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;margin-top:6px}
+.hochart .xs span{text-align:center;font-family:var(--f-mono);font-size:.84rem;color:var(--muted)}
+.hotip{position:absolute;z-index:5;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:.8rem;box-shadow:0 6px 20px rgb(0 0 0 / .14);white-space:nowrap;transform:translate(-50%,-100%)}
+.hotip b{font-family:var(--f-mono)}
+.honote{margin:12px 0 0;color:var(--muted);font-size:.8rem;line-height:1.7}
+.hotab td.n{font-family:var(--f-mono);text-align:right;white-space:nowrap;width:1%}
 .scenpage{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .scen-tools{display:flex;gap:12px;align-items:center}
 .scen-tools .search{max-width:420px}
@@ -261,7 +287,7 @@ dialog.gh .note{color:var(--muted);font-size:.84rem}
       <path d="m72 20 4 18-20-9m20 9 12-9M56 47l20-9 12 9" fill="none" stroke="#fff4e6" stroke-width="1.5" stroke-linejoin="round"/>
       <circle cx="72" cy="38" r="2.5" fill="#fff4e6"/>
     </svg><span class="lt">キャラクターシート帳<span class="en">CHARACTER SHEET ARCHIVE</span></span></h1>
-    <nav class="views" id="views" aria-label="表示の切り替え"><button type="button" data-view="chars">キャラ</button><button type="button" data-view="scen">シナリオ</button></nav><span id="count"></span></div>
+    <nav class="views" id="views" aria-label="表示の切り替え"><button type="button" data-view="chars">キャラ</button><button type="button" data-view="scen">シナリオ</button><button type="button" data-view="ho">HO傾向</button></nav><span id="count"></span></div>
   <div class="hdr-actions">
     <span class="fresh" id="fresh"></span>
     <button class="btn primary" id="rebuild" type="button" hidden>Notionから更新</button>
@@ -592,17 +618,85 @@ function renderScenTable(){
     `<tr><th scope="row">${esc(name)}</th><td><ul class="castline">${cast.map(({c, role}) =>
       `<li${isLost(c) ? ` class="is-lost"` : ""}><a href="#sheet=${encodeURIComponent(sheetKey(c))}" title="${esc(c.name)}">${esc(shortName(c.name))}</a>${role ? `<span class="role after">${esc(role)}</span>` : ""}${lostMark(c)}</li>`).join("")}</ul></td></tr>`).join("")}</tbody></table>`;
 }
+/* ---------- HOの傾向 (#ho) ----------
+   One count per person and scenario (scenarioIndex: a scenario on a 6版 and a 7版 sheet of one
+   character counts once). "HO1なになに" / "HO-1" / "PC1" count as 1, the number right after HO or PC;
+   an HO with a name only (HO蜘蛛) has no number and is only counted apart. */
+const HO_MAX = 5;
+const hoNumber = role => { const m = String(role||"").normalize("NFKC").match(/^(?:HO|PC)[\s:：\-－]*(\d+)/i); return m ? Number(m[1]) : null; };
+const isHoRole = role => /^(?:HO|PC\d)/i.test(String(role||"").normalize("NFKC"));
+const HO_S = {sys: "", pick: null};
+const HO_SYS_FIRST = ["クトゥルフ神話TRPG 6版", "クトゥルフ神話TRPG 7版", "エモクロアTRPG"];
+const bySystem = (a, b) => { const r = s => { const i = HO_SYS_FIRST.indexOf(s); return i < 0 ? 9 : i; }; return r(a) - r(b) || String(a).localeCompare(String(b), "ja"); };
+function renderHoMain(){
+  const m = $("main");
+  $("app").classList.remove("detail");
+  m.dataset.mode = "ho";
+  if (!S.ready){ m.innerHTML = `<p class="loading">読み込んでいます…</p>`; return; }
+  const runs = [];
+  for (const [name, cast] of scenarioIndex()) for (const {c, role} of cast) if (isHoRole(role)) runs.push({name, c, role, n: hoNumber(role)});
+  const systems = [...new Set(runs.map(r => r.c.system).filter(Boolean))].sort(bySystem);
+  if (HO_S.sys && !systems.includes(HO_S.sys)) HO_S.sys = "";
+  const mine = runs.filter(r => !HO_S.sys || r.c.system === HO_S.sys);
+  const numbered = mine.filter(r => r.n != null), named = mine.filter(r => r.n == null);
+  const bins = [...Array(HO_MAX).keys()].map(i => ({label: `HO${i+1}`, runs: numbered.filter(r => r.n === i+1)}));
+  if (numbered.some(r => r.n > HO_MAX)) bins.push({label: `HO${HO_MAX+1}〜`, runs: numbered.filter(r => r.n > HO_MAX)});
+  const max = Math.max(1, ...bins.map(b => b.runs.length));
+  const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.ceil(max / step) * step;
+  const pct = n => numbered.length ? Math.round(n / numbered.length * 100) : 0;
+  const pick = bins.find(b => b.label === HO_S.pick);
+  const namedRoles = [...new Set(named.map(r => r.role))];
+  $("count").textContent = `HO ${numbered.length}件`;
+  m.innerHTML = `<section class="hopage">
+    <div class="ho-chips" role="group" aria-label="システムで絞り込む">
+      <button type="button" data-hsys="" aria-pressed="${!HO_S.sys}">すべて</button>
+      ${systems.map(s => `<button type="button" data-hsys="${esc(s)}" aria-pressed="${HO_S.sys===s}">${esc(sysShort(s))}</button>`).join("")}
+    </div>
+    <div class="hocard">
+      <h2>HO番号ごとの通過数</h2>
+      <p class="sub">HO番号のある通過 <b>${numbered.length}</b>件${HO_S.sys ? `（${esc(sysShort(HO_S.sys))}）` : ""}</p>
+      <div class="hochart" style="--n:${bins.length}">
+        <div class="plot" role="group" aria-label="HO番号ごとの通過数">
+          ${[...Array(top / step + 1).keys()].map(i => `<div class="gl" style="bottom:${i*step/top*100}%"><span>${i*step}</span></div>`).join("")}
+          ${bins.map(b => `<button type="button" class="col" data-ho="${b.label}" aria-pressed="${HO_S.pick===b.label}" style="--h:${b.runs.length/top*100}%" aria-label="${b.label}：${b.runs.length}件（${pct(b.runs.length)}%）"><i></i><span class="v">${b.runs.length}</span></button>`).join("")}
+        </div>
+        <div class="xs">${bins.map(b => `<span>${b.label}</span>`).join("")}</div>
+      </div>
+      <p class="honote">「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。棒を押すと、そのHOのシナリオが下に出ます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
+    </div>
+    ${pick
+      ? `<table class="scentab hotab"><thead><tr><th scope="col">${esc(pick.label)} のシナリオ（${pick.runs.length}件）</th><th scope="col">キャラクター・HO</th></tr></thead><tbody>${pick.runs.map(r =>
+          `<tr><th scope="row">${esc(r.name)}</th><td><ul class="castline"><li${isLost(r.c) ? ` class="is-lost"` : ""}><a href="#sheet=${encodeURIComponent(sheetKey(r.c))}" title="${esc(r.c.name)}">${esc(shortName(r.c.name))}</a><span class="role after">${esc(r.role)}</span>${lostMark(r.c)}</li></ul></td></tr>`).join("") || `<tr><td colspan="2">ありません</td></tr>`}</tbody></table>`
+      : `<table class="scentab hotab"><thead><tr><th scope="col">HO</th><th scope="col" style="text-align:right">件数</th></tr></thead><tbody>${bins.map(b =>
+          `<tr><th scope="row">${b.label}</th><td class="n">${b.runs.length}件・${pct(b.runs.length)}%</td></tr>`).join("")}</tbody></table>`}
+  </section>`;
+  const chart = m.querySelector(".hochart");
+  let tip = null;
+  const show = col => {
+    const b = bins.find(x => x.label === col.dataset.ho);
+    if (!tip){ tip = document.createElement("div"); tip.className = "hotip"; chart.append(tip); }
+    tip.innerHTML = `${b.label}　<b>${b.runs.length}</b>件（${pct(b.runs.length)}%）`;
+    const r = col.getBoundingClientRect(), c = chart.getBoundingClientRect(), bar = col.querySelector("i").getBoundingClientRect();
+    tip.style.left = `${r.left - c.left + r.width/2}px`; tip.style.top = `${bar.top - c.top - 26}px`;
+  };
+  const hide = () => { tip?.remove(); tip = null; };
+  for (const col of chart.querySelectorAll(".col")){
+    col.addEventListener("pointerenter", () => show(col)); col.addEventListener("pointerleave", hide);
+    col.addEventListener("focus", () => show(col)); col.addEventListener("blur", hide);
+  }
+}
 function setView(v){
   S.view = v; store.set("view", v);
-  $("app").classList.toggle("scen", v === "scen");
+  $("app").classList.toggle("scen", v === "scen" || v === "ho");
   for (const b of $("views").querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.view === v));
-  if (v !== "scen") delete $("main").dataset.mode;
+  if (v !== "scen" && v !== "ho") delete $("main").dataset.mode;
   renderList(); renderMain();
 }
 /* #scen = scenario list, #sheet=<id> = one sheet, anything else = the character view. */
 function route(){
   const h = location.hash;
   if (h === "#scen") return setView("scen");
+  if (h === "#ho") return setView("ho");
   const m = h.match(/^#sheet=(.+)$/);
   if (m){ S.selKey = decodeURIComponent(m[1]); resolveSel(); setView("chars"); window.scrollTo(0,0); return; }
   setView("chars");
@@ -678,7 +772,7 @@ function grouped(items){
   return [...map.values()];
 }
 function renderList(){
-  if (S.view === "scen") return;
+  if (S.view !== "chars") return;
   const nLost = S.chars.filter(isLost).length;
   for (const b of $("lostSeg").querySelectorAll("button")){
     const k = b.dataset.lost, n = k==="lost" ? nLost : k==="alive" ? S.chars.length - nLost : S.chars.length;
@@ -717,6 +811,7 @@ function renderList(){
 /* ---------- sheet ---------- */
 function renderMain(){
   if (S.view === "scen") return renderScenMain();
+  if (S.view === "ho") return renderHoMain();
   if (S.selKey && S.ready){ resolveSel(); renderList(); }
   const m = $("main");
   $("app").classList.toggle("detail", !!S.sel);
@@ -788,7 +883,13 @@ $("search").addEventListener("input", e => { S.q = e.target.value; renderList();
 $("chips").addEventListener("click", e => { const b = e.target.closest("[data-sys]"); if (!b) return; S.sys = b.dataset.sys; renderList(); });
 $("lostSeg").addEventListener("click", e => { const b = e.target.closest("[data-lost]"); if (!b) return; S.lost = b.dataset.lost; store.set("lostFilter", S.lost); renderList(); });
 $("groupToggle").addEventListener("change", e => { S.group = e.target.checked; store.set("groupByName", S.group ? "1" : "0"); renderList(); renderMain(); });
-$("views").addEventListener("click", e => { const b = e.target.closest("[data-view]"); if (b) location.hash = b.dataset.view === "scen" ? "#scen" : "#chars"; });
+$("views").addEventListener("click", e => { const b = e.target.closest("[data-view]"); if (b) location.hash = b.dataset.view === "chars" ? "#chars" : "#" + b.dataset.view; });
+$("main").addEventListener("click", e => {
+  const hs = e.target.closest("[data-hsys]");
+  if (hs){ HO_S.sys = hs.dataset.hsys; HO_S.pick = null; renderHoMain(); return; }
+  const ho = e.target.closest("[data-ho]");
+  if (ho){ const k = ho.dataset.ho; HO_S.pick = HO_S.pick === k ? null : k; renderHoMain(); $("main").querySelector(`[data-ho="${k}"]`)?.focus(); }
+});
 $("main").addEventListener("input", e => { if (e.target.id === "scenSearch"){ S.sq = e.target.value; renderScenTable(); } });
 window.addEventListener("hashchange", route);
 $("list").addEventListener("click", e => {
