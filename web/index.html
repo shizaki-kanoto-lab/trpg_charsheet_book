@@ -739,7 +739,7 @@ function renderHoMain(){
       ? `<details class="hoitem" data-hoitem="${b.label}"><summary><span class="k">${b.label}</span><span class="n">${b.runs.length}件<span class="pc">・${pct(b.runs.length)}%</span></span><span class="chev" aria-hidden="true"></span></summary>
           <div class="hobody"><ul class="horuns">${b.runs.map(r =>
             `<li${isLost(r.c) ? ` class="is-lost"` : ""}><span class="t">${esc(r.name)}</span><span class="who"><a href="#sheet=${encodeURIComponent(sheetKey(r.c))}" title="${esc(r.c.name)}">${esc(shortName(r.c.name))}</a><span class="role after">${esc(r.role)}</span>${lostMark(r.c)}</span></li>`).join("")}</ul></div></details>`
-      : `<div class="hoitem zero"><span class="k">${b.label}</span><span class="n">0件</span><span class="chev" aria-hidden="true"></span></div>`).join("")}</div>` : ""}
+      : "").join("")}</div>` : ""}
   </section>`;
   const chart = m.querySelector(".hochart");
   if (!chart) return;
