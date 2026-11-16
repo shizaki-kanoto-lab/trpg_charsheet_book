@@ -308,7 +308,8 @@ async function kedamonoChars(token) {
 // When each character played each scenario: 通過記録 rows and the date of their 卓報告. Only a row
 // tied to one 卓報告 has a date: a row tied to several (すごろくしないと出られない部屋, played
 // five times with different characters) can't tell which session was this character's.
-// Map of sheet page id -> [{title, date}]. Empty when they can't be read.
+// Every row also gives its PL人数 (1PL〜5PL以上, for the sheet book's HO傾向), dated or not.
+// Map of sheet page id -> [{title, date, solo, pl}]. Empty when they can't be read.
 async function runDates(token) {
   const out = new Map();
   try {
@@ -316,26 +317,29 @@ async function runDates(token) {
     for (const pg of await allPages(token, RUNS_DB)) {
       const dates = (prop(pg.properties["卓報告"]) || []).map(id => taku.get(id));
       const solo = prop(pg.properties["立場"]) === "GMレス";
-      if (!solo && (dates.length !== 1 || !dates[0])) continue;
+      const pl = prop(pg.properties["PL人数"]) || "";
       const title = prop(pg.properties["シナリオ"]) || "";
       for (const id of prop(pg.properties["キャラ"]) || []) {
         if (!out.has(id)) out.set(id, []);
-        out.get(id).push({ title, date: dates.length === 1 ? dates[0] : "", solo });
+        out.get(id).push({ title, date: dates.length === 1 && dates[0] ? dates[0] : "", solo, pl });
       }
     }
   } catch (e) { console.log(`通過記録・卓報告を読めませんでした (${e.message})。ギャラリーの最初のシナリオはシートの順になります。`); }
   return out;
 }
-// The date of each of a sheet's シナリオ lines, from its 通過記録 rows ({line: "YYYY-MM-DD"}).
+// The date and PL人数 of each of a sheet's シナリオ lines, from its 通過記録 rows
+// ({dates: {line: "YYYY-MM-DD"}, pls: {line: "4PL"}}).
 function linesDated(page, runs) {
-  const out = {};
+  const dates = {}, pls = {};
   for (const line of String(prop(page.properties["シナリオ"]) || "").split("\n").map(s => s.trim()).filter(Boolean)) {
     const base = notionSplitHo(line.replace(/\s*(?:KPC|NPC|[KG]Pレス|GMレス)$/i, ""))[0].trim(), k = notionScenarioKey(base);
-    const hit = runs.filter(r => { const t = notionScenarioKey(r.title); return notionSameScenario(r.title, base) || t.length >= 4 && k.length >= 4 && (k.includes(t) || t.includes(k)); })
-      .map(r => r.date).filter(Boolean).sort()[0];
-    if (hit) out[line] = hit;
+    const rows = runs.filter(r => { const t = notionScenarioKey(r.title); return notionSameScenario(r.title, base) || t.length >= 4 && k.length >= 4 && (k.includes(t) || t.includes(k)); });
+    const hit = rows.map(r => r.date).filter(Boolean).sort()[0];
+    if (hit) dates[line] = hit;
+    const pl = rows.map(r => r.pl).find(Boolean);
+    if (pl) pls[line] = pl;
   }
-  return out;
+  return { dates, pls };
 }
 
 async function main() {
@@ -356,13 +360,15 @@ async function main() {
     const body = same ? { notes: old.notes, palette: old.palette, piece: old.piece } : await pageBody(token, page.id);
     if (same) reused++;
     const c = toChar(page, body);
-    const dated = linesDated(page, runs.get(page.id.replace(/-/g, "")) || []);
+    const { dates: dated, pls } = linesDated(page, runs.get(page.id.replace(/-/g, "")) || []);
     if (Object.keys(dated).length) c.dates = dated;
+    if (Object.keys(pls).length) c.pls = pls;
     // A scenario whose 通過記録 says 立場 GMレス shows as "シナリオ名GMレス" (the role badge in the gallery).
     const solo = (runs.get(page.id.replace(/-/g, "")) || []).filter(r => r.solo);
     if (solo.length) c.tags = c.tags.map(t => {
       if (/(?:KPC|NPC|[KG]Pレス|GMレス)$/i.test(t) || !solo.some(r => notionSameScenario(r.title, notionSplitHo(t)[0].trim()))) return t;
       if (c.dates?.[t]) { c.dates[t + "GMレス"] = c.dates[t]; delete c.dates[t]; }
+      if (c.pls?.[t]) { c.pls[t + "GMレス"] = c.pls[t]; delete c.pls[t]; }
       return t + "GMレス";
     });
     chars.push(c);

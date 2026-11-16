@@ -234,7 +234,27 @@ a.portrait{text-decoration:none}
 .hotip{position:absolute;z-index:5;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:.8rem;box-shadow:0 6px 20px rgb(0 0 0 / .14);white-space:nowrap;transform:translate(-50%,-100%)}
 .hotip b{font-family:var(--f-mono)}
 .honote{margin:12px 0 0;color:var(--muted);font-size:.8rem;line-height:1.7}
-.hotab td.n{font-family:var(--f-mono);text-align:right;white-space:nowrap;width:1%}
+.hopage{--pl1:#2a78d6;--pl2:#eb6834;--pl3:#1baf7a;--pl4:#eda100;--pl5:#e87ba4;--pl0:color-mix(in srgb,var(--muted) 45%,transparent)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .hopage{--pl1:#3987e5;--pl2:#d95926;--pl3:#199e70;--pl4:#c98500;--pl5:#d55181}}
+:root[data-theme="dark"] .hopage{--pl1:#3987e5;--pl2:#d95926;--pl3:#199e70;--pl4:#c98500;--pl5:#d55181}
+.hochart .col .stack{display:flex;flex-direction:column-reverse;gap:2px;width:min(56px,62%);height:var(--h);min-height:2px}
+.hochart .col .stack i{width:100%;height:auto;flex:var(--k) 1 0;min-height:2px;background:var(--c);border-radius:0;transition:opacity .15s}
+.hochart .col .stack i:last-child{border-radius:4px 4px 0 0}
+.hochart .col:hover .stack i{opacity:.85}
+.hochart .col[aria-pressed="true"] .stack{outline:2px solid var(--copper);outline-offset:2px}
+.hochart .col:focus-visible .stack{outline:2px solid var(--ink);outline-offset:2px}
+.holegend{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0 0 12px;font-size:.8rem;color:var(--muted)}
+.holegend span{display:inline-flex;align-items:center;gap:6px}
+.holegend span::before{content:"";width:10px;height:10px;border-radius:2px;background:var(--c)}
+.scentab.hotab .pl{font-size:.74rem;color:var(--muted);margin-left:8px;white-space:nowrap}
+.scentab.hotab thead th{white-space:nowrap;letter-spacing:.04em}
+.scentab.hotab tbody th{white-space:nowrap}
+.howrap{overflow-x:auto;border-radius:8px}
+.scentab.hotab td.n,.scentab.hotab thead th{padding-left:8px;padding-right:8px}
+/* The HO×PL人数 table stays a table on phones (the scenario table becomes cards there). */
+@media (max-width:760px){.scentab.hotab.mx thead{display:table-header-group}.scentab.hotab.mx tr{display:table-row}.scentab.hotab.mx tbody th,.scentab.hotab.mx td{display:table-cell}.scentab.hotab.mx tbody th{width:auto;padding-bottom:9px}.scentab.hotab.mx td{border-top:1px solid var(--line);padding-top:9px}.scentab.hotab.mx tbody tr:first-child td{border-top:0}}
+@media (max-width:520px){.scentab.hotab .pc{display:none}.scentab.hotab tbody th{font-size:.9rem}.scentab.hotab{font-size:.82rem}.scentab.hotab td.n,.scentab.hotab thead th,.scentab.hotab tbody th{padding-left:5px;padding-right:5px}.scentab.hotab thead th{letter-spacing:0}}
+.scentab.hotab td.n{font-family:var(--f-mono);text-align:right;white-space:nowrap;width:1%}
 .scenpage{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .scen-tools{display:flex;gap:12px;align-items:center}
 .scen-tools .search{max-width:420px}
@@ -544,7 +564,8 @@ function scenariosOf(c){
       continue;
     }
     const m = t.match(ROLE_SUFFIX);
-    out.push(m ? {name:m[1].trim(), role:m[2]} : {name:t, role:pending});
+    const pl = (c.pls || {})[t] || "";   // the PL人数 of this line (from 通過記録), when known
+    out.push(m ? {name:m[1].trim(), role:m[2], pl} : {name:t, role:pending, pl});
     pending = "";
   }
   return out;
@@ -558,19 +579,20 @@ function scenarioIndex(){
   const nameKey = n => n.replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xfee0));
   // One entry per person in a scenario: the newest sheet, with whichever sheet names the HO.
   const people = new Map();
-  for (const c of S.chars) for (const {name: raw, role} of scenariosOf(c)){
+  for (const c of S.chars) for (const {name: raw, role, pl} of scenariosOf(c)){
     const nk = nameKey(raw);
     if (!shown.has(nk)) shown.set(nk, raw);
     const name = shown.get(nk);
     const k = nk + "\u0000" + personKey(c);
     const x = people.get(k);
-    if (!x){ people.set(k, {name, c, role}); continue; }
+    if (!x){ people.set(k, {name, c, role, pl}); continue; }
     if (!x.role) x.role = role;
+    if (!x.pl) x.pl = pl;
     if ((c.updatedAt||0) > (x.c.updatedAt||0)) x.c = c;
   }
-  for (const {name, c, role} of people.values()){
+  for (const {name, c, role, pl} of people.values()){
     if (!map.has(name)) map.set(name, []);
-    map.get(name).push({c, role});
+    map.get(name).push({c, role, pl});
   }
   const roleKey = r => r ? r.replace(/\d+/, d => d.padStart(3,"0")) : "\uffff";
   for (const cast of map.values()) cast.sort((a,b) => roleKey(a.role).localeCompare(roleKey(b.role), "ja") || a.c.name.localeCompare(b.c.name, "ja"));
@@ -634,7 +656,7 @@ function renderHoMain(){
   m.dataset.mode = "ho";
   if (!S.ready){ m.innerHTML = `<p class="loading">読み込んでいます…</p>`; return; }
   const runs = [];
-  for (const [name, cast] of scenarioIndex()) for (const {c, role} of cast) if (isHoRole(role)) runs.push({name, c, role, n: hoNumber(role)});
+  for (const [name, cast] of scenarioIndex()) for (const {c, role, pl} of cast) if (isHoRole(role)) runs.push({name, c, role, pl, n: hoNumber(role)});
   const systems = [...new Set(runs.map(r => r.c.system).filter(Boolean))].sort(bySystem);
   if (HO_S.sys && !systems.includes(HO_S.sys)) HO_S.sys = "";
   const mine = runs.filter(r => !HO_S.sys || r.c.system === HO_S.sys);
@@ -644,6 +666,11 @@ function renderHoMain(){
   const max = Math.max(1, ...bins.map(b => b.runs.length));
   const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.ceil(max / step) * step;
   const pct = n => numbered.length ? Math.round(n / numbered.length * 100) : 0;
+  // PL人数 of each run (通過記録), as one of these; 不明 when the row has none.
+  const PLS = [["1PL","--pl1"],["2PL","--pl2"],["3PL","--pl3"],["4PL","--pl4"],["5PL以上","--pl5"],["不明","--pl0"]];
+  const plOf = r => PLS.some(([k]) => k === r.pl) ? r.pl : "不明";
+  for (const b of bins) b.by = PLS.map(([k, v]) => ({k, v, n: b.runs.filter(r => plOf(r) === k).length}));
+  const usedPl = PLS.filter(([k]) => bins.some(b => b.by.find(x => x.k === k).n));
   const pick = bins.find(b => b.label === HO_S.pick);
   const namedRoles = [...new Set(named.map(r => r.role))];
   $("count").textContent = `HO ${numbered.length}件`;
@@ -654,34 +681,36 @@ function renderHoMain(){
     </div>
     <div class="hocard">
       <h2>HO番号ごとの通過数</h2>
-      <p class="sub">HO番号のある通過 <b>${numbered.length}</b>件${HO_S.sys ? `（${esc(sysShort(HO_S.sys))}）` : ""}</p>
+      <p class="sub">HO番号のある通過 <b>${numbered.length}</b>件${HO_S.sys ? `（${esc(sysShort(HO_S.sys))}）` : ""}・色はPL人数</p>
+      <div class="holegend" aria-hidden="true">${usedPl.map(([k, v]) => `<span style="--c:var(${v})">${k}</span>`).join("")}</div>
       <div class="hochart" style="--n:${bins.length}">
         <div class="plot" role="group" aria-label="HO番号ごとの通過数">
           ${[...Array(top / step + 1).keys()].map(i => `<div class="gl" style="bottom:${i*step/top*100}%"><span>${i*step}</span></div>`).join("")}
-          ${bins.map(b => `<button type="button" class="col" data-ho="${b.label}" aria-pressed="${HO_S.pick===b.label}" style="--h:${b.runs.length/top*100}%" aria-label="${b.label}：${b.runs.length}件（${pct(b.runs.length)}%）"><i></i><span class="v">${b.runs.length}</span></button>`).join("")}
+          ${bins.map(b => `<button type="button" class="col" data-ho="${b.label}" aria-pressed="${HO_S.pick===b.label}" style="--h:${b.runs.length/top*100}%" aria-label="${b.label}：${b.runs.length}件（${pct(b.runs.length)}%）${b.by.filter(x => x.n).map(x => `${x.k} ${x.n}件`).join("・")}"><span class="stack">${b.by.filter(x => x.n).map(x => `<i style="--c:var(${x.v});--k:${x.n}" data-pl="${x.k}"></i>`).join("")}</span><span class="v">${b.runs.length}</span></button>`).join("")}
         </div>
         <div class="xs">${bins.map(b => `<span>${b.label}</span>`).join("")}</div>
       </div>
-      <p class="honote">「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。棒を押すと、そのHOのシナリオが下に出ます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
+      <p class="honote">PL人数は通過記録のPL人数欄から取ります（空の行は「不明」）。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。棒を押すと、そのHOのシナリオが下に出ます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
     </div>
     ${pick
       ? `<table class="scentab hotab"><thead><tr><th scope="col">${esc(pick.label)} のシナリオ（${pick.runs.length}件）</th><th scope="col">キャラクター・HO</th></tr></thead><tbody>${pick.runs.map(r =>
-          `<tr><th scope="row">${esc(r.name)}</th><td><ul class="castline"><li${isLost(r.c) ? ` class="is-lost"` : ""}><a href="#sheet=${encodeURIComponent(sheetKey(r.c))}" title="${esc(r.c.name)}">${esc(shortName(r.c.name))}</a><span class="role after">${esc(r.role)}</span>${lostMark(r.c)}</li></ul></td></tr>`).join("") || `<tr><td colspan="2">ありません</td></tr>`}</tbody></table>`
-      : `<table class="scentab hotab"><thead><tr><th scope="col">HO</th><th scope="col" style="text-align:right">件数</th></tr></thead><tbody>${bins.map(b =>
-          `<tr><th scope="row">${b.label}</th><td class="n">${b.runs.length}件・${pct(b.runs.length)}%</td></tr>`).join("")}</tbody></table>`}
+          `<tr><th scope="row">${esc(r.name)}</th><td><ul class="castline"><li${isLost(r.c) ? ` class="is-lost"` : ""}><a href="#sheet=${encodeURIComponent(sheetKey(r.c))}" title="${esc(r.c.name)}">${esc(shortName(r.c.name))}</a><span class="role after">${esc(r.role)}</span>${lostMark(r.c)}<span class="pl">${esc(plOf(r))}</span></li></ul></td></tr>`).join("") || `<tr><td colspan="2">ありません</td></tr>`}</tbody></table>`
+      : `<div class="howrap"><table class="scentab hotab mx"><thead><tr><th scope="col">HO</th>${usedPl.map(([k]) => `<th scope="col" style="text-align:right">${k}</th>`).join("")}<th scope="col" style="text-align:right">計</th></tr></thead><tbody>${bins.map(b =>
+          `<tr><th scope="row">${b.label}</th>${usedPl.map(([k]) => { const n = b.by.find(x => x.k === k).n; return `<td class="n">${n || "–"}</td>`; }).join("")}<td class="n">${b.runs.length}<span class="pc">件・${pct(b.runs.length)}%</span></td></tr>`).join("")}</tbody></table></div>`}
   </section>`;
   const chart = m.querySelector(".hochart");
   let tip = null;
-  const show = col => {
+  const show = (col, seg) => {
     const b = bins.find(x => x.label === col.dataset.ho);
     if (!tip){ tip = document.createElement("div"); tip.className = "hotip"; chart.append(tip); }
-    tip.innerHTML = `${b.label}　<b>${b.runs.length}</b>件（${pct(b.runs.length)}%）`;
-    const r = col.getBoundingClientRect(), c = chart.getBoundingClientRect(), bar = col.querySelector("i").getBoundingClientRect();
+    const x = seg && b.by.find(y => y.k === seg.dataset.pl);
+    tip.innerHTML = x ? `${b.label}・${x.k}　<b>${x.n}</b>件（${b.label}の${Math.round(x.n / b.runs.length * 100)}%）` : `${b.label}　<b>${b.runs.length}</b>件（${pct(b.runs.length)}%）`;
+    const r = col.getBoundingClientRect(), c = chart.getBoundingClientRect(), bar = (seg || col.querySelector(".stack")).getBoundingClientRect();
     tip.style.left = `${r.left - c.left + r.width/2}px`; tip.style.top = `${bar.top - c.top - 26}px`;
   };
   const hide = () => { tip?.remove(); tip = null; };
   for (const col of chart.querySelectorAll(".col")){
-    col.addEventListener("pointerenter", () => show(col)); col.addEventListener("pointerleave", hide);
+    col.addEventListener("pointerover", e => show(col, e.target.closest("[data-pl]"))); col.addEventListener("pointerleave", hide);
     col.addEventListener("focus", () => show(col)); col.addEventListener("blur", hide);
   }
 }
