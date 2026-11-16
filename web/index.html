@@ -234,6 +234,36 @@ a.portrait{text-decoration:none}
 .hotip{position:absolute;z-index:5;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:.8rem;box-shadow:0 6px 20px rgb(0 0 0 / .14);white-space:nowrap;transform:translate(-50%,-100%)}
 .hotip b{font-family:var(--f-mono)}
 .honote{margin:12px 0 0;color:var(--muted);font-size:.8rem;line-height:1.7}
+.hochart .col.zero{cursor:default}
+.hoacc{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.hoitem{border-top:1px solid var(--line);interpolate-size:allow-keywords}
+.hoitem:first-child{border-top:0}
+.hoitem summary,.hoitem.zero{display:grid;grid-template-columns:minmax(0,1fr) auto 18px;gap:12px;align-items:center;padding:10px 14px;list-style:none}
+.hoitem summary{cursor:pointer}
+.hoitem summary::-webkit-details-marker{display:none}
+.hoitem summary:hover{background:var(--surface-2)}
+.hoitem .k{font-family:var(--f-display);font-weight:800;font-size:1.02rem}
+.hoitem .n{font-family:var(--f-mono);font-size:.9rem;white-space:nowrap}
+.hoitem.zero{color:var(--muted)}
+.hoitem.zero .k{font-weight:500}
+.hoitem .chev{width:8px;height:8px;border-right:1.6px solid var(--muted);border-bottom:1.6px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .25s}
+.hoitem[open] .chev{transform:rotate(225deg) translate(-2px,-2px)}
+.hoitem.zero .chev{visibility:hidden}
+/* びよっと: the body grows from 0 with a little overshoot (Chrome animates the details content; elsewhere it just opens). */
+.hoitem::details-content{block-size:0;overflow:hidden;transition:block-size .38s cubic-bezier(.34,1.45,.55,1),content-visibility .38s allow-discrete}
+.hoitem[open]::details-content{block-size:auto}
+.hoitem[open] .hobody{animation:hopop .38s cubic-bezier(.34,1.45,.55,1)}
+@keyframes hopop{from{opacity:0;transform:translateY(-6px) scaleY(.96)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.hoitem::details-content{transition:none}.hoitem[open] .hobody{animation:none}}
+.hobody{padding:2px 14px 12px;border-top:1px dashed var(--line);transform-origin:top}
+.horuns{list-style:none;margin:0;padding:0}
+.horuns li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;padding:7px 0;border-bottom:1px dotted var(--line)}
+.horuns li:last-child{border-bottom:0}
+.horuns .t{font-family:var(--f-display);font-weight:700;overflow-wrap:anywhere}
+.horuns .who{white-space:nowrap}
+.horuns .who a{color:var(--ink)}
+.horuns li.is-lost .who a{color:var(--muted)}
+@media (max-width:520px){.horuns li{grid-template-columns:1fr}.horuns .who{white-space:normal}.hoitem .pc{display:none}}
 .hotabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
 .hotabs button{flex:none;border:0;background:none;padding:6px 14px 8px;font-size:.92rem;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
 .hotabs button small{font-family:var(--f-mono);font-weight:400;font-size:.76rem;margin-left:6px;opacity:.85}
@@ -640,7 +670,7 @@ function renderScenTable(){
 const HO_MAX = 5;
 const hoNumber = role => { const m = String(role||"").normalize("NFKC").match(/^(?:HO|PC)[\s:：\-－]*(\d+)/i); return m ? Number(m[1]) : null; };
 const isHoRole = role => /^(?:HO|PC\d)/i.test(String(role||"").normalize("NFKC"));
-const HO_S = {sys: "", pl: "", pick: null};
+const HO_S = {sys: "", pl: ""};
 const HO_SYS_FIRST = ["クトゥルフ神話TRPG 6版", "クトゥルフ神話TRPG 7版", "エモクロアTRPG"];
 const bySystem = (a, b) => { const r = s => { const i = HO_SYS_FIRST.indexOf(s); return i < 0 ? 9 : i; }; return r(a) - r(b) || String(a).localeCompare(String(b), "ja"); };
 function renderHoMain(){
@@ -666,7 +696,6 @@ function renderHoMain(){
   // The scale always goes past the tallest bar (at least 15% and one grid step), so its number stays inside the chart.
   const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.max(Math.ceil(max * 1.15 / step), Math.floor(max / step) + 1) * step;
   const pct = n => numbered.length ? Math.round(n / numbered.length * 100) : 0;
-  const pick = bins.find(b => b.label === HO_S.pick);
   const namedRoles = [...new Set(named.map(r => r.role))];
   $("count").textContent = `HO ${numbered.length}件`;
   m.innerHTML = `<section class="hopage">
@@ -683,17 +712,19 @@ function renderHoMain(){
       ${numbered.length ? `<div class="hochart" style="--n:${bins.length}">
         <div class="plot" role="group" aria-label="${esc(HO_S.pl)}の卓のHO番号ごとの通過数">
           ${[...Array(top / step + 1).keys()].map(i => `<div class="gl" style="bottom:${i*step/top*100}%"><span>${i*step}</span></div>`).join("")}
-          ${bins.map(b => `<button type="button" class="col" data-ho="${b.label}" aria-pressed="${HO_S.pick===b.label}" style="--h:${b.runs.length/top*100}%" aria-label="${b.label}：${b.runs.length}件（${pct(b.runs.length)}%）"><i></i><span class="v">${b.runs.length || ""}</span></button>`).join("")}
+          ${bins.map(b => b.runs.length
+            ? `<button type="button" class="col" data-ho="${b.label}" style="--h:${b.runs.length/top*100}%" aria-label="${b.label}：${b.runs.length}件（${pct(b.runs.length)}%）。押すと内訳を開く"><i></i><span class="v">${b.runs.length}</span></button>`
+            : `<div class="col zero" style="--h:0%" aria-label="${b.label}：0件"><i></i><span class="v">0</span></div>`).join("")}
         </div>
         <div class="xs">${bins.map(b => `<span>${b.label}</span>`).join("")}</div>
       </div>` : `<p class="none">この人数の卓でHO番号のある通過はありません。</p>`}
-      <p class="honote">PL人数は通過記録のPL人数欄から取ります${tabs.some(t => t.k === "不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。棒を押すと、そのHOのシナリオが下に出ます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
+      <p class="honote">PL人数は通過記録のPL人数欄から取ります${tabs.some(t => t.k === "不明") ? "（空の行は「不明」）" : ""}。「HO1なになに」「HO-1」「PC1」はHO1として数えます。同じキャラが同じシナリオを複数のシートに持っているときは1回です。棒か下のHOを押すと、そのHOのシナリオが開きます。${named.length ? `<br>番号のない名前だけのHO ${named.length}件（${namedRoles.slice(0, 8).map(esc).join("、")}${namedRoles.length > 8 ? " など" : ""}）は数えていません。` : ""}</p>
     </div>
-    ${pick
-      ? `<table class="scentab hotab"><thead><tr><th scope="col">${esc(HO_S.pl)}・${esc(pick.label)} のシナリオ（${pick.runs.length}件）</th><th scope="col">キャラクター・HO</th></tr></thead><tbody>${pick.runs.map(r =>
-          `<tr><th scope="row">${esc(r.name)}</th><td><ul class="castline"><li${isLost(r.c) ? ` class="is-lost"` : ""}><a href="#sheet=${encodeURIComponent(sheetKey(r.c))}" title="${esc(r.c.name)}">${esc(shortName(r.c.name))}</a><span class="role after">${esc(r.role)}</span>${lostMark(r.c)}</li></ul></td></tr>`).join("") || `<tr><td colspan="2">ありません</td></tr>`}</tbody></table>`
-      : numbered.length ? `<div class="howrap"><table class="scentab hotab mx"><thead><tr><th scope="col">HO</th><th scope="col" style="text-align:right">件数</th></tr></thead><tbody>${bins.map(b =>
-          `<tr><th scope="row">${b.label}</th><td class="n">${b.runs.length}件・${pct(b.runs.length)}%</td></tr>`).join("")}</tbody></table></div>` : ""}
+    ${numbered.length ? `<div class="hoacc">${bins.map(b => b.runs.length
+      ? `<details class="hoitem" data-hoitem="${b.label}"><summary><span class="k">${b.label}</span><span class="n">${b.runs.length}件<span class="pc">・${pct(b.runs.length)}%</span></span><span class="chev" aria-hidden="true"></span></summary>
+          <div class="hobody"><ul class="horuns">${b.runs.map(r =>
+            `<li${isLost(r.c) ? ` class="is-lost"` : ""}><span class="t">${esc(r.name)}</span><span class="who"><a href="#sheet=${encodeURIComponent(sheetKey(r.c))}" title="${esc(r.c.name)}">${esc(shortName(r.c.name))}</a><span class="role after">${esc(r.role)}</span>${lostMark(r.c)}</span></li>`).join("")}</ul></div></details>`
+      : `<div class="hoitem zero"><span class="k">${b.label}</span><span class="n">0件</span><span class="chev" aria-hidden="true"></span></div>`).join("")}</div>` : ""}
   </section>`;
   const chart = m.querySelector(".hochart");
   if (!chart) return;
@@ -912,11 +943,11 @@ $("groupToggle").addEventListener("change", e => { S.group = e.target.checked; s
 $("views").addEventListener("click", e => { const b = e.target.closest("[data-view]"); if (b) location.hash = b.dataset.view === "chars" ? "#chars" : "#" + b.dataset.view; });
 $("main").addEventListener("click", e => {
   const hs = e.target.closest("[data-hsys]");
-  if (hs){ HO_S.sys = hs.dataset.hsys; HO_S.pick = null; renderHoMain(); return; }
+  if (hs){ HO_S.sys = hs.dataset.hsys; renderHoMain(); return; }
   const hp = e.target.closest("[data-hpl]");
-  if (hp){ HO_S.pl = hp.dataset.hpl; HO_S.pick = null; renderHoMain(); $("main").querySelector(`[data-hpl="${HO_S.pl}"]`)?.focus(); return; }
+  if (hp){ HO_S.pl = hp.dataset.hpl; renderHoMain(); $("main").querySelector(`[data-hpl="${HO_S.pl}"]`)?.focus(); return; }
   const ho = e.target.closest("[data-ho]");
-  if (ho){ const k = ho.dataset.ho; HO_S.pick = HO_S.pick === k ? null : k; renderHoMain(); $("main").querySelector(`[data-ho="${k}"]`)?.focus(); }
+  if (ho){ const d = $("main").querySelector(`[data-hoitem="${ho.dataset.ho}"]`); if (d){ d.open = true; d.scrollIntoView({behavior: "smooth", block: "nearest"}); } }
 });
 $("main").addEventListener("input", e => { if (e.target.id === "scenSearch"){ S.sq = e.target.value; renderScenTable(); } });
 window.addEventListener("hashchange", route);
