@@ -66,7 +66,10 @@ async function main() {
       const i = e.lines.findIndex(l => l === r.line);
       if (i < 0) continue;
       const tail = (r.line.match(/\s*(?:(?:[KG]P|GM)レス|KPC|NPC)$/i) || [""])[0];
-      e.lines[i] = `${r.base}${ho}${tail}`;
+      // "トナリ美術館の5つの問PC3" keeps its PC3 in the name part: it is not repeated before "PC3孤独者".
+      const lead = (ho.normalize("NFKC").match(/^(?:PC|HO)\s*[0-9]+/i) || [""])[0];
+      const base = lead && r.base.normalize("NFKC").endsWith(lead) ? r.base.slice(0, r.base.length - lead.length) : r.base;
+      e.lines[i] = `${base}${ho}${tail}`;
       e.what.push(`${r.line} → ${e.lines[i]}`);
       edits.set(r.sheet.id, e);
     }
