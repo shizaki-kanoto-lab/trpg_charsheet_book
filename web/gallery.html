@@ -409,6 +409,9 @@ function scenariosOf(c){
   }
   return out;
 }
+/* The name a scenario goes by in the list: its series when it is an episode of one. */
+const titleOf = x => x.series || x.name || "";
+const titleKey = x => titleOf(x).normalize("NFKC").replace(/\s+/g, "");
 /* The 通過シナリオ list of a sheet. Episodes of a series (通過記録's シリーズ) are one numbered row with
    the series name, where the first episode was, and the episodes under it without the series name
    ("Paranormal Crime Episode 1：枯れた花は戻らない" -> "Episode 1：枯れた花は戻らない"). An HO that
@@ -511,8 +514,9 @@ function buildPeople(){
     // dates, the first scenario on the sheet listed first by system (CoC6th, CoC7th, emoklore, …).
     const inOrder = [...p.sheets].sort((a,b) => bySystem(a.system, b.system)).flatMap(scenariosOf);
     const dated = inOrder.filter(x => x.date).sort((a,b) => a.date.localeCompare(b.date));
-    p.first = ((dated[0] || inOrder[0]) || {}).name || "";
-    p.played = new Set(p.sheets.flatMap(c => scenariosOf(c).map(x => x.name.normalize("NFKC").replace(/\s+/g, "")))).size;
+    // A series (通過記録's シリーズ) shows and counts as one scenario, under its own name.
+    p.first = titleOf((dated[0] || inOrder[0]) || {});
+    p.played = new Set(p.sheets.flatMap(c => scenariosOf(c).map(titleKey))).size;
   }
   // Most scenarios played first, whatever the system.
   people.sort((a,b) => b.played - a.played || (a.ruby||a.name).localeCompare(b.ruby||b.name, "ja"));
@@ -530,7 +534,7 @@ const visible = () => {
 function scenOf(p){
   if (!S.sys) return {first: p.first, played: p.played};
   const list = [...p.sheets].filter(c => c.system === S.sys).flatMap(scenariosOf);
-  return {first: (list[0] || {}).name || "", played: new Set(list.map(x => x.name.normalize("NFKC").replace(/\s+/g, ""))).size};
+  return {first: titleOf(list[0] || {}), played: new Set(list.map(titleKey)).size};
 }
 
 function tileHTML(p, i){
