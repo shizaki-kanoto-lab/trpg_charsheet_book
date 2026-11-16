@@ -175,7 +175,10 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .tline .t{font-family:var(--f-mincho);font-weight:500;overflow-wrap:anywhere}
 .tline .t .r{margin-left:8px;font-family:inherit;font-size:.75rem;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);padding:0 6px;white-space:nowrap}
 .tline .s{font-size:.72rem;letter-spacing:.08em;color:var(--accent);white-space:nowrap}
-@media (max-width:520px){.tline li{grid-template-columns:minmax(0,1fr) auto}.tline .d{grid-column:1/-1}}
+.tline li.series .eps{grid-column:2/-1;list-style:none;margin:2px 0 0;padding:0 0 0 12px;border-left:2px solid var(--line)}
+.tline li.series .eps li{grid-template-columns:5.6em minmax(0,1fr);padding:6px 2px;border-bottom:0;font-size:.92rem}
+.tline li.series .eps .t{color:var(--muted)}
+@media (max-width:520px){.tline li{grid-template-columns:minmax(0,1fr) auto}.tline .d{grid-column:1/-1}.tline li.series .eps{grid-column:1/-1}.tline li.series .eps li{grid-template-columns:minmax(0,1fr)}}
 .scen{list-style:none;margin:0;padding:0;display:grid;gap:0}
 .scen li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:baseline;padding:10px 4px;border-bottom:1px solid var(--line)}
 .scen li .no{font-family:var(--f-latin);font-style:italic;color:var(--accent);font-size:1rem;min-width:2ch}
@@ -459,12 +462,18 @@ function timelineOf(p){
 }
 function timelineHTML(p){
   const {dated, undated} = timelineOf(p);
-  const row = x => `<li><span class="d">${esc(x.date ? x.date.replace(/-/g, ".") : "")}</span><span class="t">${esc(x.name)}${x.role ? `<span class="r">${esc(x.role)}</span>` : ""}</span><span class="s">${esc(sysJa(x.system))}</span></li>`;
+  const d = x => esc(x.date ? x.date.replace(/-/g, ".") : "");
+  const r = role => role ? `<span class="r">${esc(role)}</span>` : "";
+  // A series is one row (dated by its first episode) with its episodes, each with its date, under it.
+  const row = x => x.eps
+    ? `<li class="series"><span class="d">${d(x.eps[0])}</span><span class="t">${esc(x.name)}${r(x.role)}</span><span class="s">${esc([...new Set(x.eps.map(e => sysJa(e.system)))].join(" / "))}</span>
+        <ol class="eps">${x.eps.map(e => `<li><span class="d">${d(e)}</span><span class="t">${esc(e.ep)}${r(x.role ? "" : e.role)}</span></li>`).join("")}</ol></li>`
+    : `<li><span class="d">${d(x)}</span><span class="t">${esc(x.name)}${r(x.role)}</span><span class="s">${esc(sysJa(x.system))}</span></li>`;
   return `<dialog class="tl" id="tl" aria-labelledby="tlTitle">
     <div class="hd"><h2 id="tlTitle"><small>All Scenarios</small>${esc(p.name)}の通過シナリオ（全システム・時系列）</h2><button class="x" type="button" data-tl="close" aria-label="閉じる">×</button></div>
     <div class="bd">
-      ${dated.length ? `<ol class="tline">${dated.map(row).join("")}</ol>` : ""}
-      ${undated.length ? `<p class="grp">日付の分からないシナリオ（シートの順）</p><ol class="tline">${undated.map(row).join("")}</ol>` : ""}
+      ${dated.length ? `<ol class="tline">${scenGroups(dated).map(row).join("")}</ol>` : ""}
+      ${undated.length ? `<p class="grp">日付の分からないシナリオ（シートの順）</p><ol class="tline">${scenGroups(undated).map(row).join("")}</ol>` : ""}
     </div></dialog>`;
 }
 /* Notes start with "職業: …" lines (written by the importer); the rest is the character's text.
