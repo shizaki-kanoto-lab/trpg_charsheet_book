@@ -505,7 +505,8 @@ const META_TAG = /^(?:[67]版|ロスト|.*コンバート|CoC転生)$/;
 // "SHOTGUN" or "PHOTO" is part of the name. Same rule as the extension (notion.js NOTION_HO).
 const HO_AT = "HO(?=[0-9０-９:：\\-－α-ωΑ-Ω\\u3040-\\u30ff\\u3400-\\u9fff\\uff10-\\uff19]|$)";
 const ROLE_ONLY = new RegExp(`^(?:${HO_AT}|PC\\d|KPC$|NPC$)`);
-const ROLE_SUFFIX = new RegExp(`^(.+?)((?:${HO_AT}|KPC|NPC|PC\\d).*)$`);
+// KPC / NPC only at the very end: 「…KPCを攻略なんて聞いてませんが！？」 is part of a scenario name.
+const ROLE_SUFFIX = new RegExp(`^(.+?)((?:${HO_AT}|PC\\d).*|KPC|NPC)$`);
 function scenariosOf(c){
   const out = [];   // [{name, role}]
   const tags = (c.tags||[]).filter(t => !META_TAG.test(t));
