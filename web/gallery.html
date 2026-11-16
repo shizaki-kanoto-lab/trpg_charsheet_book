@@ -224,13 +224,11 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .hochart .xs span{text-align:center;font-family:var(--f-mono);font-size:.84rem;color:var(--muted)}
 .hotip{position:absolute;z-index:5;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:.8rem;box-shadow:0 6px 20px rgb(0 0 0 / .14);white-space:nowrap;transform:translate(-50%,-100%)}
 .hotip b{font-family:var(--f-mono)}
-.honote{color:var(--muted);font-size:.82rem;line-height:1.7}
-.honote summary{cursor:pointer;list-style:none}
-.honote summary::-webkit-details-marker{display:none}
-.honote .more{margin-left:.5em;color:var(--accent);white-space:nowrap}
-.honote .more::after{content:" ▸"}
-.honote[open] .more::after{content:" ▾"}
-.honote ul{margin:6px 0 0;padding-left:1.2em}
+/* How the page counts: a boxed note with an info mark. */
+.honote{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent-2);border-radius:8px;padding:12px 16px;color:var(--muted);font-size:.84rem;line-height:1.7}
+.honote svg{width:18px;height:18px;margin-top:2px;color:var(--accent-2)}
+.honote p{margin:0;color:var(--ink)}
+.honote ul{margin:4px 0 0;padding-left:1.2em}
 .hochart .col.zero{cursor:default}
 .hoacc{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .hoitem{border-top:1px solid var(--line);interpolate-size:allow-keywords}
@@ -620,7 +618,7 @@ function hoNumbers(role){
   return out;
 }
 const isHoRole = role => /^(?:HO|PC\d)/i.test(String(role||"").normalize("NFKC"));
-const HO_S = {sys: "", axis: "pl", pl: "", hoTab: "", noteOpen: false};
+const HO_S = {sys: "", axis: "pl", pl: "", hoTab: ""};
 function hoRuns(){
   const by = new Map();
   for (const p of S.people) for (const c of p.sheets) for (const x of scenariosOf(c)){
@@ -683,16 +681,18 @@ function renderHo(){
     <div class="rule" aria-hidden="true"><i></i></div>
   </header>
   <main class="wrap ho"><section class="hopage">
-    <details class="honote" data-honote${HO_S.noteOpen ? " open" : ""}><summary>HOの通過を数えたものです。PL人数は通過記録から取り、「HO1なになに」「HO-1」「PC1」はHO1として数えます。<span class="more">くわしく</span></summary>
-      <ul>
-        <li>同じキャラが同じシナリオを複数のシートに持っているときは1回です。話の分かれたシナリオ（シリーズ）も1回です。</li>
-        <li>「HO1兼HO2」のような兼任は、HO1とHO2の両方に1件ずつ数えます（棒の合計が通過の件数より多くなることがあります）。</li>
-        <li>通過記録のないシナリオ（遊んでいる途中のものなど）と、ギャラリーに出していないキャラは数えません。</li>
-        ${plKeys.includes("不明") ? "<li>PL人数の分からない通過は「不明」に入れます。</li>" : ""}
-        <li>「HO蜘蛛」のように番号のないHOは、グラフに入れず「番号なし」のタブに一覧で出します。</li>
-        <li>棒か内訳の行を押すと、そのシナリオが開きます。</li>
-      </ul>
-    </details>
+    <aside class="honote" aria-label="このグラフについて">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="6" r="1.1" fill="currentColor"/><path d="M10 9v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <div>
+        <p>どのHOでシナリオを遊んだか数えたグラフです。</p>
+        <ul>
+          <li>同じキャラが同じシナリオを複数のシートに持っているときは1回で数えます。</li>
+          <li>キャンペーンで話数ごとに分かれたシナリオも1シリーズとして扱います。</li>
+          <li>「HO1兼HO2」のような兼任は、HO1とHO2の両方に1件ずつ数えます（このためグラフの数と表の数が合わない場合があります）。</li>
+          <li>番号のないHOは、グラフに入れず「番号なし」のタブに一覧で出します。</li>
+        </ul>
+      </div>
+    </aside>
     <div class="ho-chips" role="group" aria-label="システムで絞り込む">
       <button type="button" data-hsys="" aria-pressed="${!HO_S.sys}">すべて</button>
       ${systems.map(s => `<button type="button" data-hsys="${esc(s)}" aria-pressed="${HO_S.sys===s}">${esc(sysJa(s))}</button>`).join("")}
@@ -748,8 +748,6 @@ function renderHo(){
     col.addEventListener("focus", () => show(col)); col.addEventListener("blur", hide);
   }
 }
-// くわしく stays as it was when the page redraws (a chip or tab press rebuilds it). toggle doesn't bubble.
-document.addEventListener("toggle", e => { if (e.target.matches?.("[data-honote]")) HO_S.noteOpen = e.target.open; }, true);
 
 const FOOT = `<footer class="foot"><img class="crowla l" src="crowla-light.png" alt="隠れ家クロウラ CLAWLER THE HIDEOUT." width="761" height="158"><img class="crowla d" src="crowla-dark.png" alt="" width="761" height="158">© Shizaki Kanoto / 隠れ家クロウラ</footer>`;
 let lastIndexY = 0;
