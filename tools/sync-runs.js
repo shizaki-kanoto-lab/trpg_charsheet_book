@@ -34,6 +34,17 @@ async function main() {
     return;
   }
   const { sheets, taku, rows } = await runsLoad(token, sheetDb);
+  // --trim: spaces before or after a シナリオ name (卓報告 and 通過記録) go away.
+  if (process.argv.includes("--trim")) {
+    const fix = [...taku.map(t => ({ id: t.id, db: "卓報告", name: t.name })), ...rows.map(r => ({ id: r.id, db: "通過記録", name: r.title }))]
+      .filter(x => x.name !== x.name.trim());
+    console.log(`${write ? "空白を消した" : "空白を消す予定の"}名前 ${fix.length} 件\n` + fix.map(x => `${x.db}：「${x.name}」→「${x.name.trim()}」`).join("\n"));
+    if (write) for (const x of fix) {
+      await notionRequest(token, `/pages/${x.id}`, { properties: { "シナリオ": { title: [{ text: { content: x.name.trim() } }] } } }, "PATCH");
+      await notionSleep(NOTION_GAP_MS);
+    }
+    return;
+  }
   const idx = runsIndex({ sheets, taku, rows });
   const { runs, takuOfName, existing } = idx;
   console.log(`シート ${sheets.length} 枚、卓報告 ${taku.length} 件、通過記録 ${existing.size} 件`);

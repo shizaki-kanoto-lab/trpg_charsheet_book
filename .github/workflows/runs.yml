@@ -19,6 +19,10 @@ on:
         description: "取り直し：今ある行の空の卓報告を埋め、立場・PL人数などを今のシート帳に合わせる（手で入れた値は消さない。書き込みはwriteもオン）"
         type: boolean
         default: false
+      trim:
+        description: "卓報告・通過記録のシナリオ名の前後の空白を消す（書き込みはwriteもオン）"
+        type: boolean
+        default: false
       prune:
         description: "いあきゃら・キャラッシュ・エモクロアのシートからなくなった行をゴミ箱へ移す"
         type: boolean
@@ -40,4 +44,4 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ vars.NOTION_DATABASE_ID }}
           ONLY: ${{ inputs.only }}
-        run: node tools/sync-runs.js ${{ inputs.write && '--write' || '' }} ${{ inputs.prune && '--prune' || '' }} ${{ inputs.pl && '--pl --pl-list' || '' }} ${{ inputs.refresh && '--refresh' || '' }} "--only=$ONLY"
+        run: node tools/sync-runs.js ${{ inputs.write && '--write' || '' }} ${{ inputs.prune && '--prune' || '' }} ${{ inputs.pl && '--pl --pl-list' || '' }} ${{ inputs.refresh && '--refresh' || '' }} ${{ inputs.trim && '--trim' || '' }} "--only=$ONLY"
