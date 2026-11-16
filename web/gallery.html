@@ -201,7 +201,8 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .hocard .sub{margin:0 0 14px;color:var(--muted);font-size:.84rem}
 .hocard .sub b{font-family:var(--f-mono);color:var(--ink);font-size:1rem;margin:0 2px}
 .hochart{position:relative;padding-left:2.2em}
-.hochart .plot{position:relative;height:240px;margin-top:12px;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;align-items:end;border-bottom:1px solid var(--muted)}
+/* Each column keeps the width it has with every slot (--n); slots that can't happen are left out and the rest are centred (--m). */
+.hochart .plot{position:relative;height:240px;margin-top:12px;display:grid;grid-template-columns:repeat(var(--m),calc(100% / var(--n)));justify-content:center;gap:0;align-items:end;border-bottom:1px solid var(--muted)}
 .hochart .gl{position:absolute;left:0;right:0;border-top:1px solid color-mix(in srgb,var(--line) 75%,transparent);pointer-events:none}
 .hochart .gl span{position:absolute;right:calc(100% + 8px);top:-.75em;font-family:var(--f-mono);font-size:.74rem;color:var(--muted);line-height:1.5}
 .hochart .col{position:relative;height:100%;display:flex;align-items:flex-end;justify-content:center;background:none;border:0;padding:0;cursor:pointer}
@@ -211,7 +212,7 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .hochart .col[aria-pressed="true"] i{outline:2px solid var(--copper);outline-offset:2px}
 .hochart .col:focus-visible{outline:none}
 .hochart .col:focus-visible i{outline:2px solid var(--ink);outline-offset:2px}
-.hochart .xs{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;margin-top:6px}
+.hochart .xs{display:grid;grid-template-columns:repeat(var(--m),calc(100% / var(--n)));justify-content:center;gap:0;margin-top:6px}
 .hochart .xs span{text-align:center;font-family:var(--f-mono);font-size:.84rem;color:var(--muted)}
 .hotip{position:absolute;z-index:5;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:.8rem;box-shadow:0 6px 20px rgb(0 0 0 / .14);white-space:nowrap;transform:translate(-50%,-100%)}
 .hotip b{font-family:var(--f-mono)}
@@ -230,7 +231,7 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .hoitem summary{cursor:pointer}
 .hoitem summary::-webkit-details-marker{display:none}
 .hoitem summary:hover{background:var(--surface-2)}
-.hoitem .k{font-family:var(--f-display);font-weight:800;font-size:1.02rem}
+.hoitem .k{font-family:var(--f-latin);font-weight:600;font-size:1.3rem;letter-spacing:.06em;color:var(--accent)}
 .hoitem .n{font-family:var(--f-mono);font-size:.9rem;white-space:nowrap}
 .hoitem.zero{color:var(--muted)}
 .hoitem.zero .k{font-weight:500}
@@ -243,11 +244,11 @@ dialog.tl .grp{margin:18px 0 4px;font-size:.78rem;letter-spacing:.14em;color:var
 .hoitem[open] .hobody{animation:hopop .38s cubic-bezier(.34,1.45,.55,1)}
 @keyframes hopop{from{opacity:0;transform:translateY(-6px) scaleY(.96)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.hoitem::details-content{transition:none}.hoitem[open] .hobody{animation:none}}
-.hobody{padding:2px 14px 12px;border-top:1px dashed var(--line);transform-origin:top}
+.hobody{padding:4px 14px 10px;border-top:1px solid var(--line);background:var(--soft);transform-origin:top}
 .horuns{list-style:none;margin:0;padding:0}
 .horuns li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;padding:7px 0;border-bottom:1px dotted var(--line)}
 .horuns li:last-child{border-bottom:0}
-.horuns .t{font-family:var(--f-display);font-weight:700;overflow-wrap:anywhere}
+.horuns .t{font-family:var(--f-display);font-weight:500;font-size:.95rem;overflow-wrap:anywhere}
 .horuns .who{white-space:nowrap}
 .horuns .who a{color:var(--ink)}
 .horuns .who .lostmark{margin:0 8px 0 0}
@@ -647,10 +648,11 @@ function renderHo(){
   const numbered = allNum.filter(r => tabOf(r) === tabKey), total = distinct(numbered);
   const shared = numbered.filter(r => r.ns.length > 1).length > 0;
   const bins = (byPl ? hoKeys : plKeys).map(label => ({label, runs: numbered.filter(r => binOf(r) === label)}));
-  // An HO past the table's PL人数 can't happen (HO4 at a 3PL table): its empty slot keeps its place but
-  // shows no name or number. (One that does have runs is a mistake in the data, so it stays visible.)
+  // An HO past the table's PL人数 can't happen (HO4 at a 3PL table): it is left out of the chart, and the
+  // other columns keep their width and move to the middle. (One that does have runs is a mistake in the data, so it stays visible.)
   const plN = k => /^(\d)PL$/.test(k) ? Number(k[0]) : Infinity, hoN = k => /^HO(\d+)$/.test(k) ? Number(k.slice(2)) : Infinity;
   for (const b of bins) b.void = !b.runs.length && (byPl ? hoN(b.label) > plN(tabKey) : hoN(tabKey) > plN(b.label));
+  const shown = bins.filter(b => !b.void);
   const max = Math.max(1, ...bins.map(b => b.runs.length));
   // The scale always goes past the tallest bar (at least 15% and one grid step), so its number stays inside the chart.
   const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10, top = Math.max(Math.ceil(max * 1.15 / step), Math.floor(max / step) + 1) * step;
@@ -693,15 +695,15 @@ function renderHo(){
     <div class="hocard" role="tabpanel">
       <h2>${byPl ? `${esc(tabKey)}の卓のHO` : `${esc(tabKey)}を担当した卓のPL人数`}</h2>
       <p class="sub">HO番号のある通過 <b>${total}</b>件${HO_S.sys ? `（${esc(sysJa(HO_S.sys))}）` : ""}${shared ? "・兼任は両方に数えています" : ""}</p>
-      ${total ? `<div class="hochart" style="--n:${bins.length}">
+      ${total ? `<div class="hochart" style="--n:${bins.length};--m:${shown.length}">
         <div class="plot" role="group" aria-label="${byPl ? `${esc(tabKey)}の卓のHO番号ごとの通過数` : `${esc(tabKey)}のPL人数ごとの通過数`}">
           ${[...Array(top / step + 1).keys()].map(i => `<div class="gl" style="bottom:${i*step/top*100}%"><span>${i*step}</span></div>`).join("")}
-          ${bins.map(b => b.runs.length
+          ${shown.map(b => b.runs.length
             ? `<button type="button" class="col" data-ho="${b.label}" style="--h:${b.runs.length/top*100}%" aria-label="${b.label}：${b.runs.length}件（${pct(b.runs.length)}%）。押すと内訳を開く"><i></i><span class="v">${b.runs.length}</span></button>`
             : b.void ? `<div class="col zero" aria-hidden="true"></div>`
             : `<div class="col zero" style="--h:0%" aria-label="${b.label}：0件"><i></i><span class="v">0</span></div>`).join("")}
         </div>
-        <div class="xs">${bins.map(b => `<span>${b.void ? "" : b.label}</span>`).join("")}</div>
+        <div class="xs">${shown.map(b => `<span>${b.label}</span>`).join("")}</div>
       </div>` : `<p class="none">${byPl ? "この人数の卓でHO番号のある通過はありません。" : "このHOの通過はありません。"}</p>`}
     </div>
     ${total ? `<div class="hoacc">${bins.map(b => b.runs.length
