@@ -116,7 +116,11 @@ img{display:block}
 .tile .fs:not(.plain)::before{content:"『"}.tile .fs:not(.plain)::after{content:"』"}
 .tile .sys{display:block;width:max-content;max-width:100%;margin:6px 0 0 auto;font-size:.62rem;letter-spacing:.12em;padding:0 7px;border:1px solid rgb(255 255 255 / .55);color:rgb(255 255 255 / .9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile.lost img{filter:grayscale(1) contrast(.95) brightness(.85)}
-.tile.lost .sys::after{content:" ／ LOST";color:#ffb3bd}
+/* A lost character: the picture in gray and a LOST mark in the top corner. */
+.tile .lostb{position:absolute;top:12px;left:0;z-index:2;display:flex;align-items:center;gap:7px;padding:3px 12px 3px 10px;
+  font-family:var(--f-latin);font-style:italic;font-weight:600;font-size:.86rem;letter-spacing:.3em;color:#ffe3e7;
+  background:linear-gradient(90deg,rgb(150 28 48 / .92),rgb(150 28 48 / .72));box-shadow:0 2px 8px rgb(0 0 0 / .35)}
+.tile .lostb::before{content:"";width:6px;height:6px;transform:rotate(45deg);border:1px solid currentColor}
 .tile:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @keyframes rise{to{opacity:1;transform:none}}
 .empty{text-align:center;color:var(--muted);padding:60px 0}
@@ -564,7 +568,7 @@ function tileHTML(p, i){
   const c = p.face, img = okImg(c.image) ? `<img src="${esc(c.image)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="imgRetry(this)">` : "";
   const sys = S.sys ? sysShort(S.sys) : p.systems.map(sysShort).join(" / ");
   return `<li><a class="tile${p.lost ? " lost" : ""}" href="#/${encodeURIComponent(p.key)}" style="--h:${tint(p.name)};--d:${Math.min(i,24)*0.03}s"${p.first ? ` title="${esc(p.name)}『${esc(p.first)}』"` : ""}>
-    <span class="ini" aria-hidden="true">${esc([...p.name][0]||"？")}</span>${img}
+    <span class="ini" aria-hidden="true">${esc([...p.name][0]||"？")}</span>${img}${p.lost ? `<span class="lostb">LOST</span>` : ""}
     ${p.first ? `<span class="over" aria-hidden="true"><span class="ol">First Scenario</span><span class="ot">${esc(p.first)}</span><span class="on">${p.played > 1 ? `ほか ${p.played - 1} 本` : ""}</span></span>` : ""}
     <span class="band">${p.ruby ? `<span class="rb">${esc(p.ruby)}</span>` : ""}<span class="nm">${esc(p.name)}</span>${p.first ? `<span class="fs">${esc(p.first)}</span>` : p.face.summary && NO_SCENARIOS.has(p.face.system) ? `<span class="fs plain">${esc(p.face.summary)}</span>` : ""}${sys ? `<span class="sys">${esc(sys)}</span>` : ""}</span></a></li>`;
 }
