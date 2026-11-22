@@ -173,6 +173,13 @@ async function main() {
   console.log(`\n■ キャラのシートとシステムが違う行 ${wrongSys.length} 件\n` + wrongSys.join("\n"));
   console.log(`\n■ リンクした卓報告とシステムが違う行 ${takuSys.length} 件\n` + takuSys.join("\n"));
   console.log(`\n■ シートのシナリオ欄にもう無い行 ${gone.length} 件\n` + gone.join("\n"));
+  // Rows tied to more than one 卓報告 page: which sessions they are (date, PL/GM, PL人数, name).
+  const multi = rows.filter(r => r.taku.length > 1).map(r => {
+    const ts = r.taku.map(id => takuById.get(id)).filter(Boolean).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const days = new Set(ts.map(t => t.date)).size;
+    return `${label(r)}（${ts.length}件・${days}日）\n    ` + ts.map(t => `${t.date || "日付なし"} ${t.role || "?"} ${t.pls || "?"}人 「${t.name}」`).join("\n    ");
+  });
+  console.log(`\n■ 卓報告が2件以上つながっている行 ${multi.length} 件\n` + multi.join("\n"));
   console.log(`\n■ 卓報告に見当たらないシナリオ ${report.noTaku.length} 件\n` + report.noTaku.join("\n"));
   console.log(`\n■ 複数のキャラが通っていて、どの卓か決められないもの ${report.shared.length} 件\n` + report.shared.join("\n"));
   console.log(`\n■ シートと卓報告でシステムが違うもの ${report.crossSystem.length} 件\n` + report.crossSystem.join("\n"));
