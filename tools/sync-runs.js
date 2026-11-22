@@ -177,7 +177,7 @@ async function main() {
   const multi = rows.filter(r => r.taku.length > 1).map(r => {
     const ts = r.taku.map(id => takuById.get(id)).filter(Boolean).sort((a, b) => String(a.date).localeCompare(String(b.date)));
     const days = new Set(ts.map(t => t.date)).size;
-    return `${label(r)}（${ts.length}件・${days}日）\n    ` + ts.map(t => `${t.date || "日付なし"} ${t.role || "?"} ${t.pls || "?"}人 「${t.name}」`).join("\n    ");
+    return `${label(r)}（${ts.length}件・${days}日） ${r.id}\n    ` + ts.map(t => `${t.date || "日付なし"} ${t.role || "?"} PL「${t.plText}」 「${t.name}」 ${t.id}`).join("\n    ");
   });
   console.log(`\n■ 卓報告が2件以上つながっている行 ${multi.length} 件\n` + multi.join("\n"));
   console.log(`\n■ 卓報告に見当たらないシナリオ ${report.noTaku.length} 件\n` + report.noTaku.join("\n"));

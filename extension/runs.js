@@ -102,7 +102,7 @@ async function runsLoad(token, sheetDb) {
   const taku = (await runsAllPages(token, TAKU_DB)).map(pg => ({
     id: runsBare(pg.id), name: runsProp(pg.properties["シナリオ"]) || "", system: runsProp(pg.properties["システム"]) || "",
     date: runsProp(pg.properties["日付"]) || "", role: runsProp(pg.properties["PL/GM"]) || "",
-    pls: runsPlCount(runsProp(pg.properties["PL"])),
+    pls: runsPlCount(runsProp(pg.properties["PL"])), plText: String(runsProp(pg.properties["PL"]) || ""),
   })).filter(r => r.name);
   const rows = (await runsAllPages(token, RUNS_DB)).map(pg => {
     const p = pg.properties;
